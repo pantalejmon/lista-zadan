@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { format, isToday, isTomorrow, isYesterday, isPast, parseISO, startOfDay } from 'date-fns';
+import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import type { Todo } from '../lib/types';
 import * as db from '../lib/db';

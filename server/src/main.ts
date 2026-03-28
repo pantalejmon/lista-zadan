@@ -8,12 +8,17 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
+  app.setGlobalPrefix('api');
+
   app.use(cookieParser());
 
-  app.enableCors({
-    origin: config.get<string>('cors.origin'),
-    credentials: true,
-  });
+  const corsOrigin = config.get<string>('cors.origin');
+  if (corsOrigin) {
+    app.enableCors({
+      origin: corsOrigin,
+      credentials: true,
+    });
+  }
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -21,7 +26,7 @@ async function bootstrap(): Promise<void> {
     transform: true,
   }));
 
-  const port = config.get<number>('server.port', 3000);
+  const port = process.env.PORT ?? config.get<number>('server.port', 3000);
   await app.listen(port);
 }
 bootstrap();

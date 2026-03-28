@@ -6,6 +6,7 @@
     "dev": "npm run dev -w client",
     "dev:server": "npm run start:dev -w server",
     "build": "npm run build -w client && npm run build -w server",
+    "start:prod": "npm run start:prod -w server",
     "lint": "npm run lint --workspaces",
     "test": "npm run test -w server"
   }

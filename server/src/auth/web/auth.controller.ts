@@ -33,7 +33,7 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    const frontendUrl = this.config.get<string>('cors.origin', 'http://localhost:5173');
+    const frontendUrl = this.config.get<string>('cors.origin') || '/';
     res.redirect(frontendUrl);
   }
 

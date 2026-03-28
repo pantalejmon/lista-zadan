@@ -2,7 +2,7 @@ server:
   port: 3000
 
 cors:
-  origin: 'http://localhost:5173'
+  origin: ''
 
 database:
   type: 'better-sqlite3'
@@ -11,7 +11,7 @@ database:
 google:
   clientId: ''
   clientSecret: ''
-  callbackUrl: 'http://localhost:3000/auth/google/callback'
+  callbackUrl: 'http://localhost:3000/api/auth/google/callback'
 
 jwt:
   secret: 'change-me-in-config-local-yaml'

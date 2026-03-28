@@ -21,9 +21,10 @@ interface AllTodosViewProps {
   onRefresh: () => void;
   storage: TodoStorage;
   listId?: string;
+  allowUnassign?: boolean;
 }
 
-export function AllTodosView({ refreshKey, onRefresh, storage, listId }: AllTodosViewProps) {
+export function AllTodosView({ refreshKey, onRefresh, storage, listId, allowUnassign }: AllTodosViewProps) {
   const [allTodos, setAllTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('future');
@@ -122,6 +123,15 @@ export function AllTodosView({ refreshKey, onRefresh, storage, listId }: AllTodo
 
   const handleDeleteGroup = async (groupId: string) => {
     await storage.deleteRecurrenceGroup(groupId);
+    await load();
+    onRefresh();
+  };
+
+  const handleUnassign = async (id: string) => {
+    const todo = allTodos.find((t) => t.id === id);
+    if (!todo || !todo.date) return;
+    const monthFromDate = todo.date.slice(0, 7);
+    await storage.updateTodo({ ...todo, date: undefined, month: monthFromDate });
     await load();
     onRefresh();
   };
@@ -268,6 +278,7 @@ export function AllTodosView({ refreshKey, onRefresh, storage, listId }: AllTodo
                       onUpdate={handleUpdate}
                       onDelete={handleDelete}
                       onDeleteGroup={todo.recurrenceGroupId ? handleDeleteGroup : undefined}
+                      onUnassign={allowUnassign ? handleUnassign : undefined}
                     />
                   ))}
                 </div>

@@ -47,7 +47,7 @@ export default function App() {
   const [settingsListId, setSettingsListId] = useState<string | null>(null);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
-  const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup } = useTodos(dateStr, storage, activeListId ?? undefined);
+  const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
   const { dark, toggle: toggleDark } = useDark();
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
 
@@ -88,8 +88,9 @@ export default function App() {
   const handleUnassign = async (id: string) => {
     const todo = todos.find((t) => t.id === id);
     if (!todo || !todo.date) return;
-    const monthFromDate = todo.date.slice(0, 7); // YYYY-MM
+    const monthFromDate = todo.date.slice(0, 7);
     await storage.updateTodo({ ...todo, date: undefined, month: monthFromDate });
+    await refresh();
     triggerRefresh();
   };
 
@@ -294,7 +295,7 @@ export default function App() {
       {/* All todos view */}
       {view === 'all' && (
         <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4">
-          <AllTodosView refreshKey={refreshKey} onRefresh={triggerRefresh} storage={storage} listId={activeListId ?? undefined} />
+          <AllTodosView refreshKey={refreshKey} onRefresh={triggerRefresh} storage={storage} listId={activeListId ?? undefined} allowUnassign={isCloud} />
         </main>
       )}
 

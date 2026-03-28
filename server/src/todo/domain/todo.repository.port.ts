@@ -10,4 +10,5 @@ export abstract class TodoRepositoryPort {
   abstract delete(id: string): Promise<void>;
   abstract deleteByRecurrenceGroupId(groupId: string): Promise<void>;
   abstract findDistinctDatesByList(listId: string): Promise<string[]>;
+  abstract findUnassignedByList(listId: string): Promise<Todo[]>;
 }

@@ -71,6 +71,12 @@ export class TodoService {
     await this.repository.deleteByRecurrenceGroupId(groupId);
   }
 
+  async getUnassigned(listId: string, userId: string): Promise<TodoResponse[]> {
+    await this.sharingService.assertPermission(listId, userId, ['owner', 'editor', 'viewer']);
+    const todos = await this.repository.findUnassignedByList(listId);
+    return todos.map((t) => t.toResponse());
+  }
+
   async getDatesWithTodos(listId: string, userId: string): Promise<string[]> {
     await this.sharingService.assertPermission(listId, userId, ['owner', 'editor', 'viewer']);
     return this.repository.findDistinctDatesByList(listId);

@@ -12,10 +12,15 @@ export class UpdateTodoDto {
   @IsOptional()
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  date?: string;
+  date?: string | null;
 
   @IsOptional()
   @IsString()
   @Matches(/^\d{2}:\d{2}$/)
   time?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}$/)
+  month?: string | null;
 }

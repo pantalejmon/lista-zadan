@@ -31,8 +31,12 @@ export async function getAllTodos(listId: string): Promise<Todo[]> {
 export async function addTodo(todo: Omit<Todo, 'id' | 'createdAt'> & { listId: string }): Promise<Todo> {
   return request<Todo>('/todos', {
     method: 'POST',
-    body: JSON.stringify({ text: todo.text, date: todo.date, time: todo.time, listId: todo.listId }),
+    body: JSON.stringify({ text: todo.text, date: todo.date, time: todo.time, month: todo.month, listId: todo.listId }),
   });
+}
+
+export async function getUnassignedTodos(listId: string): Promise<Todo[]> {
+  return request<Todo[]>(`/todos/unassigned?listId=${listId}`);
 }
 
 export async function updateTodo(todo: Todo): Promise<Todo> {
@@ -41,8 +45,9 @@ export async function updateTodo(todo: Todo): Promise<Todo> {
     body: JSON.stringify({
       text: todo.text,
       completed: todo.completed,
-      date: todo.date,
+      date: todo.date ?? null,
       time: todo.time,
+      month: todo.month ?? null,
     }),
   });
 }

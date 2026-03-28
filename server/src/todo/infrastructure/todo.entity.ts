@@ -12,8 +12,8 @@ export class TodoEntity {
   @Column('boolean', { default: false })
   completed!: boolean;
 
-  @Column('varchar')
-  date!: string;
+  @Column('varchar', { nullable: true })
+  date!: string | null;
 
   @Column('varchar', { nullable: true })
   time!: string | null;
@@ -30,6 +30,9 @@ export class TodoEntity {
   @Column('varchar', { nullable: true })
   listId!: string | null;
 
+  @Column('varchar', { nullable: true })
+  month!: string | null;
+
   toDomain(): Todo {
     return new Todo(
       this.id,
@@ -41,6 +44,7 @@ export class TodoEntity {
       this.recurrenceGroupId,
       this.userId,
       this.listId,
+      this.month,
     );
   }
 
@@ -55,6 +59,7 @@ export class TodoEntity {
     entity.recurrenceGroupId = todo.recurrenceGroupId;
     entity.userId = todo.userId;
     entity.listId = todo.listId;
+    entity.month = todo.month;
     return entity;
   }
 }

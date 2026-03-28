@@ -74,6 +74,15 @@ export class TodoController {
     return this.todoService.deleteRecurrenceGroup(groupId);
   }
 
+  @Get('unassigned')
+  getUnassigned(@Req() req: Request, @Query('listId') listId?: string): Promise<TodoResponse[]> {
+    const userId = (req.user as User).id;
+    if (!listId) {
+      throw new BadRequestException('listId query parameter is required');
+    }
+    return this.todoService.getUnassigned(listId, userId);
+  }
+
   @Get('dates-with-todos')
   getDatesWithTodos(@Req() req: Request, @Query('listId') listId?: string): Promise<string[]> {
     const userId = (req.user as User).id;

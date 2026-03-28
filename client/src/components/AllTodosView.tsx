@@ -46,11 +46,14 @@ export function AllTodosView({ refreshKey, onRefresh, storage, listId }: AllTodo
   const filtered = useMemo(() => {
     let result = allTodos;
 
+    // Only show dated todos in this view
+    result = result.filter((t) => t.date);
+
     // Time filter
     if (timeFilter === 'future') {
-      result = result.filter((t) => t.date >= todayStr);
+      result = result.filter((t) => t.date! >= todayStr);
     } else if (timeFilter === 'past') {
-      result = result.filter((t) => t.date < todayStr);
+      result = result.filter((t) => t.date! < todayStr);
     }
 
     // Status filter
@@ -73,9 +76,10 @@ export function AllTodosView({ refreshKey, onRefresh, storage, listId }: AllTodo
   const grouped = useMemo(() => {
     const map = new Map<string, Todo[]>();
     for (const todo of filtered) {
-      const group = map.get(todo.date) || [];
+      const date = todo.date!;
+      const group = map.get(date) || [];
       group.push(todo);
-      map.set(todo.date, group);
+      map.set(date, group);
     }
     // Sort groups by date
     const entries = [...map.entries()].sort((a, b) => {

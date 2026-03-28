@@ -10,6 +10,7 @@ import { CreateUserTable1711612900000 } from './migration/1711612900000-CreateUs
 import { AddUserIdToTodo1711613000000 } from './migration/1711613000000-AddUserIdToTodo';
 import { CreateSharingTables1711613100000 } from './migration/1711613100000-CreateSharingTables';
 import { AddListIdToTodo1711613200000 } from './migration/1711613200000-AddListIdToTodo';
+import { AddMonthToTodoAndMakeDateNullable1711613300000 } from './migration/1711613300000-AddMonthToTodoAndMakeDateNullable';
 import configuration from './config/configuration';
 
 @Module({
@@ -32,6 +33,7 @@ import configuration from './config/configuration';
           AddUserIdToTodo1711613000000,
           CreateSharingTables1711613100000,
           AddListIdToTodo1711613200000,
+          AddMonthToTodoAndMakeDateNullable1711613300000,
         ],
       }),
     }),

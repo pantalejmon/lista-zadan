@@ -13,6 +13,7 @@ import { MigrationBanner } from './components/MigrationBanner';
 import { ListSelector } from './components/ListSelector';
 import { ListSettings } from './components/ListSettings';
 import { InvitationBanner } from './components/InvitationBanner';
+import { UnassignedView } from './components/UnassignedView';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
 import { useTodoCounts } from './hooks/useTodoCounts';
@@ -21,7 +22,7 @@ import { useStorage } from './hooks/useStorage';
 import { useLists } from './hooks/useLists';
 import { useInvitations } from './hooks/useInvitations';
 
-type View = 'calendar' | 'all';
+type View = 'calendar' | 'all' | 'unassigned';
 
 function formatDateLabel(date: Date): string {
   if (isToday(date)) return 'Dzisiaj';
@@ -81,6 +82,14 @@ export default function App() {
 
   const handleDelete = async (id: string) => {
     await remove(id);
+    triggerRefresh();
+  };
+
+  const handleUnassign = async (id: string) => {
+    const todo = todos.find((t) => t.id === id);
+    if (!todo || !todo.date) return;
+    const monthFromDate = todo.date.slice(0, 7); // YYYY-MM
+    await storage.updateTodo({ ...todo, date: undefined, month: monthFromDate });
     triggerRefresh();
   };
 
@@ -196,6 +205,19 @@ export default function App() {
             </svg>
             Lista zadań
           </button>
+          <button
+            onClick={() => setView('unassigned')}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-all ${
+              view === 'unassigned'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Nieprzypisane
+          </button>
         </div>
       </div>
 
@@ -254,6 +276,7 @@ export default function App() {
                     onUpdate={handleUpdate}
                     onDelete={handleDelete}
                     onDeleteGroup={todo.recurrenceGroupId ? handleDeleteGroup : undefined}
+                    onUnassign={isCloud ? handleUnassign : undefined}
                   />
                 ))}
                 <AddTodo selectedDate={dateStr} onAdd={handleAdd} onAddRecurring={handleAddRecurring} />
@@ -272,6 +295,13 @@ export default function App() {
       {view === 'all' && (
         <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4">
           <AllTodosView refreshKey={refreshKey} onRefresh={triggerRefresh} storage={storage} listId={activeListId ?? undefined} />
+        </main>
+      )}
+
+      {/* Unassigned view */}
+      {view === 'unassigned' && (
+        <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4">
+          <UnassignedView storage={storage} listId={activeListId ?? undefined} refreshKey={refreshKey} onRefresh={triggerRefresh} />
         </main>
       )}
 

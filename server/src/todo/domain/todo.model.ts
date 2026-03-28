@@ -7,23 +7,25 @@ export class Todo {
   readonly id: string;
   readonly text: string;
   readonly completed: boolean;
-  readonly date: string;
+  readonly date: string | null;
   readonly time: string | null;
   readonly createdAt: number;
   readonly recurrenceGroupId: string | null;
   readonly userId: string | null;
   readonly listId: string | null;
+  readonly month: string | null;
 
   constructor(
     id: string,
     text: string,
     completed: boolean,
-    date: string,
+    date: string | null,
     time: string | null,
     createdAt: number,
     recurrenceGroupId: string | null,
     userId: string | null,
     listId: string | null,
+    month: string | null,
   ) {
     this.id = id;
     this.text = text;
@@ -34,6 +36,7 @@ export class Todo {
     this.recurrenceGroupId = recurrenceGroupId;
     this.userId = userId;
     this.listId = listId;
+    this.month = month;
   }
 
   static createFromDto(dto: CreateTodoDto, userId: string, listId: string): Todo {
@@ -41,12 +44,13 @@ export class Todo {
       randomUUID(),
       dto.text,
       false,
-      dto.date,
+      dto.date ?? null,
       dto.time ?? null,
       Date.now(),
       null,
       userId,
       listId,
+      dto.date ? null : (dto.month ?? null),
     );
   }
 
@@ -69,20 +73,25 @@ export class Todo {
       groupId,
       userId,
       listId,
+      null,
     );
   }
 
   update(dto: UpdateTodoDto): Todo {
+    const newDate = dto.date !== undefined ? dto.date : this.date;
+    const newMonth = dto.month !== undefined ? dto.month : (newDate ? null : this.month);
+
     return new Todo(
       this.id,
       dto.text ?? this.text,
       dto.completed ?? this.completed,
-      dto.date ?? this.date,
+      newDate,
       dto.time !== undefined ? dto.time : this.time,
       this.createdAt,
       this.recurrenceGroupId,
       this.userId,
       this.listId,
+      newMonth,
     );
   }
 
@@ -96,6 +105,7 @@ export class Todo {
       createdAt: this.createdAt,
       recurrenceGroupId: this.recurrenceGroupId,
       listId: this.listId,
+      month: this.month,
     };
   }
 }

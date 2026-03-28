@@ -4,11 +4,12 @@ export interface Todo {
   id: string;
   text: string;
   completed: boolean;
-  date: string; // YYYY-MM-DD
+  date?: string; // YYYY-MM-DD (null for unassigned todos)
   time?: string; // HH:mm
   createdAt: number;
   recurrenceGroupId?: string; // links all instances of a recurring todo
   listId?: string;
+  month?: string; // YYYY-MM (set on unassigned todos)
 }
 
 export interface RecurrenceConfig {

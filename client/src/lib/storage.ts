@@ -5,6 +5,7 @@ import * as api from './api';
 export interface TodoStorage {
   getTodosByDate(date: string, listId?: string): Promise<Todo[]>;
   getAllTodos(listId?: string): Promise<Todo[]>;
+  getUnassignedTodos(listId?: string): Promise<Todo[]>;
   addTodo(todo: Omit<Todo, 'id' | 'createdAt'> & { id?: string; createdAt?: number; listId?: string }): Promise<void>;
   updateTodo(todo: Todo): Promise<void>;
   deleteTodo(id: string): Promise<void>;
@@ -18,6 +19,7 @@ export type StorageMode = 'local' | 'cloud';
 const localStorage: TodoStorage = {
   getTodosByDate: db.getTodosByDate,
   getAllTodos: db.getAllTodos,
+  getUnassignedTodos: async () => [],
   addTodo: db.addTodo,
   updateTodo: db.updateTodo,
   deleteTodo: db.deleteTodo,
@@ -29,6 +31,7 @@ const localStorage: TodoStorage = {
 const cloudStorage: TodoStorage = {
   getTodosByDate: (date, listId) => api.getTodosByDate(date, listId!),
   getAllTodos: (listId) => api.getAllTodos(listId!),
+  getUnassignedTodos: (listId) => api.getUnassignedTodos(listId!),
   addTodo: async (todo) => { await api.addTodo({ ...todo, listId: todo.listId! }); },
   updateTodo: async (todo) => { await api.updateTodo(todo); },
   deleteTodo: api.deleteTodo,

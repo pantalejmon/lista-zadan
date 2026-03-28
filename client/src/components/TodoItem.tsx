@@ -7,9 +7,10 @@ interface TodoItemProps {
   onUpdate: (id: string, text: string, time?: string) => void;
   onDelete: (id: string) => void;
   onDeleteGroup?: (groupId: string) => void;
+  onUnassign?: (id: string) => void;
 }
 
-export function TodoItem({ todo, onToggle, onUpdate, onDelete, onDeleteGroup }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onUpdate, onDelete, onDeleteGroup, onUnassign }: TodoItemProps) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(todo.text);
   const [time, setTime] = useState(todo.time || '');
@@ -59,6 +60,17 @@ export function TodoItem({ todo, onToggle, onUpdate, onDelete, onDeleteGroup }: 
               className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
               Usuń czas
+            </button>
+          )}
+          {onUnassign && todo.date && (
+            <button
+              onClick={() => {
+                onUnassign(todo.id);
+                setEditing(false);
+              }}
+              className="text-xs text-amber-500 hover:text-amber-600 px-2 py-1"
+            >
+              Usuń datę
             </button>
           )}
           <div className="flex-1" />

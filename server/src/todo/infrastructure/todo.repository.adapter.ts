@@ -54,9 +54,19 @@ export class TodoRepositoryAdapter extends TodoRepositoryPort {
     const result = await this.repo
       .createQueryBuilder('todo')
       .select('DISTINCT todo.date', 'date')
-      .where('todo.listId = :listId', { listId })
+      .where('todo.listId = :listId AND todo.date IS NOT NULL', { listId })
       .orderBy('todo.date', 'ASC')
       .getRawMany<{ date: string }>();
     return result.map((r) => r.date);
+  }
+
+  async findUnassignedByList(listId: string): Promise<Todo[]> {
+    const entities = await this.repo
+      .createQueryBuilder('todo')
+      .where('todo.listId = :listId AND todo.date IS NULL', { listId })
+      .orderBy('todo.month', 'ASC')
+      .addOrderBy('todo.createdAt', 'ASC')
+      .getMany();
+    return entities.map((e) => e.toDomain());
   }
 }

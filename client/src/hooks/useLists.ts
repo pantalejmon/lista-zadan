@@ -2,26 +2,42 @@ import { useState, useEffect, useCallback } from 'react';
 import type { TodoList } from '../lib/types';
 import * as api from '../lib/api';
 
+const STORAGE_KEY = 'lista-zadan:activeListId';
+
 export function useLists(isCloud: boolean) {
   const [lists, setLists] = useState<TodoList[]>([]);
-  const [activeListId, setActiveListId] = useState<string | null>(null);
+  const [activeListId, setActiveListIdRaw] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const setActiveListId = useCallback((id: string | null) => {
+    setActiveListIdRaw(id);
+    if (id) {
+      localStorage.setItem(STORAGE_KEY, id);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     if (!isCloud) {
       setLists([]);
-      setActiveListId(null);
+      setActiveListIdRaw(null);
       setLoading(false);
       return;
     }
     const result = await api.getLists();
     setLists(result);
-    setActiveListId((prev) => {
-      if (prev && result.some((l) => l.id === prev)) {
-        return prev;
+    setActiveListIdRaw((prev) => {
+      const saved = prev ?? localStorage.getItem(STORAGE_KEY);
+      if (saved && result.some((l) => l.id === saved)) {
+        return saved;
       }
       const defaultList = result.find((l) => l.isDefault);
-      return defaultList?.id ?? result[0]?.id ?? null;
+      const id = defaultList?.id ?? result[0]?.id ?? null;
+      if (id) {
+        localStorage.setItem(STORAGE_KEY, id);
+      }
+      return id;
     });
     setLoading(false);
   }, [isCloud]);

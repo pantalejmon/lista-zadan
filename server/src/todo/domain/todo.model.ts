@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+import { CreateTodoDto } from '../web/dto/create-todo.dto';
 import { TodoResponse } from '../web/dto/todo.response';
 import { UpdateTodoDto } from '../web/dto/update-todo.dto';
 
@@ -28,6 +30,30 @@ export class Todo {
     this.recurrenceGroupId = recurrenceGroupId;
   }
 
+  static createFromDto(dto: CreateTodoDto): Todo {
+    return new Todo(
+      randomUUID(),
+      dto.text,
+      false,
+      dto.date,
+      dto.time ?? null,
+      Date.now(),
+      null,
+    );
+  }
+
+  static createRecurring(text: string, time: string | undefined, groupId: string, date: string, createdAt: number): Todo {
+    return new Todo(
+      randomUUID(),
+      text,
+      false,
+      date,
+      time ?? null,
+      createdAt,
+      groupId,
+    );
+  }
+
   update(dto: UpdateTodoDto): Todo {
     return new Todo(
       this.id,
@@ -41,14 +67,14 @@ export class Todo {
   }
 
   toResponse(): TodoResponse {
-    return new TodoResponse(
-      this.id,
-      this.text,
-      this.completed,
-      this.date,
-      this.time,
-      this.createdAt,
-      this.recurrenceGroupId,
-    );
+    return {
+      id: this.id,
+      text: this.text,
+      completed: this.completed,
+      date: this.date,
+      time: this.time,
+      createdAt: this.createdAt,
+      recurrenceGroupId: this.recurrenceGroupId,
+    };
   }
 }

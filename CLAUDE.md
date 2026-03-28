@@ -159,6 +159,12 @@ Web depends on domain. The module file wires it all together via NestJS DI (`pro
 - **`toResponse()` on domain models**: domain models have a `toResponse()` method returning the response DTO.
   Controllers and services call `model.toResponse()` instead of manually constructing response objects.
   Related entities are flattened to IDs (e.g. `listId` instead of nested `TodoList`).
+- **Named static factories over all-args constructors**: don't call `new Model(arg1, arg2, ..., arg7)` in
+  services — positional arguments are unreadable. Domain models expose static factory methods that describe
+  *what* is being created and *from what*: `Todo.createFromDto(dto)`, `Todo.createRecurring(dto, groupId, ...)`.
+  The raw constructor stays for internal use (entity `toDomain()`, `update()` returning new instance).
+- **Constructor injection (NestJS)**: NestJS uses constructor-based DI — there is no `inject()` function like
+  in Angular. Always inject dependencies via constructor parameters.
 - **Explicit null handling**: use nullish coalescing (`??`) and optional chaining (`?.`) instead of ternary
   null checks. For complex chains, prefer early returns over deep nesting.
 - **No barrel files**: don't create `index.ts` re-export files. Import directly from the source file.

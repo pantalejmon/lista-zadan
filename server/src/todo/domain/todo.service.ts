@@ -29,15 +29,7 @@ export class TodoService {
   }
 
   async create(dto: CreateTodoDto): Promise<TodoResponse> {
-    const todo = new Todo(
-      randomUUID(),
-      dto.text,
-      false,
-      dto.date,
-      dto.time ?? null,
-      Date.now(),
-      null,
-    );
+    const todo = Todo.createFromDto(dto);
     await this.repository.save(todo);
     return todo.toResponse();
   }
@@ -65,17 +57,8 @@ export class TodoService {
     const groupId = randomUUID();
     const now = Date.now();
 
-    const todos = dates.map(
-      (date) =>
-        new Todo(
-          randomUUID(),
-          dto.text,
-          false,
-          date,
-          dto.time ?? null,
-          now,
-          groupId,
-        ),
+    const todos = dates.map((date) =>
+      Todo.createRecurring(dto.text, dto.time, groupId, date, now),
     );
 
     await this.repository.saveMany(todos);

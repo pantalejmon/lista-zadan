@@ -94,18 +94,18 @@ export function ListSelector({ lists, activeList, onSelect, onCreateList, onOpen
 
           <div className="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
             {creating ? (
-              <div className="px-3 py-2 flex gap-2">
+              <div className="px-3 py-2 flex gap-2 min-w-0">
                 <input
                   ref={inputRef}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { handleCreate(); } }}
                   placeholder="Nazwa listy..."
-                  className="flex-1 text-sm px-2 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="min-w-0 flex-1 text-sm px-2 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
                 <button
                   onClick={handleCreate}
-                  className="text-xs font-medium px-2 py-1 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors"
+                  className="shrink-0 text-xs font-medium px-2 py-1 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors"
                 >
                   OK
                 </button>

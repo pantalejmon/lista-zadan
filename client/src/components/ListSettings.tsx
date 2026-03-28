@@ -15,6 +15,7 @@ export function ListSettings({ list, onClose, onUpdate, onDelete }: ListSettings
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<ListRole>('editor');
   const [loading, setLoading] = useState(true);
+  const [inviteSuccess, setInviteSuccess] = useState('');
 
   const loadMembers = useCallback(async () => {
     const result = await api.getListMembers(list.id);
@@ -37,7 +38,9 @@ export function ListSettings({ list, onClose, onUpdate, onDelete }: ListSettings
     const email = inviteEmail.trim();
     if (!email) return;
     await api.inviteToList(list.id, email, inviteRole);
+    setInviteSuccess(email);
     setInviteEmail('');
+    setTimeout(() => setInviteSuccess(''), 3000);
     await loadMembers();
   };
 
@@ -47,9 +50,9 @@ export function ListSettings({ list, onClose, onUpdate, onDelete }: ListSettings
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm animate-fadeIn overflow-y-auto" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md mx-4 p-5 space-y-4"
+        className="bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md sm:mx-4 p-5 space-y-4 max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -116,31 +119,38 @@ export function ListSettings({ list, onClose, onUpdate, onDelete }: ListSettings
         {/* Invite */}
         <div>
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Zaproś</label>
-          <div className="flex gap-2 mt-1">
+          <div className="mt-1 space-y-2">
             <input
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { handleInvite(); } }}
               placeholder="email@example.com"
-              className="flex-1 text-sm px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 placeholder-gray-400"
+              className="w-full text-sm px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 placeholder-gray-400"
             />
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as ListRole)}
-              className="text-xs px-2 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none"
-            >
-              <option value="editor">Edytor</option>
-              <option value="viewer">Podgląd</option>
-            </select>
-            <button
-              onClick={handleInvite}
-              disabled={!inviteEmail.trim()}
-              className="text-xs font-medium px-3 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition-colors disabled:opacity-50"
-            >
-              Zaproś
-            </button>
+            <div className="flex gap-2">
+              <select
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value as ListRole)}
+                className="text-xs px-2 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none"
+              >
+                <option value="editor">Edytor</option>
+                <option value="viewer">Podgląd</option>
+              </select>
+              <button
+                onClick={handleInvite}
+                disabled={!inviteEmail.trim()}
+                className="text-xs font-medium px-3 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition-colors disabled:opacity-50"
+              >
+                Zaproś
+              </button>
+            </div>
           </div>
+          {inviteSuccess && (
+            <p className="mt-2 text-xs text-emerald-500 animate-fadeIn">
+              Zaproszenie wysłane do {inviteSuccess}
+            </p>
+          )}
         </div>
 
         {/* Delete */}

@@ -21,4 +21,8 @@ export class CreateRecurringTodosDto {
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   dateTo!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  listId!: string;
 }

@@ -13,4 +13,8 @@ export class CreateTodoDto {
   @IsString()
   @Matches(/^\d{2}:\d{2}$/)
   time?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  listId!: string;
 }

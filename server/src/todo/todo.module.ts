@@ -1,14 +1,16 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
+import { SharingModule } from '../sharing/sharing.module';
 import { TodoEntity } from './infrastructure/todo.entity';
 import { TodoRepositoryPort } from './domain/todo.repository.port';
 import { TodoRepositoryAdapter } from './infrastructure/todo.repository.adapter';
 import { TodoService } from './domain/todo.service';
 import { TodoController } from './web/todo.controller';
+import { SharingService } from '../sharing/domain/sharing.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TodoEntity]), AuthModule],
+  imports: [TypeOrmModule.forFeature([TodoEntity]), AuthModule, SharingModule],
   controllers: [TodoController],
   providers: [
     {
@@ -17,8 +19,9 @@ import { TodoController } from './web/todo.controller';
     },
     {
       provide: TodoService,
-      useFactory: (repo: TodoRepositoryPort) => new TodoService(repo),
-      inject: [TodoRepositoryPort],
+      useFactory: (repo: TodoRepositoryPort, sharingService: SharingService) =>
+        new TodoService(repo, sharingService),
+      inject: [TodoRepositoryPort, SharingService],
     },
   ],
   exports: [TodoService],

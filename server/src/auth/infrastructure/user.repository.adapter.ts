@@ -24,6 +24,11 @@ export class UserRepositoryAdapter extends UserRepositoryPort {
     return entity?.toDomain() ?? null;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const entity = await this.repo.findOneBy({ email });
+    return entity?.toDomain() ?? null;
+  }
+
   async save(user: User): Promise<void> {
     await this.repo.save(UserEntity.fromDomain(user));
   }

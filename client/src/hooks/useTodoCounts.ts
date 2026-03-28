@@ -6,12 +6,12 @@ export interface DayCounts {
   [date: string]: { total: number; completed: number };
 }
 
-export function useTodoCounts(currentMonth: Date, refreshKey: number, storage: TodoStorage) {
+export function useTodoCounts(currentMonth: Date, refreshKey: number, storage: TodoStorage, listId?: string) {
   const [counts, setCounts] = useState<DayCounts>({});
 
   useEffect(() => {
     (async () => {
-      const allTodos = await storage.getAllTodos();
+      const allTodos = await storage.getAllTodos(listId);
       const start = startOfMonth(currentMonth);
       const end = endOfMonth(currentMonth);
       const days = eachDayOfInterval({ start, end });
@@ -29,7 +29,7 @@ export function useTodoCounts(currentMonth: Date, refreshKey: number, storage: T
       }
       setCounts(result);
     })();
-  }, [currentMonth, refreshKey, storage]);
+  }, [currentMonth, refreshKey, storage, listId]);
 
   return counts;
 }

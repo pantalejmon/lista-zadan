@@ -6,10 +6,11 @@ const MIGRATED_KEY = 'todos-migrated-to-cloud';
 
 interface MigrationBannerProps {
   storage: TodoStorage;
+  listId?: string;
   onMigrated: () => void;
 }
 
-export function MigrationBanner({ storage, onMigrated }: MigrationBannerProps) {
+export function MigrationBanner({ storage, listId, onMigrated }: MigrationBannerProps) {
   const [localCount, setLocalCount] = useState(0);
   const [visible, setVisible] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -35,7 +36,7 @@ export function MigrationBanner({ storage, onMigrated }: MigrationBannerProps) {
     try {
       const localTodos = await db.getAllTodos();
       for (const todo of localTodos) {
-        await storage.addTodo(todo);
+        await storage.addTodo({ ...todo, listId });
       }
       window.localStorage.setItem(MIGRATED_KEY, '1');
       setVisible(false);

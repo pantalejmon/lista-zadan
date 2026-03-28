@@ -6,12 +6,12 @@ function generateId(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function useTodos(date: string, storage: TodoStorage) {
+export function useTodos(date: string, storage: TodoStorage, listId?: string) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const items = await storage.getTodosByDate(date);
+    const items = await storage.getTodosByDate(date, listId);
     items.sort((a, b) => {
       if (a.time && b.time) return a.time.localeCompare(b.time);
       if (a.time) return -1;
@@ -20,7 +20,7 @@ export function useTodos(date: string, storage: TodoStorage) {
     });
     setTodos(items);
     setLoading(false);
-  }, [date, storage]);
+  }, [date, storage, listId]);
 
   useEffect(() => {
     setLoading(true);
@@ -36,19 +36,20 @@ export function useTodos(date: string, storage: TodoStorage) {
         date,
         time: time || undefined,
         createdAt: Date.now(),
+        listId,
       };
       await storage.addTodo(todo);
       await refresh();
     },
-    [date, storage, refresh]
+    [date, storage, refresh, listId]
   );
 
   const addRecurring = useCallback(
     async (text: string, time: string | undefined, config: RecurrenceConfig) => {
-      await storage.addRecurringTodos(text, time, config);
+      await storage.addRecurringTodos(text, time, config, listId);
       await refresh();
     },
-    [storage, refresh]
+    [storage, refresh, listId]
   );
 
   const toggle = useCallback(

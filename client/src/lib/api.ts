@@ -1,4 +1,4 @@
-import type { Todo, RecurrenceConfig } from './types';
+import type { Todo, RecurrenceConfig, TodoList, ListMember, ListInvitation, ListRole } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -18,18 +18,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return text ? JSON.parse(text) : (undefined as T);
 }
 
-export async function getTodosByDate(date: string): Promise<Todo[]> {
-  return request<Todo[]>(`/todos?date=${date}`);
+// --- Todos ---
+
+export async function getTodosByDate(date: string, listId: string): Promise<Todo[]> {
+  return request<Todo[]>(`/todos?date=${date}&listId=${listId}`);
 }
 
-export async function getAllTodos(): Promise<Todo[]> {
-  return request<Todo[]>('/todos');
+export async function getAllTodos(listId: string): Promise<Todo[]> {
+  return request<Todo[]>(`/todos?listId=${listId}`);
 }
 
-export async function addTodo(todo: Omit<Todo, 'id' | 'createdAt'>): Promise<Todo> {
+export async function addTodo(todo: Omit<Todo, 'id' | 'createdAt'> & { listId: string }): Promise<Todo> {
   return request<Todo>('/todos', {
     method: 'POST',
-    body: JSON.stringify({ text: todo.text, date: todo.date, time: todo.time }),
+    body: JSON.stringify({ text: todo.text, date: todo.date, time: todo.time, listId: todo.listId }),
   });
 }
 
@@ -57,6 +59,7 @@ export async function addRecurringTodos(
   text: string,
   time: string | undefined,
   config: RecurrenceConfig,
+  listId: string,
 ): Promise<Todo[]> {
   return request<Todo[]>('/todos/recurring', {
     method: 'POST',
@@ -66,11 +69,65 @@ export async function addRecurringTodos(
       type: config.type,
       dateFrom: config.dateFrom,
       dateTo: config.dateTo,
+      listId,
     }),
   });
 }
 
-export async function getDatesWithTodos(): Promise<Set<string>> {
-  const dates = await request<string[]>('/todos/dates-with-todos');
+export async function getDatesWithTodos(listId: string): Promise<Set<string>> {
+  const dates = await request<string[]>(`/todos/dates-with-todos?listId=${listId}`);
   return new Set(dates);
+}
+
+// --- Lists ---
+
+export async function getLists(): Promise<TodoList[]> {
+  return request<TodoList[]>('/lists');
+}
+
+export async function createList(name: string): Promise<TodoList> {
+  return request<TodoList>('/lists', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function updateList(listId: string, name: string): Promise<TodoList> {
+  return request<TodoList>(`/lists/${listId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteList(listId: string): Promise<void> {
+  return request(`/lists/${listId}`, { method: 'DELETE' });
+}
+
+export async function getListMembers(listId: string): Promise<ListMember[]> {
+  return request<ListMember[]>(`/lists/${listId}/members`);
+}
+
+export async function removeListMember(listId: string, memberId: string): Promise<void> {
+  return request(`/lists/${listId}/members/${memberId}`, { method: 'DELETE' });
+}
+
+export async function inviteToList(listId: string, email: string, role: ListRole): Promise<ListInvitation> {
+  return request<ListInvitation>(`/lists/${listId}/invitations`, {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}
+
+// --- Invitations ---
+
+export async function getPendingInvitations(): Promise<ListInvitation[]> {
+  return request<ListInvitation[]>('/invitations/pending');
+}
+
+export async function acceptInvitation(id: string): Promise<void> {
+  return request(`/invitations/${id}/accept`, { method: 'POST' });
+}
+
+export async function declineInvitation(id: string): Promise<void> {
+  return request(`/invitations/${id}/decline`, { method: 'POST' });
 }

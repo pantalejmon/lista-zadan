@@ -6,4 +6,5 @@ export interface TodoResponse {
   readonly time: string | null;
   readonly createdAt: number;
   readonly recurrenceGroupId: string | null;
+  readonly listId: string | null;
 }

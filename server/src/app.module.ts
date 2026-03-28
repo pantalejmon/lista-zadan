@@ -8,6 +8,8 @@ import { SharingModule } from './sharing/sharing.module';
 import { CreateTodoTable1711612800000 } from './migration/1711612800000-CreateTodoTable';
 import { CreateUserTable1711612900000 } from './migration/1711612900000-CreateUserTable';
 import { AddUserIdToTodo1711613000000 } from './migration/1711613000000-AddUserIdToTodo';
+import { CreateSharingTables1711613100000 } from './migration/1711613100000-CreateSharingTables';
+import { AddListIdToTodo1711613200000 } from './migration/1711613200000-AddListIdToTodo';
 import configuration from './config/configuration';
 
 @Module({
@@ -28,6 +30,8 @@ import configuration from './config/configuration';
           CreateTodoTable1711612800000,
           CreateUserTable1711612900000,
           AddUserIdToTodo1711613000000,
+          CreateSharingTables1711613100000,
+          AddListIdToTodo1711613200000,
         ],
       }),
     }),

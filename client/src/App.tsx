@@ -10,11 +10,16 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { UserMenu } from './components/UserMenu';
 import { ModeIndicator } from './components/ModeIndicator';
 import { MigrationBanner } from './components/MigrationBanner';
+import { ListSelector } from './components/ListSelector';
+import { ListSettings } from './components/ListSettings';
+import { InvitationBanner } from './components/InvitationBanner';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
 import { useTodoCounts } from './hooks/useTodoCounts';
 import { useAuth } from './hooks/useAuth';
 import { useStorage } from './hooks/useStorage';
+import { useLists } from './hooks/useLists';
+import { useInvitations } from './hooks/useInvitations';
 
 type View = 'calendar' | 'all';
 
@@ -28,15 +33,22 @@ function formatDateLabel(date: Date): string {
 export default function App() {
   const { user, loading: authLoading, login, logout } = useAuth();
   const { storage, mode } = useStorage(user);
+  const isCloud = mode === 'cloud';
+  const {
+    lists, activeList, activeListId, setActiveListId,
+    createList, updateList, deleteList, refresh: refreshLists,
+  } = useLists(isCloud);
+  const { invitations, accept: acceptInvite, decline: declineInvite } = useInvitations(isCloud);
   const [view, setView] = useState<View>('calendar');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [refreshKey, setRefreshKey] = useState(0);
+  const [settingsListId, setSettingsListId] = useState<string | null>(null);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
-  const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup } = useTodos(dateStr, storage);
+  const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup } = useTodos(dateStr, storage, activeListId ?? undefined);
   const { dark, toggle: toggleDark } = useDark();
-  const counts = useTodoCounts(currentMonth, refreshKey, storage);
+  const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -85,8 +97,25 @@ export default function App() {
     useCallback(() => handleSelectDate(subDays(selectedDate, 1)), [selectedDate, handleSelectDate]),
   );
 
+  const handleAcceptInvite = async (id: string) => {
+    await acceptInvite(id);
+    await refreshLists();
+    triggerRefresh();
+  };
+
+  const handleDeclineInvite = async (id: string) => {
+    await declineInvite(id);
+  };
+
+  const handleDeleteList = async (listId: string) => {
+    await deleteList(listId);
+    triggerRefresh();
+  };
+
   const completedCount = todos.filter((t) => t.completed).length;
   const totalCount = todos.length;
+
+  const settingsList = settingsListId ? lists.find((l) => l.id === settingsListId) : null;
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -98,7 +127,17 @@ export default function App() {
               <rect width="100" height="100" rx="20" fill="currentColor" />
               <path d="M25 52l15 15 35-35" stroke="white" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <h1 className="text-base font-bold">Lista Zadań</h1>
+            {isCloud ? (
+              <ListSelector
+                lists={lists}
+                activeList={activeList}
+                onSelect={setActiveListId}
+                onCreateList={createList}
+                onOpenSettings={setSettingsListId}
+              />
+            ) : (
+              <h1 className="text-base font-bold">Lista Zadań</h1>
+            )}
             <ModeIndicator mode={mode} />
           </div>
           <div className="flex items-center gap-2">
@@ -117,7 +156,16 @@ export default function App() {
       </header>
 
       {/* Migration banner */}
-      {user && <MigrationBanner storage={storage} onMigrated={triggerRefresh} />}
+      {user && <MigrationBanner storage={storage} listId={activeListId ?? undefined} onMigrated={triggerRefresh} />}
+
+      {/* Invitation banner */}
+      {user && (
+        <InvitationBanner
+          invitations={invitations}
+          onAccept={handleAcceptInvite}
+          onDecline={handleDeclineInvite}
+        />
+      )}
 
       {/* Tab bar */}
       <div className="sticky top-[53px] z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
@@ -223,8 +271,18 @@ export default function App() {
       {/* All todos view */}
       {view === 'all' && (
         <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4">
-          <AllTodosView refreshKey={refreshKey} onRefresh={triggerRefresh} storage={storage} />
+          <AllTodosView refreshKey={refreshKey} onRefresh={triggerRefresh} storage={storage} listId={activeListId ?? undefined} />
         </main>
+      )}
+
+      {/* List settings modal */}
+      {settingsList && (
+        <ListSettings
+          list={settingsList}
+          onClose={() => setSettingsListId(null)}
+          onUpdate={(listId, name) => { updateList(listId, name); }}
+          onDelete={handleDeleteList}
+        />
       )}
     </div>
   );

@@ -20,9 +20,10 @@ interface AllTodosViewProps {
   refreshKey: number;
   onRefresh: () => void;
   storage: TodoStorage;
+  listId?: string;
 }
 
-export function AllTodosView({ refreshKey, onRefresh, storage }: AllTodosViewProps) {
+export function AllTodosView({ refreshKey, onRefresh, storage, listId }: AllTodosViewProps) {
   const [allTodos, setAllTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('future');
@@ -30,10 +31,10 @@ export function AllTodosView({ refreshKey, onRefresh, storage }: AllTodosViewPro
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
-    const todos = await storage.getAllTodos();
+    const todos = await storage.getAllTodos(listId);
     setAllTodos(todos);
     setLoading(false);
-  }, [storage]);
+  }, [storage, listId]);
 
   useEffect(() => {
     setLoading(true);

@@ -9,6 +9,7 @@ import {
   Query,
   Req,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { TodoService } from '../domain/todo.service';
@@ -25,12 +26,19 @@ export class TodoController {
   constructor(private readonly todoService: TodoService) {}
 
   @Get()
-  getAll(@Req() req: Request, @Query('date') date?: string): Promise<TodoResponse[]> {
+  getAll(
+    @Req() req: Request,
+    @Query('date') date?: string,
+    @Query('listId') listId?: string,
+  ): Promise<TodoResponse[]> {
     const userId = (req.user as User).id;
-    if (date) {
-      return this.todoService.getByDate(date, userId);
+    if (!listId) {
+      throw new BadRequestException('listId query parameter is required');
     }
-    return this.todoService.getAll(userId);
+    if (date) {
+      return this.todoService.getByDate(date, listId, userId);
+    }
+    return this.todoService.getAll(listId, userId);
   }
 
   @Post()
@@ -67,8 +75,11 @@ export class TodoController {
   }
 
   @Get('dates-with-todos')
-  getDatesWithTodos(@Req() req: Request): Promise<string[]> {
+  getDatesWithTodos(@Req() req: Request, @Query('listId') listId?: string): Promise<string[]> {
     const userId = (req.user as User).id;
-    return this.todoService.getDatesWithTodos(userId);
+    if (!listId) {
+      throw new BadRequestException('listId query parameter is required');
+    }
+    return this.todoService.getDatesWithTodos(listId, userId);
   }
 }

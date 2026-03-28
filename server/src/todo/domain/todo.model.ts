@@ -12,6 +12,7 @@ export class Todo {
   readonly createdAt: number;
   readonly recurrenceGroupId: string | null;
   readonly userId: string | null;
+  readonly listId: string | null;
 
   constructor(
     id: string,
@@ -22,6 +23,7 @@ export class Todo {
     createdAt: number,
     recurrenceGroupId: string | null,
     userId: string | null,
+    listId: string | null,
   ) {
     this.id = id;
     this.text = text;
@@ -31,9 +33,10 @@ export class Todo {
     this.createdAt = createdAt;
     this.recurrenceGroupId = recurrenceGroupId;
     this.userId = userId;
+    this.listId = listId;
   }
 
-  static createFromDto(dto: CreateTodoDto, userId: string | null): Todo {
+  static createFromDto(dto: CreateTodoDto, userId: string, listId: string): Todo {
     return new Todo(
       randomUUID(),
       dto.text,
@@ -43,6 +46,7 @@ export class Todo {
       Date.now(),
       null,
       userId,
+      listId,
     );
   }
 
@@ -52,7 +56,8 @@ export class Todo {
     groupId: string,
     date: string,
     createdAt: number,
-    userId: string | null,
+    userId: string,
+    listId: string,
   ): Todo {
     return new Todo(
       randomUUID(),
@@ -63,6 +68,7 @@ export class Todo {
       createdAt,
       groupId,
       userId,
+      listId,
     );
   }
 
@@ -76,6 +82,7 @@ export class Todo {
       this.createdAt,
       this.recurrenceGroupId,
       this.userId,
+      this.listId,
     );
   }
 
@@ -88,6 +95,7 @@ export class Todo {
       time: this.time,
       createdAt: this.createdAt,
       recurrenceGroupId: this.recurrenceGroupId,
+      listId: this.listId,
     };
   }
 }

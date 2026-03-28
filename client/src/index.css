@@ -52,3 +52,12 @@ body {
 .animate-slide-down {
   animation: slideDown 0.25s ease-out;
 }
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.25s ease-out;
+}

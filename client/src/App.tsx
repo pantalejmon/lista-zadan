@@ -6,15 +6,13 @@ import { Calendar } from './components/Calendar';
 import { TodoItem } from './components/TodoItem';
 import { AddTodo } from './components/AddTodo';
 import { AllTodosView } from './components/AllTodosView';
-import { ThemeToggle } from './components/ThemeToggle';
-import { UserMenu } from './components/UserMenu';
-import { ModeIndicator } from './components/ModeIndicator';
 import { MigrationBanner } from './components/MigrationBanner';
 import { ListSelector } from './components/ListSelector';
 import { ListSettings } from './components/ListSettings';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
-import { ConnectionIndicator } from './components/ConnectionIndicator';
+import { SideMenu } from './components/SideMenu';
+import { ThemeToggle } from './components/ThemeToggle';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
 import { useTodoCounts } from './hooks/useTodoCounts';
@@ -48,6 +46,7 @@ export default function App() {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [refreshKey, setRefreshKey] = useState(0);
   const [settingsListId, setSettingsListId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
@@ -151,8 +150,17 @@ export default function App() {
       {/* Top bar */}
       <header className="sticky top-0 z-20 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <svg className="w-6 h-6 text-primary-500" viewBox="0 0 100 100" fill="none">
+          <div className="flex items-center gap-1 min-w-0">
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="p-2 -ml-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
+              aria-label="Menu"
+            >
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <svg className="w-6 h-6 text-primary-500 shrink-0" viewBox="0 0 100 100" fill="none">
               <rect width="100" height="100" rx="20" fill="currentColor" />
               <path d="M25 52l15 15 35-35" stroke="white" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -165,27 +173,33 @@ export default function App() {
                 onOpenSettings={setSettingsListId}
               />
             ) : (
-              <h1 className="text-base font-bold">Lista Zadań</h1>
-            )}
-            <ModeIndicator mode={mode} />
-            {isCloud && (
-              <ConnectionIndicator wsStatus={wsStatus} syncStatus={syncStatus} pendingCount={pendingCount} />
+              <h1 className="text-sm font-semibold truncate">Lista Zadań</h1>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {!authLoading && !user && (
-              <button
-                onClick={login}
-                className="text-xs font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors px-2 py-1 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10"
-              >
-                Zaloguj
-              </button>
-            )}
-            {user && <UserMenu user={user} onLogout={logout} />}
-            <ThemeToggle dark={dark} onToggle={toggleDark} />
-          </div>
+          <ThemeToggle dark={dark} onToggle={toggleDark} />
         </div>
       </header>
+
+      {/* Side menu */}
+      <SideMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        user={user}
+        authLoading={authLoading}
+        onLogin={login}
+        onLogout={logout}
+        dark={dark}
+        onToggleDark={toggleDark}
+        wsStatus={wsStatus}
+        syncStatus={syncStatus}
+        pendingCount={pendingCount}
+        isCloud={isCloud}
+        lists={lists}
+        activeList={activeList}
+        onSelectList={setActiveListId}
+        onCreateList={createList}
+        onOpenSettings={setSettingsListId}
+      />
 
       {/* Migration banner */}
       {user && <MigrationBanner storage={storage} listId={activeListId ?? undefined} onMigrated={triggerRefresh} />}

@@ -13,6 +13,7 @@ import { TodoRepositoryPort } from './todo.repository.port';
 import { CreateTodoDto } from '../web/dto/create-todo.dto';
 import { UpdateTodoDto } from '../web/dto/update-todo.dto';
 import { CreateRecurringTodosDto } from '../web/dto/create-recurring-todos.dto';
+import { SyncOperationDto } from '../web/dto/sync-todos.dto';
 import { TodoResponse } from '../web/dto/todo.response';
 import { SharingService } from '../../sharing/domain/sharing.service';
 
@@ -48,6 +49,10 @@ export class TodoService {
     return updated.toResponse();
   }
 
+  async findById(id: string): Promise<Todo | null> {
+    return this.repository.findById(id);
+  }
+
   async delete(id: string, userId: string): Promise<void> {
     await this.findTodoWithPermission(id, userId, ['owner', 'editor']);
     await this.repository.delete(id);
@@ -67,8 +72,91 @@ export class TodoService {
     return todos.map((t) => t.toResponse());
   }
 
+  async getListIdForRecurrenceGroup(groupId: string, userId: string): Promise<string | null> {
+    const todos = await this.repository.findByRecurrenceGroupId(groupId);
+    if (todos.length === 0) {
+      return null;
+    }
+    const listId = todos[0].listId;
+    if (listId) {
+      await this.sharingService.assertPermission(listId, userId, ['owner', 'editor']);
+    }
+    return listId;
+  }
+
   async deleteRecurrenceGroup(groupId: string): Promise<void> {
     await this.repository.deleteByRecurrenceGroupId(groupId);
+  }
+
+  async syncOperations(operations: SyncOperationDto[], userId: string): Promise<TodoResponse[]> {
+    const results: TodoResponse[] = [];
+
+    for (const op of operations) {
+      const listId = op.todo.listId;
+      await this.sharingService.assertPermission(listId, userId, ['owner', 'editor']);
+
+      switch (op.type) {
+        case 'create': {
+          const existing = await this.repository.findById(op.todo.id);
+          if (!existing) {
+            const todo = new Todo(
+              op.todo.id,
+              op.todo.text,
+              op.todo.completed,
+              op.todo.date ?? null,
+              op.todo.time ?? null,
+              op.todo.createdAt,
+              op.todo.recurrenceGroupId ?? null,
+              userId,
+              listId,
+              op.todo.month ?? null,
+              op.todo.updatedAt ?? op.timestamp,
+            );
+            await this.repository.save(todo);
+            results.push(todo.toResponse());
+          } else {
+            results.push(existing.toResponse());
+          }
+          break;
+        }
+        case 'update': {
+          const existing = await this.repository.findById(op.todo.id);
+          if (existing) {
+            const clientUpdatedAt = op.todo.updatedAt ?? op.timestamp;
+            if (clientUpdatedAt >= existing.updatedAt) {
+              const updated = new Todo(
+                existing.id,
+                op.todo.text,
+                op.todo.completed,
+                op.todo.date ?? null,
+                op.todo.time !== undefined ? op.todo.time : existing.time,
+                existing.createdAt,
+                existing.recurrenceGroupId,
+                existing.userId,
+                existing.listId,
+                op.todo.month ?? null,
+                clientUpdatedAt,
+              );
+              await this.repository.update(updated);
+              results.push(updated.toResponse());
+            } else {
+              // Server version is newer — return server state
+              results.push(existing.toResponse());
+            }
+          }
+          break;
+        }
+        case 'delete': {
+          const existing = await this.repository.findById(op.todo.id);
+          if (existing) {
+            await this.repository.delete(op.todo.id);
+          }
+          break;
+        }
+      }
+    }
+
+    return results;
   }
 
   async getUnassigned(listId: string, userId: string): Promise<TodoResponse[]> {

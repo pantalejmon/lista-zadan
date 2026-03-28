@@ -14,6 +14,7 @@ import { ListSelector } from './components/ListSelector';
 import { ListSettings } from './components/ListSettings';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
+import { ConnectionIndicator } from './components/ConnectionIndicator';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
 import { useTodoCounts } from './hooks/useTodoCounts';
@@ -21,6 +22,8 @@ import { useAuth } from './hooks/useAuth';
 import { useStorage } from './hooks/useStorage';
 import { useLists } from './hooks/useLists';
 import { useInvitations } from './hooks/useInvitations';
+import { useWebSocket } from './hooks/useWebSocket';
+import { useOfflineSync } from './hooks/useOfflineSync';
 
 type View = 'calendar' | 'all' | 'unassigned';
 
@@ -54,6 +57,22 @@ export default function App() {
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
   }, []);
+
+  const handleWsTodoChange = useCallback(() => {
+    refresh();
+    triggerRefresh();
+  }, [refresh, triggerRefresh]);
+
+  const { status: wsStatus } = useWebSocket({
+    enabled: isCloud,
+    listId: activeListId ?? undefined,
+    onTodoChange: handleWsTodoChange,
+  });
+
+  const { syncStatus, pendingCount } = useOfflineSync({
+    enabled: isCloud,
+    onSynced: handleWsTodoChange,
+  });
 
   const handleAdd = async (text: string, time?: string) => {
     await add(text, time);
@@ -149,6 +168,9 @@ export default function App() {
               <h1 className="text-base font-bold">Lista Zadań</h1>
             )}
             <ModeIndicator mode={mode} />
+            {isCloud && (
+              <ConnectionIndicator wsStatus={wsStatus} syncStatus={syncStatus} pendingCount={pendingCount} />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {!authLoading && !user && (

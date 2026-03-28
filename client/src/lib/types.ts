@@ -10,6 +10,7 @@ export interface Todo {
   recurrenceGroupId?: string; // links all instances of a recurring todo
   listId?: string;
   month?: string; // YYYY-MM (set on unassigned todos)
+  updatedAt?: number;
 }
 
 export interface RecurrenceConfig {

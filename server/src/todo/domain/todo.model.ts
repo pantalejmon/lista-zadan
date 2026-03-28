@@ -14,6 +14,7 @@ export class Todo {
   readonly userId: string | null;
   readonly listId: string | null;
   readonly month: string | null;
+  readonly updatedAt: number;
 
   constructor(
     id: string,
@@ -26,6 +27,7 @@ export class Todo {
     userId: string | null,
     listId: string | null,
     month: string | null,
+    updatedAt: number,
   ) {
     this.id = id;
     this.text = text;
@@ -37,20 +39,23 @@ export class Todo {
     this.userId = userId;
     this.listId = listId;
     this.month = month;
+    this.updatedAt = updatedAt;
   }
 
   static createFromDto(dto: CreateTodoDto, userId: string, listId: string): Todo {
+    const now = Date.now();
     return new Todo(
       randomUUID(),
       dto.text,
       false,
       dto.date ?? null,
       dto.time ?? null,
-      Date.now(),
+      now,
       null,
       userId,
       listId,
       dto.date ? null : (dto.month ?? null),
+      now,
     );
   }
 
@@ -74,6 +79,7 @@ export class Todo {
       userId,
       listId,
       null,
+      createdAt,
     );
   }
 
@@ -92,6 +98,7 @@ export class Todo {
       this.userId,
       this.listId,
       newMonth,
+      Date.now(),
     );
   }
 
@@ -106,6 +113,7 @@ export class Todo {
       recurrenceGroupId: this.recurrenceGroupId,
       listId: this.listId,
       month: this.month,
+      updatedAt: this.updatedAt,
     };
   }
 }

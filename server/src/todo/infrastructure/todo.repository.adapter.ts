@@ -46,6 +46,11 @@ export class TodoRepositoryAdapter extends TodoRepositoryPort {
     await this.repo.delete(id);
   }
 
+  async findByRecurrenceGroupId(groupId: string): Promise<Todo[]> {
+    const entities = await this.repo.findBy({ recurrenceGroupId: groupId });
+    return entities.map((e) => e.toDomain());
+  }
+
   async deleteByRecurrenceGroupId(groupId: string): Promise<void> {
     await this.repo.delete({ recurrenceGroupId: groupId });
   }

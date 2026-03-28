@@ -79,6 +79,30 @@ export async function addRecurringTodos(
   });
 }
 
+export interface SyncOperation {
+  type: string;
+  todo: {
+    id: string;
+    text: string;
+    completed: boolean;
+    date?: string | null;
+    time?: string | null;
+    createdAt: number;
+    updatedAt?: number;
+    recurrenceGroupId?: string | null;
+    month?: string | null;
+    listId: string;
+  };
+  timestamp: number;
+}
+
+export async function syncTodos(operations: SyncOperation[]): Promise<Todo[]> {
+  return request<Todo[]>('/todos/sync', {
+    method: 'POST',
+    body: JSON.stringify({ operations }),
+  });
+}
+
 export async function getDatesWithTodos(listId: string): Promise<Set<string>> {
   const dates = await request<string[]>(`/todos/dates-with-todos?listId=${listId}`);
   return new Set(dates);

@@ -33,6 +33,9 @@ export class TodoEntity {
   @Column('varchar', { nullable: true })
   month!: string | null;
 
+  @Column('bigint', { nullable: true })
+  updatedAt!: number | null;
+
   toDomain(): Todo {
     return new Todo(
       this.id,
@@ -45,6 +48,7 @@ export class TodoEntity {
       this.userId,
       this.listId,
       this.month,
+      Number(this.updatedAt ?? this.createdAt),
     );
   }
 
@@ -60,6 +64,7 @@ export class TodoEntity {
     entity.userId = todo.userId;
     entity.listId = todo.listId;
     entity.month = todo.month;
+    entity.updatedAt = todo.updatedAt;
     return entity;
   }
 }

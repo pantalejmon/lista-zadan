@@ -8,4 +8,5 @@ export interface TodoResponse {
   readonly recurrenceGroupId: string | null;
   readonly listId: string | null;
   readonly month: string | null;
+  readonly updatedAt: number;
 }

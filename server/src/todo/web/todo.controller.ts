@@ -16,14 +16,19 @@ import { TodoService } from '../domain/todo.service';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
 import { CreateRecurringTodosDto } from './dto/create-recurring-todos.dto';
+import { SyncTodosDto } from './dto/sync-todos.dto';
 import { TodoResponse } from './dto/todo.response';
 import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
 import { User } from '../../auth/domain/user.model';
+import { TodosGateway } from './todos.gateway';
 
 @Controller('todos')
 @UseGuards(JwtAuthGuard)
 export class TodoController {
-  constructor(private readonly todoService: TodoService) {}
+  constructor(
+    private readonly todoService: TodoService,
+    private readonly todosGateway: TodosGateway,
+  ) {}
 
   @Get()
   getAll(
@@ -42,36 +47,62 @@ export class TodoController {
   }
 
   @Post()
-  create(@Req() req: Request, @Body() dto: CreateTodoDto): Promise<TodoResponse> {
+  async create(@Req() req: Request, @Body() dto: CreateTodoDto): Promise<TodoResponse> {
     const userId = (req.user as User).id;
-    return this.todoService.create(dto, userId);
+    const todo = await this.todoService.create(dto, userId);
+    this.todosGateway.notifyTodoCreated(dto.listId, todo);
+    return todo;
   }
 
   @Put(':id')
-  update(
+  async update(
     @Req() req: Request,
     @Param('id') id: string,
     @Body() dto: UpdateTodoDto,
   ): Promise<TodoResponse> {
     const userId = (req.user as User).id;
-    return this.todoService.update(id, dto, userId);
+    const todo = await this.todoService.update(id, dto, userId);
+    if (todo.listId) {
+      this.todosGateway.notifyTodoUpdated(todo.listId, todo);
+    }
+    return todo;
   }
 
   @Delete(':id')
-  delete(@Req() req: Request, @Param('id') id: string): Promise<void> {
+  async delete(@Req() req: Request, @Param('id') id: string): Promise<void> {
     const userId = (req.user as User).id;
-    return this.todoService.delete(id, userId);
+    const todo = await this.todoService.findById(id);
+    await this.todoService.delete(id, userId);
+    if (todo?.listId) {
+      this.todosGateway.notifyTodoDeleted(todo.listId, id);
+    }
   }
 
   @Post('recurring')
-  createRecurring(@Req() req: Request, @Body() dto: CreateRecurringTodosDto): Promise<TodoResponse[]> {
+  async createRecurring(@Req() req: Request, @Body() dto: CreateRecurringTodosDto): Promise<TodoResponse[]> {
     const userId = (req.user as User).id;
-    return this.todoService.createRecurring(dto, userId);
+    const todos = await this.todoService.createRecurring(dto, userId);
+    this.todosGateway.notifyRecurrenceCreated(dto.listId, todos);
+    return todos;
   }
 
   @Delete('recurrence-group/:groupId')
-  deleteRecurrenceGroup(@Param('groupId') groupId: string): Promise<void> {
-    return this.todoService.deleteRecurrenceGroup(groupId);
+  async deleteRecurrenceGroup(
+    @Req() req: Request,
+    @Param('groupId') groupId: string,
+  ): Promise<void> {
+    const userId = (req.user as User).id;
+    const listId = await this.todoService.getListIdForRecurrenceGroup(groupId, userId);
+    await this.todoService.deleteRecurrenceGroup(groupId);
+    if (listId) {
+      this.todosGateway.notifyRecurrenceDeleted(listId, groupId);
+    }
+  }
+
+  @Post('sync')
+  async sync(@Req() req: Request, @Body() dto: SyncTodosDto): Promise<TodoResponse[]> {
+    const userId = (req.user as User).id;
+    return this.todoService.syncOperations(dto.operations, userId);
   }
 
   @Get('unassigned')

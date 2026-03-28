@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Todo, RecurrenceConfig } from '../lib/types';
-import * as db from '../lib/db';
+import type { TodoStorage } from '../lib/storage';
 
 function generateId(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function useTodos(date: string) {
+export function useTodos(date: string, storage: TodoStorage) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const items = await db.getTodosByDate(date);
+    const items = await storage.getTodosByDate(date);
     items.sort((a, b) => {
       if (a.time && b.time) return a.time.localeCompare(b.time);
       if (a.time) return -1;
@@ -20,7 +20,7 @@ export function useTodos(date: string) {
     });
     setTodos(items);
     setLoading(false);
-  }, [date]);
+  }, [date, storage]);
 
   useEffect(() => {
     setLoading(true);
@@ -37,54 +37,54 @@ export function useTodos(date: string) {
         time: time || undefined,
         createdAt: Date.now(),
       };
-      await db.addTodo(todo);
+      await storage.addTodo(todo);
       await refresh();
     },
-    [date, refresh]
+    [date, storage, refresh]
   );
 
   const addRecurring = useCallback(
     async (text: string, time: string | undefined, config: RecurrenceConfig) => {
-      await db.addRecurringTodos(text, time, config);
+      await storage.addRecurringTodos(text, time, config);
       await refresh();
     },
-    [refresh]
+    [storage, refresh]
   );
 
   const toggle = useCallback(
     async (id: string) => {
       const todo = todos.find((t) => t.id === id);
       if (!todo) return;
-      await db.updateTodo({ ...todo, completed: !todo.completed });
+      await storage.updateTodo({ ...todo, completed: !todo.completed });
       await refresh();
     },
-    [todos, refresh]
+    [todos, storage, refresh]
   );
 
   const update = useCallback(
     async (id: string, text: string, time?: string) => {
       const todo = todos.find((t) => t.id === id);
       if (!todo) return;
-      await db.updateTodo({ ...todo, text, time: time || undefined });
+      await storage.updateTodo({ ...todo, text, time: time || undefined });
       await refresh();
     },
-    [todos, refresh]
+    [todos, storage, refresh]
   );
 
   const remove = useCallback(
     async (id: string) => {
-      await db.deleteTodo(id);
+      await storage.deleteTodo(id);
       await refresh();
     },
-    [refresh]
+    [storage, refresh]
   );
 
   const removeRecurrenceGroup = useCallback(
     async (groupId: string) => {
-      await db.deleteRecurrenceGroup(groupId);
+      await storage.deleteRecurrenceGroup(groupId);
       await refresh();
     },
-    [refresh]
+    [storage, refresh]
   );
 
   return { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup, refresh };

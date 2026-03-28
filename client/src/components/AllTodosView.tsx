@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import type { Todo } from '../lib/types';
-import * as db from '../lib/db';
+import type { TodoStorage } from '../lib/storage';
 import { TodoItem } from './TodoItem';
 
 type TimeFilter = 'future' | 'past' | 'all';
@@ -19,9 +19,10 @@ function formatGroupLabel(dateStr: string): string {
 interface AllTodosViewProps {
   refreshKey: number;
   onRefresh: () => void;
+  storage: TodoStorage;
 }
 
-export function AllTodosView({ refreshKey, onRefresh }: AllTodosViewProps) {
+export function AllTodosView({ refreshKey, onRefresh, storage }: AllTodosViewProps) {
   const [allTodos, setAllTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('future');
@@ -29,10 +30,10 @@ export function AllTodosView({ refreshKey, onRefresh }: AllTodosViewProps) {
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
-    const todos = await db.getAllTodos();
+    const todos = await storage.getAllTodos();
     setAllTodos(todos);
     setLoading(false);
-  }, []);
+  }, [storage]);
 
   useEffect(() => {
     setLoading(true);
@@ -95,7 +96,7 @@ export function AllTodosView({ refreshKey, onRefresh }: AllTodosViewProps) {
   const handleToggle = async (id: string) => {
     const todo = allTodos.find((t) => t.id === id);
     if (!todo) return;
-    await db.updateTodo({ ...todo, completed: !todo.completed });
+    await storage.updateTodo({ ...todo, completed: !todo.completed });
     await load();
     onRefresh();
   };
@@ -103,19 +104,19 @@ export function AllTodosView({ refreshKey, onRefresh }: AllTodosViewProps) {
   const handleUpdate = async (id: string, text: string, time?: string) => {
     const todo = allTodos.find((t) => t.id === id);
     if (!todo) return;
-    await db.updateTodo({ ...todo, text, time: time || undefined });
+    await storage.updateTodo({ ...todo, text, time: time || undefined });
     await load();
     onRefresh();
   };
 
   const handleDelete = async (id: string) => {
-    await db.deleteTodo(id);
+    await storage.deleteTodo(id);
     await load();
     onRefresh();
   };
 
   const handleDeleteGroup = async (groupId: string) => {
-    await db.deleteRecurrenceGroup(groupId);
+    await storage.deleteRecurrenceGroup(groupId);
     await load();
     onRefresh();
   };

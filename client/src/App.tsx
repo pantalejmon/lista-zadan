@@ -8,10 +8,13 @@ import { AddTodo } from './components/AddTodo';
 import { AllTodosView } from './components/AllTodosView';
 import { ThemeToggle } from './components/ThemeToggle';
 import { UserMenu } from './components/UserMenu';
+import { ModeIndicator } from './components/ModeIndicator';
+import { MigrationBanner } from './components/MigrationBanner';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
 import { useTodoCounts } from './hooks/useTodoCounts';
 import { useAuth } from './hooks/useAuth';
+import { useStorage } from './hooks/useStorage';
 
 type View = 'calendar' | 'all';
 
@@ -24,15 +27,16 @@ function formatDateLabel(date: Date): string {
 
 export default function App() {
   const { user, loading: authLoading, login, logout } = useAuth();
+  const { storage, mode } = useStorage(user);
   const [view, setView] = useState<View>('calendar');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [refreshKey, setRefreshKey] = useState(0);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
-  const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup } = useTodos(dateStr);
+  const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup } = useTodos(dateStr, storage);
   const { dark, toggle: toggleDark } = useDark();
-  const counts = useTodoCounts(currentMonth, refreshKey);
+  const counts = useTodoCounts(currentMonth, refreshKey, storage);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -95,6 +99,7 @@ export default function App() {
               <path d="M25 52l15 15 35-35" stroke="white" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <h1 className="text-base font-bold">Lista Zadań</h1>
+            <ModeIndicator mode={mode} />
           </div>
           <div className="flex items-center gap-2">
             {!authLoading && !user && (
@@ -110,6 +115,9 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* Migration banner */}
+      {user && <MigrationBanner storage={storage} onMigrated={triggerRefresh} />}
 
       {/* Tab bar */}
       <div className="sticky top-[53px] z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
@@ -215,7 +223,7 @@ export default function App() {
       {/* All todos view */}
       {view === 'all' && (
         <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4">
-          <AllTodosView refreshKey={refreshKey} onRefresh={triggerRefresh} />
+          <AllTodosView refreshKey={refreshKey} onRefresh={triggerRefresh} storage={storage} />
         </main>
       )}
     </div>

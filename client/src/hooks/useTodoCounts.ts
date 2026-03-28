@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import * as db from '../lib/db';
+import type { TodoStorage } from '../lib/storage';
 
 export interface DayCounts {
   [date: string]: { total: number; completed: number };
 }
 
-export function useTodoCounts(currentMonth: Date, refreshKey: number) {
+export function useTodoCounts(currentMonth: Date, refreshKey: number, storage: TodoStorage) {
   const [counts, setCounts] = useState<DayCounts>({});
 
   useEffect(() => {
     (async () => {
-      const allTodos = await db.getAllTodos();
+      const allTodos = await storage.getAllTodos();
       const start = startOfMonth(currentMonth);
       const end = endOfMonth(currentMonth);
       const days = eachDayOfInterval({ start, end });
@@ -29,7 +29,7 @@ export function useTodoCounts(currentMonth: Date, refreshKey: number) {
       }
       setCounts(result);
     })();
-  }, [currentMonth, refreshKey]);
+  }, [currentMonth, refreshKey, storage]);
 
   return counts;
 }

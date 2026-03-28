@@ -24,6 +24,9 @@ export class TodoEntity {
   @Column('varchar', { nullable: true })
   recurrenceGroupId!: string | null;
 
+  @Column('varchar', { nullable: true })
+  userId!: string | null;
+
   toDomain(): Todo {
     return new Todo(
       this.id,
@@ -33,6 +36,7 @@ export class TodoEntity {
       this.time,
       Number(this.createdAt),
       this.recurrenceGroupId,
+      this.userId,
     );
   }
 
@@ -45,6 +49,7 @@ export class TodoEntity {
     entity.time = todo.time;
     entity.createdAt = todo.createdAt;
     entity.recurrenceGroupId = todo.recurrenceGroupId;
+    entity.userId = todo.userId;
     return entity;
   }
 }

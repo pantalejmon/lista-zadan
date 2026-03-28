@@ -7,46 +7,58 @@ import {
   Body,
   Param,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { TodoService } from '../domain/todo.service';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
 import { CreateRecurringTodosDto } from './dto/create-recurring-todos.dto';
 import { TodoResponse } from './dto/todo.response';
+import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
+import { User } from '../../auth/domain/user.model';
 
 @Controller('todos')
+@UseGuards(JwtAuthGuard)
 export class TodoController {
   constructor(private readonly todoService: TodoService) {}
 
   @Get()
-  getAll(@Query('date') date?: string): Promise<TodoResponse[]> {
+  getAll(@Req() req: Request, @Query('date') date?: string): Promise<TodoResponse[]> {
+    const userId = (req.user as User).id;
     if (date) {
-      return this.todoService.getByDate(date);
+      return this.todoService.getByDate(date, userId);
     }
-    return this.todoService.getAll();
+    return this.todoService.getAll(userId);
   }
 
   @Post()
-  create(@Body() dto: CreateTodoDto): Promise<TodoResponse> {
-    return this.todoService.create(dto);
+  create(@Req() req: Request, @Body() dto: CreateTodoDto): Promise<TodoResponse> {
+    const userId = (req.user as User).id;
+    return this.todoService.create(dto, userId);
   }
 
   @Put(':id')
   update(
+    @Req() req: Request,
     @Param('id') id: string,
     @Body() dto: UpdateTodoDto,
   ): Promise<TodoResponse> {
-    return this.todoService.update(id, dto);
+    const userId = (req.user as User).id;
+    return this.todoService.update(id, dto, userId);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string): Promise<void> {
-    return this.todoService.delete(id);
+  delete(@Req() req: Request, @Param('id') id: string): Promise<void> {
+    const userId = (req.user as User).id;
+    return this.todoService.delete(id, userId);
   }
 
   @Post('recurring')
-  createRecurring(@Body() dto: CreateRecurringTodosDto): Promise<TodoResponse[]> {
-    return this.todoService.createRecurring(dto);
+  createRecurring(@Req() req: Request, @Body() dto: CreateRecurringTodosDto): Promise<TodoResponse[]> {
+    const userId = (req.user as User).id;
+    return this.todoService.createRecurring(dto, userId);
   }
 
   @Delete('recurrence-group/:groupId')
@@ -55,7 +67,8 @@ export class TodoController {
   }
 
   @Get('dates-with-todos')
-  getDatesWithTodos(): Promise<string[]> {
-    return this.todoService.getDatesWithTodos();
+  getDatesWithTodos(@Req() req: Request): Promise<string[]> {
+    const userId = (req.user as User).id;
+    return this.todoService.getDatesWithTodos(userId);
   }
 }

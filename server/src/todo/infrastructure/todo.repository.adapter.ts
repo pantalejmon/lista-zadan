@@ -19,13 +19,13 @@ export class TodoRepositoryAdapter extends TodoRepositoryPort {
     return entity?.toDomain() ?? null;
   }
 
-  async findByDate(date: string): Promise<Todo[]> {
-    const entities = await this.repo.findBy({ date });
+  async findByDateAndUser(date: string, userId: string): Promise<Todo[]> {
+    const entities = await this.repo.findBy({ date, userId });
     return entities.map((e) => e.toDomain());
   }
 
-  async findAll(): Promise<Todo[]> {
-    const entities = await this.repo.find();
+  async findAllByUser(userId: string): Promise<Todo[]> {
+    const entities = await this.repo.findBy({ userId });
     return entities.map((e) => e.toDomain());
   }
 
@@ -50,10 +50,11 @@ export class TodoRepositoryAdapter extends TodoRepositoryPort {
     await this.repo.delete({ recurrenceGroupId: groupId });
   }
 
-  async findDistinctDates(): Promise<string[]> {
+  async findDistinctDatesByUser(userId: string): Promise<string[]> {
     const result = await this.repo
       .createQueryBuilder('todo')
       .select('DISTINCT todo.date', 'date')
+      .where('todo.userId = :userId', { userId })
       .orderBy('todo.date', 'ASC')
       .getRawMany<{ date: string }>();
     return result.map((r) => r.date);

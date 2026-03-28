@@ -7,9 +7,11 @@ import { TodoItem } from './components/TodoItem';
 import { AddTodo } from './components/AddTodo';
 import { AllTodosView } from './components/AllTodosView';
 import { ThemeToggle } from './components/ThemeToggle';
+import { UserMenu } from './components/UserMenu';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
 import { useTodoCounts } from './hooks/useTodoCounts';
+import { useAuth } from './hooks/useAuth';
 
 type View = 'calendar' | 'all';
 
@@ -21,6 +23,7 @@ function formatDateLabel(date: Date): string {
 }
 
 export default function App() {
+  const { user, loading: authLoading, login, logout } = useAuth();
   const [view, setView] = useState<View>('calendar');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
@@ -93,7 +96,18 @@ export default function App() {
             </svg>
             <h1 className="text-base font-bold">Lista Zadań</h1>
           </div>
-          <ThemeToggle dark={dark} onToggle={toggleDark} />
+          <div className="flex items-center gap-2">
+            {!authLoading && !user && (
+              <button
+                onClick={login}
+                className="text-xs font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors px-2 py-1 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10"
+              >
+                Zaloguj
+              </button>
+            )}
+            {user && <UserMenu user={user} onLogout={logout} />}
+            <ThemeToggle dark={dark} onToggle={toggleDark} />
+          </div>
         </div>
       </header>
 

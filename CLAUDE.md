@@ -17,19 +17,21 @@ cloud mode (server storage with Google OAuth). Polish language UI.
 
 ## Build & Run Commands
 
-```bash
-# Frontend
-npm run dev                    # Dev server (Vite)
-npm run build                  # Type-check + production build
-npm run lint                   # ESLint
-npm run preview                # Preview production build
+The project uses **npm workspaces** — root `package.json` orchestrates `client/` and `server/`.
 
-# Backend (once created)
-cd server && npm run start:dev          # Dev with watch
-cd server && npm run build              # Compile
-cd server && npm run start:prod         # Production
-cd server && npm run test               # Unit tests
-cd server && npm run test:e2e           # E2E tests
+```bash
+# From root — workspace shortcuts
+npm run dev                    # Start frontend (Vite)
+npm run dev:server             # Start backend (NestJS --watch)
+npm run build                  # Build both workspaces
+npm run lint                   # Lint all workspaces
+npm run test                   # Run server tests
+
+# Direct workspace commands
+npm run build -w client        # Build frontend only
+npm run build -w server        # Build backend only
+npm run test:e2e -w server     # E2E tests
+npm run preview -w client      # Preview production build
 ```
 
 ## Tech Stack

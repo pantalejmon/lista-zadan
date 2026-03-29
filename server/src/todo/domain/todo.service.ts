@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import { NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   eachDayOfInterval,
   eachWeekOfInterval,
@@ -16,12 +17,32 @@ import { CreateRecurringTodosDto } from '../web/dto/create-recurring-todos.dto';
 import { SyncOperationDto } from '../web/dto/sync-todos.dto';
 import { TodoResponse } from '../web/dto/todo.response';
 import { SharingService } from '../../sharing/domain/sharing.service';
+import { UserRepositoryPort } from '../../auth/domain/user.repository.port';
 
+function todoStorageBytes(todo: Todo): number {
+  return Buffer.byteLength(todo.text, 'utf8') + 200;
+}
+
+@Injectable()
 export class TodoService {
   constructor(
     private readonly repository: TodoRepositoryPort,
     private readonly sharingService: SharingService,
+    private readonly userRepository: UserRepositoryPort,
+    private readonly configService: ConfigService,
   ) {}
+
+  private get maxStorageBytes(): number {
+    return this.configService.get<number>('storage.maxBytesPerUser', 52_428_800);
+  }
+
+  private async assertQuota(userId: string, additionalBytes: number): Promise<void> {
+    const user = await this.userRepository.findById(userId);
+    const used = user?.usedStorageBytes ?? 0;
+    if (used + additionalBytes > this.maxStorageBytes) {
+      throw new PayloadTooLargeException('Storage quota exceeded');
+    }
+  }
 
   async getByDate(date: string, listId: string, userId: string): Promise<TodoResponse[]> {
     await this.sharingService.assertPermission(listId, userId, ['owner', 'editor', 'viewer']);
@@ -38,14 +59,24 @@ export class TodoService {
   async create(dto: CreateTodoDto, userId: string): Promise<TodoResponse> {
     await this.sharingService.assertPermission(dto.listId, userId, ['owner', 'editor']);
     const todo = Todo.createFromDto(dto, userId, dto.listId);
+    const bytes = todoStorageBytes(todo);
+    await this.assertQuota(userId, bytes);
     await this.repository.save(todo);
+    await this.userRepository.addStorageUsed(userId, bytes);
     return todo.toResponse();
   }
 
   async update(id: string, dto: UpdateTodoDto, userId: string): Promise<TodoResponse> {
     const todo = await this.findTodoWithPermission(id, userId, ['owner', 'editor']);
     const updated = todo.update(dto);
+    const delta = todoStorageBytes(updated) - todoStorageBytes(todo);
+    if (delta > 0) {
+      await this.assertQuota(userId, delta);
+    }
     await this.repository.update(updated);
+    if (delta !== 0) {
+      await this.userRepository.addStorageUsed(userId, delta);
+    }
     return updated.toResponse();
   }
 
@@ -54,8 +85,10 @@ export class TodoService {
   }
 
   async delete(id: string, userId: string): Promise<void> {
-    await this.findTodoWithPermission(id, userId, ['owner', 'editor']);
+    const todo = await this.findTodoWithPermission(id, userId, ['owner', 'editor']);
+    const bytes = todoStorageBytes(todo);
     await this.repository.delete(id);
+    await this.userRepository.addStorageUsed(userId, -bytes);
   }
 
   async createRecurring(dto: CreateRecurringTodosDto, userId: string): Promise<TodoResponse[]> {
@@ -68,7 +101,10 @@ export class TodoService {
       Todo.createRecurring(dto.text, dto.time, groupId, date, now, userId, dto.listId),
     );
 
+    const totalBytes = todos.reduce((sum, t) => sum + todoStorageBytes(t), 0);
+    await this.assertQuota(userId, totalBytes);
     await this.repository.saveMany(todos);
+    await this.userRepository.addStorageUsed(userId, totalBytes);
     return todos.map((t) => t.toResponse());
   }
 
@@ -84,8 +120,11 @@ export class TodoService {
     return listId;
   }
 
-  async deleteRecurrenceGroup(groupId: string): Promise<void> {
+  async deleteRecurrenceGroup(groupId: string, userId: string): Promise<void> {
+    const todos = await this.repository.findByRecurrenceGroupId(groupId);
+    const totalBytes = todos.reduce((sum, t) => sum + todoStorageBytes(t), 0);
     await this.repository.deleteByRecurrenceGroupId(groupId);
+    await this.userRepository.addStorageUsed(userId, -totalBytes);
   }
 
   async syncOperations(operations: SyncOperationDto[], userId: string): Promise<TodoResponse[]> {
@@ -112,7 +151,10 @@ export class TodoService {
               op.todo.month ?? null,
               op.todo.updatedAt ?? op.timestamp,
             );
+            const bytes = todoStorageBytes(todo);
+            await this.assertQuota(userId, bytes);
             await this.repository.save(todo);
+            await this.userRepository.addStorageUsed(userId, bytes);
             results.push(todo.toResponse());
           } else {
             results.push(existing.toResponse());
@@ -137,7 +179,14 @@ export class TodoService {
                 op.todo.month ?? null,
                 clientUpdatedAt,
               );
+              const delta = todoStorageBytes(updated) - todoStorageBytes(existing);
+              if (delta > 0) {
+                await this.assertQuota(userId, delta);
+              }
               await this.repository.update(updated);
+              if (delta !== 0) {
+                await this.userRepository.addStorageUsed(userId, delta);
+              }
               results.push(updated.toResponse());
             } else {
               // Server version is newer — return server state
@@ -149,7 +198,9 @@ export class TodoService {
         case 'delete': {
           const existing = await this.repository.findById(op.todo.id);
           if (existing) {
+            const bytes = todoStorageBytes(existing);
             await this.repository.delete(op.todo.id);
+            await this.userRepository.addStorageUsed(userId, -bytes);
           }
           break;
         }

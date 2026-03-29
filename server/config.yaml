@@ -16,3 +16,9 @@ google:
 jwt:
   secret: 'change-me-in-config-local-yaml'
   expiresIn: '7d'
+
+rateLimiter:
+  maxCreatesPerMinute: 60
+
+storage:
+  maxBytesPerUser: 52428800

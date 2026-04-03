@@ -5,4 +5,5 @@ export abstract class UserRepositoryPort {
   abstract findByGoogleId(googleId: string): Promise<User | null>;
   abstract findByEmail(email: string): Promise<User | null>;
   abstract save(user: User): Promise<void>;
+  abstract addStorageUsed(userId: string, deltaBytes: number): Promise<void>;
 }

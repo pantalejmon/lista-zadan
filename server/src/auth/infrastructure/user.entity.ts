@@ -21,6 +21,9 @@ export class UserEntity {
   @Column('bigint')
   createdAt!: number;
 
+  @Column('bigint', { default: 0 })
+  usedStorageBytes!: number;
+
   toDomain(): User {
     return new User(
       this.id,
@@ -29,6 +32,7 @@ export class UserEntity {
       this.displayName,
       this.avatarUrl,
       Number(this.createdAt),
+      Number(this.usedStorageBytes),
     );
   }
 
@@ -40,6 +44,7 @@ export class UserEntity {
     entity.displayName = user.displayName;
     entity.avatarUrl = user.avatarUrl;
     entity.createdAt = user.createdAt;
+    entity.usedStorageBytes = user.usedStorageBytes;
     return entity;
   }
 }

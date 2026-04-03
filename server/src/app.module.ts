@@ -14,6 +14,7 @@ import { CreateSharingTables1711613100000 } from './migration/1711613100000-Crea
 import { AddListIdToTodo1711613200000 } from './migration/1711613200000-AddListIdToTodo';
 import { AddMonthToTodoAndMakeDateNullable1711613300000 } from './migration/1711613300000-AddMonthToTodoAndMakeDateNullable';
 import { AddUpdatedAtToTodo1711613400000 } from './migration/1711613400000-AddUpdatedAtToTodo';
+import { AddStorageQuotaToUser1743206400000 } from './migration/1743206400000-AddStorageQuotaToUser';
 import configuration from './config/configuration';
 
 @Module({
@@ -38,12 +39,13 @@ import configuration from './config/configuration';
           AddListIdToTodo1711613200000,
           AddMonthToTodoAndMakeDateNullable1711613300000,
           AddUpdatedAtToTodo1711613400000,
+          AddStorageQuotaToUser1743206400000,
         ],
       }),
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'client', 'dist'),
-      exclude: ['/api/(.*)'],
+      exclude: ['/api/{*path}'],
     }),
     AuthModule,
     TodoModule,

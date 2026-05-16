@@ -31,7 +31,14 @@ export async function getAllTodos(listId: string): Promise<Todo[]> {
 export async function addTodo(todo: Omit<Todo, 'id' | 'createdAt'> & { listId: string }): Promise<Todo> {
   return request<Todo>('/todos', {
     method: 'POST',
-    body: JSON.stringify({ text: todo.text, date: todo.date, time: todo.time, month: todo.month, listId: todo.listId }),
+    body: JSON.stringify({
+      text: todo.text,
+      date: todo.date,
+      time: todo.time,
+      month: todo.month,
+      listId: todo.listId,
+      kind: todo.kind,
+    }),
   });
 }
 
@@ -48,6 +55,7 @@ export async function updateTodo(todo: Todo): Promise<Todo> {
       date: todo.date ?? null,
       time: todo.time,
       month: todo.month ?? null,
+      items: todo.kind === 'shopping' ? (todo.items ?? []) : undefined,
     }),
   });
 }
@@ -92,6 +100,8 @@ export interface SyncOperation {
     recurrenceGroupId?: string | null;
     month?: string | null;
     listId: string;
+    kind?: 'task' | 'shopping';
+    items?: { id: string; text: string; checked: boolean; order: number }[] | null;
   };
   timestamp: number;
 }

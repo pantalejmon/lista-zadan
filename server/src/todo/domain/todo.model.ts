@@ -2,6 +2,9 @@ import { randomUUID } from 'crypto';
 import { CreateTodoDto } from '../web/dto/create-todo.dto';
 import { TodoResponse } from '../web/dto/todo.response';
 import { UpdateTodoDto } from '../web/dto/update-todo.dto';
+import { ShoppingItem, isShoppingComplete } from './shopping-item';
+
+export type TodoKind = 'task' | 'shopping';
 
 export class Todo {
   readonly id: string;
@@ -15,6 +18,8 @@ export class Todo {
   readonly listId: string | null;
   readonly month: string | null;
   readonly updatedAt: number;
+  readonly kind: TodoKind;
+  readonly items: readonly ShoppingItem[] | null;
 
   constructor(
     id: string,
@@ -28,10 +33,11 @@ export class Todo {
     listId: string | null,
     month: string | null,
     updatedAt: number,
+    kind: TodoKind = 'task',
+    items: readonly ShoppingItem[] | null = null,
   ) {
     this.id = id;
     this.text = text;
-    this.completed = completed;
     this.date = date;
     this.time = time;
     this.createdAt = createdAt;
@@ -40,22 +46,28 @@ export class Todo {
     this.listId = listId;
     this.month = month;
     this.updatedAt = updatedAt;
+    this.kind = kind;
+    this.items = kind === 'shopping' ? (items ?? []) : null;
+    this.completed = this.kind === 'shopping' ? isShoppingComplete(this.items ?? []) : completed;
   }
 
   static createFromDto(dto: CreateTodoDto, userId: string, listId: string): Todo {
     const now = Date.now();
+    const kind: TodoKind = dto.kind ?? 'task';
     return new Todo(
       randomUUID(),
       dto.text,
       false,
       dto.date ?? null,
-      dto.time ?? null,
+      kind === 'shopping' ? null : (dto.time ?? null),
       now,
       null,
       userId,
       listId,
       dto.date ? null : (dto.month ?? null),
       now,
+      kind,
+      kind === 'shopping' ? [] : null,
     );
   }
 
@@ -80,12 +92,15 @@ export class Todo {
       listId,
       null,
       createdAt,
+      'task',
+      null,
     );
   }
 
   update(dto: UpdateTodoDto): Todo {
     const newDate = dto.date !== undefined ? dto.date : this.date;
     const newMonth = dto.month !== undefined ? dto.month : (newDate ? null : this.month);
+    const newItems = this.kind === 'shopping' && dto.items !== undefined ? dto.items : this.items;
 
     return new Todo(
       this.id,
@@ -99,6 +114,8 @@ export class Todo {
       this.listId,
       newMonth,
       Date.now(),
+      this.kind,
+      newItems,
     );
   }
 
@@ -114,6 +131,8 @@ export class Todo {
       listId: this.listId,
       month: this.month,
       updatedAt: this.updatedAt,
+      kind: this.kind,
+      items: this.items === null ? null : [...this.items],
     };
   }
 }

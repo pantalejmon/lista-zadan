@@ -4,6 +4,7 @@ import { pl } from 'date-fns/locale';
 import type { Todo } from '../lib/types';
 import type { TodoStorage } from '../lib/storage';
 import { TodoItem } from './TodoItem';
+import { ShoppingListItem } from './ShoppingListItem';
 
 type TimeFilter = 'future' | 'past' | 'all';
 type StatusFilter = 'all' | 'pending' | 'completed';
@@ -102,7 +103,14 @@ export function AllTodosView({ refreshKey, onRefresh, storage, listId, allowUnas
   const handleToggle = async (id: string) => {
     const todo = allTodos.find((t) => t.id === id);
     if (!todo) return;
+    if (todo.kind === 'shopping') return;
     await storage.updateTodo({ ...todo, completed: !todo.completed });
+    await load();
+    onRefresh();
+  };
+
+  const handleUpdateFull = async (updated: Todo) => {
+    await storage.updateTodo(updated);
     await load();
     onRefresh();
   };
@@ -270,17 +278,26 @@ export function AllTodosView({ refreshKey, onRefresh, storage, listId, allowUnas
 
                 {/* Todos */}
                 <div className="space-y-1.5">
-                  {todos.map((todo) => (
-                    <TodoItem
-                      key={todo.id}
-                      todo={todo}
-                      onToggle={handleToggle}
-                      onUpdate={handleUpdate}
-                      onDelete={handleDelete}
-                      onDeleteGroup={todo.recurrenceGroupId ? handleDeleteGroup : undefined}
-                      onUnassign={allowUnassign ? handleUnassign : undefined}
-                    />
-                  ))}
+                  {todos.map((todo) =>
+                    todo.kind === 'shopping' ? (
+                      <ShoppingListItem
+                        key={todo.id}
+                        todo={todo}
+                        onUpdate={handleUpdateFull}
+                        onDelete={handleDelete}
+                      />
+                    ) : (
+                      <TodoItem
+                        key={todo.id}
+                        todo={todo}
+                        onToggle={handleToggle}
+                        onUpdate={handleUpdate}
+                        onDelete={handleDelete}
+                        onDeleteGroup={todo.recurrenceGroupId ? handleDeleteGroup : undefined}
+                        onUnassign={allowUnassign ? handleUnassign : undefined}
+                      />
+                    ),
+                  )}
                 </div>
               </div>
             );

@@ -20,7 +20,10 @@ import { SharingService } from '../../sharing/domain/sharing.service';
 import { UserRepositoryPort } from '../../auth/domain/user.repository.port';
 
 function todoStorageBytes(todo: Todo): number {
-  return Buffer.byteLength(todo.text, 'utf8') + 200;
+  const itemsBytes = todo.items
+    ? todo.items.reduce((sum, i) => sum + Buffer.byteLength(i.text, 'utf8') + 80, 0)
+    : 0;
+  return Buffer.byteLength(todo.text, 'utf8') + 200 + itemsBytes;
 }
 
 @Injectable()
@@ -150,6 +153,8 @@ export class TodoService {
               listId,
               op.todo.month ?? null,
               op.todo.updatedAt ?? op.timestamp,
+              op.todo.kind ?? 'task',
+              op.todo.items ?? null,
             );
             const bytes = todoStorageBytes(todo);
             await this.assertQuota(userId, bytes);
@@ -178,6 +183,10 @@ export class TodoService {
                 existing.listId,
                 op.todo.month ?? null,
                 clientUpdatedAt,
+                existing.kind,
+                existing.kind === 'shopping'
+                  ? (op.todo.items !== undefined ? op.todo.items : existing.items)
+                  : null,
               );
               const delta = todoStorageBytes(updated) - todoStorageBytes(existing);
               if (delta > 0) {

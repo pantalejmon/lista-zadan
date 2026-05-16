@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
 import { format, addMonths } from 'date-fns';
-import type { RecurrenceType, RecurrenceConfig } from '../lib/types';
+import type { RecurrenceType, RecurrenceConfig, TodoKind } from '../lib/types';
 
 interface AddTodoProps {
   selectedDate: string; // YYYY-MM-DD
   onAdd: (text: string, time?: string) => void;
   onAddRecurring: (text: string, time: string | undefined, config: RecurrenceConfig) => void;
+  onAddShopping?: (text: string) => void;
 }
 
 const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
@@ -14,8 +15,9 @@ const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
   monthly: 'Co miesiąc',
 };
 
-export function AddTodo({ selectedDate, onAdd, onAddRecurring }: AddTodoProps) {
+export function AddTodo({ selectedDate, onAdd, onAddRecurring, onAddShopping }: AddTodoProps) {
   const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<TodoKind>('task');
   const [text, setText] = useState('');
   const [time, setTime] = useState('');
   const [showRecurrence, setShowRecurrence] = useState(false);
@@ -29,6 +31,7 @@ export function AddTodo({ selectedDate, onAdd, onAddRecurring }: AddTodoProps) {
     setTime('');
     setShowRecurrence(false);
     setRecurrenceType('daily');
+    setKind('task');
     setOpen(false);
   };
 
@@ -41,10 +44,18 @@ export function AddTodo({ selectedDate, onAdd, onAddRecurring }: AddTodoProps) {
 
   const handleSubmit = () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
 
-    if (showRecurrence) {
-      if (!dateFrom || !dateTo || dateFrom > dateTo) return;
+    if (kind === 'shopping') {
+      if (onAddShopping) {
+        onAddShopping(trimmed);
+      }
+    } else if (showRecurrence) {
+      if (!dateFrom || !dateTo || dateFrom > dateTo) {
+        return;
+      }
       onAddRecurring(trimmed, time || undefined, {
         type: recurrenceType,
         dateFrom,
@@ -57,8 +68,8 @@ export function AddTodo({ selectedDate, onAdd, onAddRecurring }: AddTodoProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSubmit();
-    if (e.key === 'Escape') reset();
+    if (e.key === 'Enter') { handleSubmit(); }
+    if (e.key === 'Escape') { reset(); }
   };
 
   if (!open) {
@@ -87,56 +98,94 @@ export function AddTodo({ selectedDate, onAdd, onAddRecurring }: AddTodoProps) {
 
   return (
     <div className="animate-fade-in flex flex-col gap-3 p-3 rounded-2xl bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-800 shadow-lg shadow-primary-500/10">
+      {/* Kind switcher */}
+      {onAddShopping && (
+        <div className="flex bg-gray-100 dark:bg-gray-900 rounded-xl p-0.5">
+          <button
+            type="button"
+            onClick={() => setKind('task')}
+            className={`flex-1 flex items-center justify-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all ${
+              kind === 'task'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm font-medium'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            Zadanie
+          </button>
+          <button
+            type="button"
+            onClick={() => setKind('shopping')}
+            className={`flex-1 flex items-center justify-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all ${
+              kind === 'shopping'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm font-medium'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.6 4h13.2M9 21a1 1 0 11-2 0 1 1 0 012 0zm10 0a1 1 0 11-2 0 1 1 0 012 0z" />
+            </svg>
+            Zakupy
+          </button>
+        </div>
+      )}
+
       <input
         ref={inputRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
         className="w-full bg-transparent text-sm font-medium placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
-        placeholder="Co trzeba zrobić?"
+        placeholder={kind === 'shopping' ? 'Nazwa listy zakupów...' : 'Co trzeba zrobić?'}
       />
 
-      {/* Time row */}
-      <div className="flex items-center gap-2">
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-        />
-        <span className="text-xs text-gray-400">(opcjonalnie)</span>
-      </div>
+      {/* Time row — hidden for shopping */}
+      {kind === 'task' && (
+        <div className="flex items-center gap-2">
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+          />
+          <span className="text-xs text-gray-400">(opcjonalnie)</span>
+        </div>
+      )}
 
-      {/* Recurrence toggle */}
-      <button
-        type="button"
-        onClick={() => setShowRecurrence((s) => !s)}
-        className={`
-          flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg self-start transition-all
-          ${showRecurrence
-            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-            : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-          }
-        `}
-      >
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        Cykliczne
-        <svg
-          className={`w-3 h-3 transition-transform duration-200 ${showRecurrence ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
+      {/* Recurrence toggle — hidden for shopping */}
+      {kind === 'task' && (
+        <button
+          type="button"
+          onClick={() => setShowRecurrence((s) => !s)}
+          className={`
+            flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg self-start transition-all
+            ${showRecurrence
+              ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+              : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+            }
+          `}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Cykliczne
+          <svg
+            className={`w-3 h-3 transition-transform duration-200 ${showRecurrence ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      )}
 
       {/* Recurrence options */}
-      {showRecurrence && (
+      {kind === 'task' && showRecurrence && (
         <div className="animate-slide-down flex flex-col gap-2 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
           {/* Frequency */}
           <div className="flex items-center gap-1.5">
@@ -196,10 +245,10 @@ export function AddTodo({ selectedDate, onAdd, onAddRecurring }: AddTodoProps) {
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!text.trim() || (showRecurrence && (!dateFrom || !dateTo || dateFrom > dateTo))}
+          disabled={!text.trim() || (kind === 'task' && showRecurrence && (!dateFrom || !dateTo || dateFrom > dateTo))}
           className="text-xs bg-primary-500 text-white px-3 py-1.5 rounded-lg hover:bg-primary-600 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {showRecurrence ? 'Dodaj cyklicznie' : 'Dodaj'}
+          {kind === 'shopping' ? 'Dodaj listę' : showRecurrence ? 'Dodaj cyklicznie' : 'Dodaj'}
         </button>
       </div>
     </div>

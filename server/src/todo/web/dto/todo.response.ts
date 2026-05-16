@@ -1,3 +1,6 @@
+import { TodoKind } from '../../domain/todo.model';
+import { ShoppingItem } from '../../domain/shopping-item';
+
 export interface TodoResponse {
   readonly id: string;
   readonly text: string;
@@ -9,4 +12,6 @@ export interface TodoResponse {
   readonly listId: string | null;
   readonly month: string | null;
   readonly updatedAt: number;
+  readonly kind: TodoKind;
+  readonly items: ShoppingItem[] | null;
 }

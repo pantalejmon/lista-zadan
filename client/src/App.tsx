@@ -4,6 +4,7 @@ import { pl } from 'date-fns/locale';
 import { useSwipe } from './hooks/useSwipe';
 import { Calendar } from './components/Calendar';
 import { TodoItem } from './components/TodoItem';
+import { ShoppingListItem } from './components/ShoppingListItem';
 import { AddTodo } from './components/AddTodo';
 import { AllTodosView } from './components/AllTodosView';
 import { MigrationBanner } from './components/MigrationBanner';
@@ -49,7 +50,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
-  const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
+  const { todos, loading, add, addShopping, addRecurring, toggle, update, updateFull, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
   const { dark, toggle: toggleDark } = useDark();
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
 
@@ -78,6 +79,11 @@ export default function App() {
     triggerRefresh();
   };
 
+  const handleAddShopping = async (text: string) => {
+    await addShopping(text);
+    triggerRefresh();
+  };
+
   const handleAddRecurring: typeof addRecurring = async (text, time, config) => {
     await addRecurring(text, time, config);
     triggerRefresh();
@@ -95,6 +101,11 @@ export default function App() {
 
   const handleUpdate = async (id: string, text: string, time?: string) => {
     await update(id, text, time);
+    triggerRefresh();
+  };
+
+  const handleUpdateFull = async (updated: import('./lib/types').Todo) => {
+    await updateFull(updated);
     triggerRefresh();
   };
 
@@ -305,18 +316,27 @@ export default function App() {
               </div>
             ) : (
               <>
-                {todos.map((todo) => (
-                  <TodoItem
-                    key={todo.id}
-                    todo={todo}
-                    onToggle={handleToggle}
-                    onUpdate={handleUpdate}
-                    onDelete={handleDelete}
-                    onDeleteGroup={todo.recurrenceGroupId ? handleDeleteGroup : undefined}
-                    onUnassign={isCloud ? handleUnassign : undefined}
-                  />
-                ))}
-                <AddTodo selectedDate={dateStr} onAdd={handleAdd} onAddRecurring={handleAddRecurring} />
+                {todos.map((todo) =>
+                  todo.kind === 'shopping' ? (
+                    <ShoppingListItem
+                      key={todo.id}
+                      todo={todo}
+                      onUpdate={handleUpdateFull}
+                      onDelete={handleDelete}
+                    />
+                  ) : (
+                    <TodoItem
+                      key={todo.id}
+                      todo={todo}
+                      onToggle={handleToggle}
+                      onUpdate={handleUpdate}
+                      onDelete={handleDelete}
+                      onDeleteGroup={todo.recurrenceGroupId ? handleDeleteGroup : undefined}
+                      onUnassign={isCloud ? handleUnassign : undefined}
+                    />
+                  ),
+                )}
+                <AddTodo selectedDate={dateStr} onAdd={handleAdd} onAddRecurring={handleAddRecurring} onAddShopping={handleAddShopping} />
                 {totalCount === 0 && (
                   <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-4">
                     Brak zadań na ten dzień

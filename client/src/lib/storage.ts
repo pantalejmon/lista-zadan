@@ -60,6 +60,8 @@ const cloudStorage: TodoStorage = {
       listId: todo.listId,
       month: todo.month,
       updatedAt: Date.now(),
+      kind: todo.kind ?? 'task',
+      items: todo.kind === 'shopping' ? (todo.items ?? []) : null,
     };
     if (!isOnline()) {
       await enqueueOperation({ type: 'create', todo: fullTodo, listId: todo.listId!, timestamp: Date.now() });

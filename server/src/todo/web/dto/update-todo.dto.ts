@@ -1,4 +1,6 @@
-import { IsString, IsBoolean, IsOptional, Matches } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, Matches, IsArray, ValidateNested, ArrayMaxSize } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ShoppingItemDto } from './shopping-item.dto';
 
 export class UpdateTodoDto {
   @IsOptional()
@@ -23,4 +25,11 @@ export class UpdateTodoDto {
   @IsString()
   @Matches(/^\d{4}-\d{2}$/)
   month?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ShoppingItemDto)
+  items?: ShoppingItemDto[];
 }

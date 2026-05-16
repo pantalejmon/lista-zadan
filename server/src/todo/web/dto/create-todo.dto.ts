@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, Matches, IsOptional, ValidateIf } from 'class-validator';
+import { IsString, IsNotEmpty, Matches, IsOptional, ValidateIf, IsIn } from 'class-validator';
+import { TodoKind } from '../../domain/todo.model';
 
 export class CreateTodoDto {
   @IsString()
@@ -23,4 +24,8 @@ export class CreateTodoDto {
   @IsString()
   @IsNotEmpty()
   listId!: string;
+
+  @IsOptional()
+  @IsIn(['task', 'shopping'])
+  kind?: TodoKind;
 }

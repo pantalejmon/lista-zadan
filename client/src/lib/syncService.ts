@@ -45,6 +45,8 @@ export async function syncPendingOps(onStatusChange: StatusCallback): Promise<vo
           recurrenceGroupId: op.todo.recurrenceGroupId,
           month: op.todo.month,
           listId: op.todo.listId ?? (op.type === 'create' ? op.listId : ''),
+          kind: op.todo.kind,
+          items: op.todo.kind === 'shopping' ? (op.todo.items ?? []) : undefined,
         },
         timestamp: op.timestamp,
       };

@@ -40,6 +40,15 @@ body {
   to { opacity: 1; max-height: 200px; }
 }
 
+@keyframes expandPanel {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 2000px; }
+}
+
+.animate-expand-panel {
+  animation: expandPanel 0.3s ease-out;
+}
+
 @keyframes checkmark {
   from { stroke-dashoffset: 24; }
   to { stroke-dashoffset: 0; }

@@ -15,6 +15,8 @@ import { AddListIdToTodo1711613200000 } from './migration/1711613200000-AddListI
 import { AddMonthToTodoAndMakeDateNullable1711613300000 } from './migration/1711613300000-AddMonthToTodoAndMakeDateNullable';
 import { AddUpdatedAtToTodo1711613400000 } from './migration/1711613400000-AddUpdatedAtToTodo';
 import { AddHouseholdTables1721800000000 } from './migration/1721800000000-AddHouseholdTables';
+import { AddStorageQuotaToUser1743206400000 } from './migration/1743206400000-AddStorageQuotaToUser';
+import { AddShoppingListSupport1763251200000 } from './migration/1763251200000-AddShoppingListSupport';
 import configuration from './config/configuration';
 
 @Module({
@@ -40,12 +42,14 @@ import configuration from './config/configuration';
           AddMonthToTodoAndMakeDateNullable1711613300000,
           AddUpdatedAtToTodo1711613400000,
           AddHouseholdTables1721800000000,
+          AddStorageQuotaToUser1743206400000,
+          AddShoppingListSupport1763251200000,
         ],
       }),
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'client', 'dist'),
-      exclude: ['/api/(.*)'],
+      exclude: ['/api/{*path}'],
     }),
     AuthModule,
     TodoModule,

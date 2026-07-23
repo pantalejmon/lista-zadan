@@ -1,5 +1,6 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
-import { Todo } from '../domain/todo.model';
+import { Todo, TodoKind } from '../domain/todo.model';
+import { ShoppingItem } from '../domain/shopping-item';
 
 @Entity('todo')
 export class TodoEntity {
@@ -36,7 +37,14 @@ export class TodoEntity {
   @Column('bigint', { nullable: true })
   updatedAt!: number | null;
 
+  @Column('varchar', { default: 'task' })
+  kind!: TodoKind;
+
+  @Column('text', { nullable: true })
+  items!: string | null;
+
   toDomain(): Todo {
+    const parsedItems = this.kind === 'shopping' ? parseItems(this.items) : null;
     return new Todo(
       this.id,
       this.text,
@@ -49,6 +57,8 @@ export class TodoEntity {
       this.listId,
       this.month,
       Number(this.updatedAt ?? this.createdAt),
+      this.kind,
+      parsedItems,
     );
   }
 
@@ -65,6 +75,31 @@ export class TodoEntity {
     entity.listId = todo.listId;
     entity.month = todo.month;
     entity.updatedAt = todo.updatedAt;
+    entity.kind = todo.kind;
+    entity.items = todo.items === null ? null : JSON.stringify(todo.items);
     return entity;
+  }
+}
+
+function parseItems(raw: string | null): ShoppingItem[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .filter((i): i is ShoppingItem =>
+        typeof i === 'object' && i !== null &&
+        typeof (i as ShoppingItem).id === 'string' &&
+        typeof (i as ShoppingItem).text === 'string' &&
+        typeof (i as ShoppingItem).checked === 'boolean' &&
+        typeof (i as ShoppingItem).order === 'number',
+      )
+      .sort((a, b) => a.order - b.order);
+  } catch {
+    return [];
   }
 }

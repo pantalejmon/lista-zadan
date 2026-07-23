@@ -32,4 +32,11 @@ export class UserRepositoryAdapter extends UserRepositoryPort {
   async save(user: User): Promise<void> {
     await this.repo.save(UserEntity.fromDomain(user));
   }
+
+  async addStorageUsed(userId: string, deltaBytes: number): Promise<void> {
+    await this.repo.query(
+      `UPDATE "user" SET "usedStorageBytes" = MAX(0, "usedStorageBytes" + ?) WHERE "id" = ?`,
+      [deltaBytes, userId],
+    );
+  }
 }

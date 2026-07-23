@@ -21,6 +21,7 @@ import { TodoResponse } from './dto/todo.response';
 import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
 import { User } from '../../auth/domain/user.model';
 import { TodosGateway } from './todos.gateway';
+import { RateLimiterGuard } from './rate-limiter.guard';
 
 @Controller('todos')
 @UseGuards(JwtAuthGuard)
@@ -47,6 +48,7 @@ export class TodoController {
   }
 
   @Post()
+  @UseGuards(RateLimiterGuard)
   async create(@Req() req: Request, @Body() dto: CreateTodoDto): Promise<TodoResponse> {
     const userId = (req.user as User).id;
     const todo = await this.todoService.create(dto, userId);
@@ -79,6 +81,7 @@ export class TodoController {
   }
 
   @Post('recurring')
+  @UseGuards(RateLimiterGuard)
   async createRecurring(@Req() req: Request, @Body() dto: CreateRecurringTodosDto): Promise<TodoResponse[]> {
     const userId = (req.user as User).id;
     const todos = await this.todoService.createRecurring(dto, userId);
@@ -93,7 +96,7 @@ export class TodoController {
   ): Promise<void> {
     const userId = (req.user as User).id;
     const listId = await this.todoService.getListIdForRecurrenceGroup(groupId, userId);
-    await this.todoService.deleteRecurrenceGroup(groupId);
+    await this.todoService.deleteRecurrenceGroup(groupId, userId);
     if (listId) {
       this.todosGateway.notifyRecurrenceDeleted(listId, groupId);
     }

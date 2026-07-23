@@ -37,6 +37,25 @@ export function useTodos(date: string, storage: TodoStorage, listId?: string) {
         time: time || undefined,
         createdAt: Date.now(),
         listId,
+        kind: 'task',
+      };
+      await storage.addTodo(todo);
+      await refresh();
+    },
+    [date, storage, refresh, listId]
+  );
+
+  const addShopping = useCallback(
+    async (text: string) => {
+      const todo: Todo = {
+        id: generateId(),
+        text,
+        completed: false,
+        date,
+        createdAt: Date.now(),
+        listId,
+        kind: 'shopping',
+        items: [],
       };
       await storage.addTodo(todo);
       await refresh();
@@ -56,10 +75,19 @@ export function useTodos(date: string, storage: TodoStorage, listId?: string) {
     async (id: string) => {
       const todo = todos.find((t) => t.id === id);
       if (!todo) return;
+      if (todo.kind === 'shopping') return; // shopping completion is derived from items
       await storage.updateTodo({ ...todo, completed: !todo.completed });
       await refresh();
     },
     [todos, storage, refresh]
+  );
+
+  const updateFull = useCallback(
+    async (updated: Todo) => {
+      await storage.updateTodo(updated);
+      await refresh();
+    },
+    [storage, refresh]
   );
 
   const update = useCallback(
@@ -88,5 +116,5 @@ export function useTodos(date: string, storage: TodoStorage, listId?: string) {
     [storage, refresh]
   );
 
-  return { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup, refresh };
+  return { todos, loading, add, addShopping, addRecurring, toggle, update, updateFull, remove, removeRecurrenceGroup, refresh };
 }

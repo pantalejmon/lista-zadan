@@ -40,6 +40,6 @@ import { AuthController } from './web/auth.controller';
     JwtStrategy,
     JwtAuthGuard,
   ],
-  exports: [AuthService, JwtAuthGuard, JwtModule],
+  exports: [AuthService, JwtAuthGuard, JwtModule, UserRepositoryPort],
 })
 export class AuthModule {}

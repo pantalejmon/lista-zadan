@@ -1,5 +1,7 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsNumber, IsEnum, IsArray, ValidateNested, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsNumber, IsEnum, IsArray, ValidateNested, Matches, IsIn, ArrayMaxSize } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TodoKind } from '../../domain/todo.model';
+import { ShoppingItemDto } from './shopping-item.dto';
 
 class SyncTodoData {
   @IsString()
@@ -42,6 +44,17 @@ class SyncTodoData {
   @IsString()
   @IsNotEmpty()
   listId!: string;
+
+  @IsOptional()
+  @IsIn(['task', 'shopping'])
+  kind?: TodoKind;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ShoppingItemDto)
+  items?: ShoppingItemDto[] | null;
 }
 
 export class SyncOperationDto {

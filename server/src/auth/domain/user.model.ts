@@ -15,6 +15,7 @@ export class User {
   readonly displayName: string;
   readonly avatarUrl: string | null;
   readonly createdAt: number;
+  readonly usedStorageBytes: number;
 
   constructor(
     id: string,
@@ -23,6 +24,7 @@ export class User {
     displayName: string,
     avatarUrl: string | null,
     createdAt: number,
+    usedStorageBytes: number,
   ) {
     this.id = id;
     this.googleId = googleId;
@@ -30,6 +32,7 @@ export class User {
     this.displayName = displayName;
     this.avatarUrl = avatarUrl;
     this.createdAt = createdAt;
+    this.usedStorageBytes = usedStorageBytes;
   }
 
   static createFromGoogleProfile(profile: GoogleProfile): User {
@@ -40,6 +43,7 @@ export class User {
       profile.displayName,
       profile.avatarUrl,
       Date.now(),
+      0,
     );
   }
 

@@ -40,6 +40,15 @@ body {
   to { opacity: 1; max-height: 200px; }
 }
 
+@keyframes expandPanel {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 2000px; }
+}
+
+.animate-expand-panel {
+  animation: expandPanel 0.3s ease-out;
+}
+
 @keyframes checkmark {
   from { stroke-dashoffset: 24; }
   to { stroke-dashoffset: 0; }
@@ -51,4 +60,13 @@ body {
 
 .animate-slide-down {
   animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.25s ease-out;
 }

@@ -12,6 +12,7 @@ import { ModeIndicator } from './components/ModeIndicator';
 import { MigrationBanner } from './components/MigrationBanner';
 import { ListSelector } from './components/ListSelector';
 import { ListSettings } from './components/ListSettings';
+import { HouseholdSettings } from './components/HouseholdSettings';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
 import { ConnectionIndicator } from './components/ConnectionIndicator';
@@ -21,6 +22,7 @@ import { useTodoCounts } from './hooks/useTodoCounts';
 import { useAuth } from './hooks/useAuth';
 import { useStorage } from './hooks/useStorage';
 import { useLists } from './hooks/useLists';
+import { useHouseholds } from './hooks/useHouseholds';
 import { useInvitations } from './hooks/useInvitations';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useOfflineSync } from './hooks/useOfflineSync';
@@ -42,12 +44,16 @@ export default function App() {
     lists, activeList, activeListId, setActiveListId,
     createList, updateList, deleteList, refresh: refreshLists,
   } = useLists(isCloud);
+  const {
+    households, createHousehold, renameHousehold, refresh: refreshHouseholds,
+  } = useHouseholds(isCloud);
   const { invitations, accept: acceptInvite, decline: declineInvite } = useInvitations(isCloud);
   const [view, setView] = useState<View>('calendar');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [refreshKey, setRefreshKey] = useState(0);
   const [settingsListId, setSettingsListId] = useState<string | null>(null);
+  const [householdSettingsId, setHouseholdSettingsId] = useState<string | null>(null);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const { todos, loading, add, addRecurring, toggle, update, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
@@ -128,8 +134,17 @@ export default function App() {
 
   const handleAcceptInvite = async (id: string) => {
     await acceptInvite(id);
+    await refreshHouseholds();
     await refreshLists();
     triggerRefresh();
+  };
+
+  const handleCreateHousehold = async (name: string) => {
+    await createHousehold(name);
+  };
+
+  const handleRenameHousehold = async (householdId: string, name: string) => {
+    await renameHousehold(householdId, name);
   };
 
   const handleDeclineInvite = async (id: string) => {
@@ -145,6 +160,9 @@ export default function App() {
   const totalCount = todos.length;
 
   const settingsList = settingsListId ? lists.find((l) => l.id === settingsListId) : null;
+  const settingsHousehold = householdSettingsId
+    ? households.find((h) => h.id === householdSettingsId)
+    : null;
 
   return (
     <div className="min-h-dvh flex flex-col overflow-x-hidden">
@@ -158,11 +176,14 @@ export default function App() {
             </svg>
             {isCloud ? (
               <ListSelector
+                households={households}
                 lists={lists}
                 activeList={activeList}
                 onSelect={setActiveListId}
                 onCreateList={createList}
-                onOpenSettings={setSettingsListId}
+                onCreateHousehold={handleCreateHousehold}
+                onOpenListSettings={setSettingsListId}
+                onOpenHouseholdSettings={setHouseholdSettingsId}
               />
             ) : (
               <h1 className="text-base font-bold">Lista Zadań</h1>
@@ -335,6 +356,15 @@ export default function App() {
           onClose={() => setSettingsListId(null)}
           onUpdate={(listId, name) => { updateList(listId, name); }}
           onDelete={handleDeleteList}
+        />
+      )}
+
+      {/* Household settings modal */}
+      {settingsHousehold && (
+        <HouseholdSettings
+          household={settingsHousehold}
+          onClose={() => setHouseholdSettingsId(null)}
+          onRename={handleRenameHousehold}
         />
       )}
     </div>

@@ -47,8 +47,8 @@ export function useLists(isCloud: boolean) {
     load();
   }, [load]);
 
-  const createList = useCallback(async (name: string) => {
-    const list = await api.createList(name);
+  const createList = useCallback(async (name: string, householdId?: string) => {
+    const list = await api.createList(name, householdId);
     await load();
     return list;
   }, [load]);

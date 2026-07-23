@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { ListInvitation } from '../lib/types';
+import type { HouseholdInvitation } from '../lib/types';
 import * as api from '../lib/api';
 
 export function useInvitations(isCloud: boolean) {
-  const [invitations, setInvitations] = useState<ListInvitation[]>([]);
+  const [invitations, setInvitations] = useState<HouseholdInvitation[]>([]);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {

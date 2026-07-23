@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
 import type { ListRole } from './list-role';
 
-export interface ListMemberResponse {
+export interface HouseholdMemberResponse {
   readonly id: string;
-  readonly listId: string;
+  readonly householdId: string;
   readonly userId: string;
   readonly email: string;
   readonly displayName: string;
@@ -11,28 +11,28 @@ export interface ListMemberResponse {
   readonly joinedAt: number;
 }
 
-export class ListMember {
+export class HouseholdMember {
   readonly id: string;
-  readonly listId: string;
+  readonly householdId: string;
   readonly userId: string;
   readonly role: ListRole;
   readonly joinedAt: number;
 
   constructor(
     id: string,
-    listId: string,
+    householdId: string,
     userId: string,
     role: ListRole,
     joinedAt: number,
   ) {
     this.id = id;
-    this.listId = listId;
+    this.householdId = householdId;
     this.userId = userId;
     this.role = role;
     this.joinedAt = joinedAt;
   }
 
-  static create(listId: string, userId: string, role: ListRole): ListMember {
-    return new ListMember(randomUUID(), listId, userId, role, Date.now());
+  static create(householdId: string, userId: string, role: ListRole): HouseholdMember {
+    return new HouseholdMember(randomUUID(), householdId, userId, role, Date.now());
   }
 }

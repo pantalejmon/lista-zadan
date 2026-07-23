@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { JwtService } from '@nestjs/jwt';
 import { AuthModule } from '../auth/auth.module';
 import { SharingModule } from '../sharing/sharing.module';
 import { TodoEntity } from './infrastructure/todo.entity';
@@ -10,7 +9,6 @@ import { TodoService } from './domain/todo.service';
 import { TodoController } from './web/todo.controller';
 import { TodosGateway } from './web/todos.gateway';
 import { SharingService } from '../sharing/domain/sharing.service';
-import { AuthService } from '../auth/domain/auth.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([TodoEntity]), AuthModule, SharingModule],
@@ -26,12 +24,11 @@ import { AuthService } from '../auth/domain/auth.service';
         new TodoService(repo, sharingService),
       inject: [TodoRepositoryPort, SharingService],
     },
-    {
-      provide: TodosGateway,
-      useFactory: (jwt: JwtService, auth: AuthService, sharing: SharingService) =>
-        new TodosGateway(jwt, auth, sharing),
-      inject: [JwtService, AuthService, SharingService],
-    },
+    // Must be a class provider (not useFactory): NestJS detects gateways via
+    // wrapper.metatype, which for a factory has no @WebSocketGateway metadata —
+    // so the socket.io server never gets assigned to @WebSocketServer() and
+    // this.server is undefined. As a class provider, DI still injects the deps.
+    TodosGateway,
   ],
   exports: [TodoService],
 })

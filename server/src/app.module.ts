@@ -14,6 +14,7 @@ import { CreateSharingTables1711613100000 } from './migration/1711613100000-Crea
 import { AddListIdToTodo1711613200000 } from './migration/1711613200000-AddListIdToTodo';
 import { AddMonthToTodoAndMakeDateNullable1711613300000 } from './migration/1711613300000-AddMonthToTodoAndMakeDateNullable';
 import { AddUpdatedAtToTodo1711613400000 } from './migration/1711613400000-AddUpdatedAtToTodo';
+import { AddHouseholdTables1721800000000 } from './migration/1721800000000-AddHouseholdTables';
 import configuration from './config/configuration';
 
 @Module({
@@ -38,6 +39,7 @@ import configuration from './config/configuration';
           AddListIdToTodo1711613200000,
           AddMonthToTodoAndMakeDateNullable1711613300000,
           AddUpdatedAtToTodo1711613400000,
+          AddHouseholdTables1721800000000,
         ],
       }),
     }),

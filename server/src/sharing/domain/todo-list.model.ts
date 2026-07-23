@@ -5,6 +5,8 @@ export interface TodoListResponse {
   readonly id: string;
   readonly name: string;
   readonly ownerId: string;
+  readonly householdId: string;
+  readonly householdName: string;
   readonly isDefault: boolean;
   readonly role: ListRole;
   readonly createdAt: number;
@@ -14,6 +16,7 @@ export class TodoList {
   readonly id: string;
   readonly name: string;
   readonly ownerId: string;
+  readonly householdId: string;
   readonly isDefault: boolean;
   readonly createdAt: number;
 
@@ -21,33 +24,37 @@ export class TodoList {
     id: string,
     name: string,
     ownerId: string,
+    householdId: string,
     isDefault: boolean,
     createdAt: number,
   ) {
     this.id = id;
     this.name = name;
     this.ownerId = ownerId;
+    this.householdId = householdId;
     this.isDefault = isDefault;
     this.createdAt = createdAt;
   }
 
-  static createDefault(ownerId: string): TodoList {
-    return new TodoList(randomUUID(), 'Moja lista', ownerId, true, Date.now());
+  static createDefault(ownerId: string, householdId: string): TodoList {
+    return new TodoList(randomUUID(), 'Moja lista', ownerId, householdId, true, Date.now());
   }
 
-  static createCustom(name: string, ownerId: string): TodoList {
-    return new TodoList(randomUUID(), name, ownerId, false, Date.now());
+  static createCustom(name: string, ownerId: string, householdId: string): TodoList {
+    return new TodoList(randomUUID(), name, ownerId, householdId, false, Date.now());
   }
 
   rename(name: string): TodoList {
-    return new TodoList(this.id, name, this.ownerId, this.isDefault, this.createdAt);
+    return new TodoList(this.id, name, this.ownerId, this.householdId, this.isDefault, this.createdAt);
   }
 
-  toResponse(role: ListRole): TodoListResponse {
+  toResponse(role: ListRole, householdName: string): TodoListResponse {
     return {
       id: this.id,
       name: this.name,
       ownerId: this.ownerId,
+      householdId: this.householdId,
+      householdName,
       isDefault: this.isDefault,
       role,
       createdAt: this.createdAt,

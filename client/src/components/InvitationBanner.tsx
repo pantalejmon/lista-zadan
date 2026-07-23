@@ -1,7 +1,7 @@
-import type { ListInvitation } from '../lib/types';
+import type { HouseholdInvitation } from '../lib/types';
 
 interface InvitationBannerProps {
-  invitations: ListInvitation[];
+  invitations: HouseholdInvitation[];
   onAccept: (id: string) => void;
   onDecline: (id: string) => void;
 }
@@ -19,8 +19,8 @@ export function InvitationBanner({ invitations, onAccept, onDecline }: Invitatio
           className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-3 animate-fadeIn"
         >
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            <strong>{inv.invitedByName}</strong> zaprasza Cię do listy{' '}
-            <strong>{inv.listName}</strong>{' '}
+            <strong>{inv.invitedByName}</strong> zaprasza Cię do gospodarstwa{' '}
+            <strong>{inv.householdName}</strong>{' '}
             <span className="text-xs">
               ({inv.role === 'editor' ? 'edytor' : 'podgląd'})
             </span>

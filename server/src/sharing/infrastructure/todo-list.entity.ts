@@ -12,6 +12,9 @@ export class TodoListEntity {
   @Column('varchar')
   ownerId!: string;
 
+  @Column('varchar')
+  householdId!: string;
+
   @Column('boolean', { default: false })
   isDefault!: boolean;
 
@@ -19,7 +22,14 @@ export class TodoListEntity {
   createdAt!: number;
 
   toDomain(): TodoList {
-    return new TodoList(this.id, this.name, this.ownerId, this.isDefault, Number(this.createdAt));
+    return new TodoList(
+      this.id,
+      this.name,
+      this.ownerId,
+      this.householdId,
+      this.isDefault,
+      Number(this.createdAt),
+    );
   }
 
   static fromDomain(model: TodoList): TodoListEntity {
@@ -27,6 +37,7 @@ export class TodoListEntity {
     entity.id = model.id;
     entity.name = model.name;
     entity.ownerId = model.ownerId;
+    entity.householdId = model.householdId;
     entity.isDefault = model.isDefault;
     entity.createdAt = model.createdAt;
     return entity;

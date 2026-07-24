@@ -47,7 +47,7 @@ curl -X POST https://TWOJA-DOMENA/api/mcp \
 
 `tools/list` zwraca **tylko** narzędzia, na które pozwalają scope'y tokenu.
 
-## 3. Dostępne narzędzia (MVP)
+## 3. Dostępne narzędzia
 
 **Todo / listy** (scope `todo:*`):
 - `list_todo_lists` — listy zadań użytkownika,
@@ -57,10 +57,19 @@ curl -X POST https://TWOJA-DOMENA/api/mcp \
 
 **Posiłki** (scope `meals:*`, gospodarstwo z tokenu lub argumentu `householdId`):
 - `list_recipes`, `get_week_plan`, `get_shopping_list`, `what_is_missing`,
-- `add_shopping_item`, `generate_shopping_from_plan`.
+- `add_shopping_item`, `generate_shopping_from_plan`,
+- `list_products`, `get_pantry`, `create_product`, `set_pantry_stock`.
+
+**Gospodarstwo** (scope `households:read`, eksport dodatkowo `meals:read`+`todo:write`):
+- `list_households`,
+- `export_shopping_to_list` — eksportuj listę zakupów posiłków do wskazanej listy zadań.
+
+**Serwis domu** (scope `home:*`):
+- `list_home_assets`, `add_home_asset`, `add_maintenance`, `complete_maintenance`.
 
 Wszystkie narzędzia przechodzą przez te same serwisy domenowe co UI, więc obowiązują
-identyczne uprawnienia (członkostwo w gospodarstwie, role owner/editor/viewer).
+identyczne uprawnienia (członkostwo w gospodarstwie, role owner/editor/viewer). Narzędzia
+wymagające kilku uprawnień (np. eksport: `meals:read` + `todo:write`) egzekwują **wszystkie**.
 
 ## 4. Przykłady promptów dla agenta
 

@@ -73,8 +73,9 @@ export class McpService {
     if (!tool) {
       return this.err(id, -32602, `Unknown tool: ${name}`);
     }
-    if (!this.hasScope(caller, tool)) {
-      return this.err(id, -32000, `Token missing required scope: ${tool.requiredScope}`);
+    const missingScopes = this.missingScopes(caller, tool);
+    if (missingScopes.length > 0) {
+      return this.err(id, -32000, `Token missing required scope(s): ${missingScopes.join(', ')}`);
     }
     const args = (params.arguments as Record<string, unknown> | undefined) ?? {};
     const ctx = this.buildContext(caller);
@@ -113,14 +114,17 @@ export class McpService {
   }
 
   private visibleTools(caller: McpCaller): McpTool[] {
-    return this.tools.filter((t) => this.hasScope(caller, t));
+    return this.tools.filter((t) => this.missingScopes(caller, t).length === 0);
   }
 
-  private hasScope(caller: McpCaller, tool: McpTool): boolean {
+  // Scopes the tool requires that the caller's token does not satisfy. Empty for
+  // interactive (cookie) callers, who carry full authority.
+  private missingScopes(caller: McpCaller, tool: McpTool): string[] {
     if (!caller.token) {
-      return true; // interactive human — full authority
+      return [];
     }
-    return scopeSatisfied(new Set(caller.token.scopes), tool.requiredScope);
+    const granted = new Set(caller.token.scopes);
+    return tool.requiredScopes.filter((scope) => !scopeSatisfied(granted, scope));
   }
 
   private negotiateVersion(params: Record<string, unknown> | undefined): string {

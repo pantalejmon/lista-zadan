@@ -9,6 +9,8 @@ import { MealEntryRepositoryPort } from './meal-entry.repository.port';
 import { MealShoppingItemRepositoryPort } from './meal-shopping-item.repository.port';
 import { ProductRepositoryPort } from './product.repository.port';
 import { Product, type ProductResponse } from './product.model';
+import { PantryItemRepositoryPort } from './pantry-item.repository.port';
+import { PantryItem, type PantryItemResponse } from './pantry-item.model';
 import { MealGateway } from '../web/meal.gateway';
 import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
 import { CreateEntryDto } from '../web/dto/create-entry.dto';
@@ -21,12 +23,25 @@ export interface PlannerEntryResponse extends MealEntryResponse {
   recipe: RecipeResponse | null;
 }
 
+export interface NeedResponse {
+  productId: string | null;
+  name: string;
+  unit: string;
+  required: number;
+  inStock: number;
+  shortfall: number;
+  packageSize?: number;
+  toBuy: number;
+  packages?: number;
+}
+
 export class MealService {
   constructor(
     private readonly recipeRepo: RecipeRepositoryPort,
     private readonly entryRepo: MealEntryRepositoryPort,
     private readonly shoppingRepo: MealShoppingItemRepositoryPort,
     private readonly productRepo: ProductRepositoryPort,
+    private readonly pantryRepo: PantryItemRepositoryPort,
     private readonly sharingService: SharingService,
     private readonly gateway: MealGateway,
   ) {}
@@ -203,31 +218,147 @@ export class MealService {
     this.gateway.notifyChanged(item.householdId);
   }
 
+  // Pantry-aware: buys only what's missing, rounded up to whole packages.
   async generateFromPlan(householdId: string, userId: string, weekStart: string): Promise<number> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
+    const needs = await this.computeNeedsInternal(householdId, weekStart);
+    const items = needs
+      .filter((n) => n.toBuy > 0)
+      .map((n) => MealShoppingItem.create(householdId, n.name, n.toBuy, n.unit));
+    await this.shoppingRepo.saveMany(items);
+    this.gateway.notifyChanged(householdId);
+    return items.length;
+  }
+
+  // ---- pantry ----
+
+  async getPantry(householdId: string, userId: string): Promise<PantryItemResponse[]> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
+    const [items, products] = await Promise.all([
+      this.pantryRepo.findByHousehold(householdId),
+      this.productRepo.findByHousehold(householdId),
+    ]);
+    const byId = new Map(products.map((p) => [p.id, p]));
+    return items
+      .map((it) => {
+        const product = byId.get(it.productId);
+        return product ? this.toPantryResponse(it, product) : null;
+      })
+      .filter((x): x is PantryItemResponse => x !== null)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  }
+
+  async setStock(householdId: string, userId: string, productId: string, quantity: number): Promise<PantryItemResponse> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
+    const product = await this.findProductOrThrow(productId);
+    if (product.householdId !== householdId) {
+      throw new NotFoundException('Product not in this household');
+    }
+    const existing = await this.pantryRepo.findByHouseholdAndProduct(householdId, productId);
+    const item = existing ? existing.withQuantity(quantity) : PantryItem.create(householdId, productId, quantity);
+    await this.pantryRepo.save(item);
+    this.gateway.notifyChanged(householdId);
+    return this.toPantryResponse(item, product);
+  }
+
+  async adjustStock(householdId: string, userId: string, productId: string, delta: number): Promise<PantryItemResponse> {
+    const existing = await this.pantryRepo.findByHouseholdAndProduct(householdId, productId);
+    const next = Math.max(0, (existing?.quantity ?? 0) + delta);
+    return this.setStock(householdId, userId, productId, next);
+  }
+
+  async removePantryItem(id: string, userId: string): Promise<void> {
+    const item = await this.pantryRepo.findById(id);
+    if (!item) {
+      return;
+    }
+    await this.sharingService.assertHouseholdPermission(item.householdId, userId, WRITE_ROLES);
+    await this.pantryRepo.delete(id);
+    this.gateway.notifyChanged(item.householdId);
+  }
+
+  // ---- needs (planer vs spiżarnia → czego brakuje) ----
+
+  async computeNeeds(householdId: string, userId: string, weekStart: string): Promise<NeedResponse[]> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
+    return this.computeNeedsInternal(householdId, weekStart);
+  }
+
+  private async computeNeedsInternal(householdId: string, weekStart: string): Promise<NeedResponse[]> {
     const entries = await this.entryRepo.findByWeek(householdId, weekStart);
-    const aggregated = new Map<string, { name: string; quantity: number; unit: string }>();
+    const products = await this.productRepo.findByHousehold(householdId);
+    const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
+    const pantry = await this.pantryRepo.findByHousehold(householdId);
+    const stockByProduct = new Map(pantry.map((x) => [x.productId, x.quantity]));
+
+    const agg = new Map<
+      string,
+      { productId: string | null; name: string; unit: string; required: number; packageSize: number | null }
+    >();
     for (const entry of entries) {
       const recipe = await this.recipeRepo.findById(entry.recipeId);
       if (!recipe) {
         continue;
       }
       for (const ri of recipe.recipeIngredients) {
-        const key = `${ri.name.toLowerCase()}__${ri.unit}`;
-        const current = aggregated.get(key);
+        const product = byName.get(ri.name.toLowerCase());
+        if (product && !product.trackInPantry) {
+          continue; // „do smaku" — pomijamy w spiżarni/zakupach
+        }
+        const key = product ? product.id : `name:${ri.name.toLowerCase()}`;
+        const current = agg.get(key);
         if (current) {
-          current.quantity += ri.quantity;
+          current.required += ri.quantity;
         } else {
-          aggregated.set(key, { name: ri.name, quantity: ri.quantity, unit: ri.unit });
+          agg.set(key, {
+            productId: product?.id ?? null,
+            name: product?.name ?? ri.name,
+            unit: product?.baseUnit ?? ri.unit,
+            required: ri.quantity,
+            packageSize: product?.packageSize ?? null,
+          });
         }
       }
     }
-    const items = [...aggregated.values()].map((a) =>
-      MealShoppingItem.create(householdId, a.name, a.quantity || null, a.unit || null),
-    );
-    await this.shoppingRepo.saveMany(items);
-    this.gateway.notifyChanged(householdId);
-    return items.length;
+
+    const needs: NeedResponse[] = [];
+    for (const a of agg.values()) {
+      const inStock = a.productId ? (stockByProduct.get(a.productId) ?? 0) : 0;
+      const shortfall = Math.max(0, a.required - inStock);
+      let toBuy = 0;
+      let packages: number | undefined;
+      if (shortfall > 0) {
+        if (a.packageSize && a.packageSize > 0) {
+          packages = Math.ceil(shortfall / a.packageSize);
+          toBuy = packages * a.packageSize;
+        } else {
+          toBuy = shortfall;
+        }
+      }
+      needs.push({
+        productId: a.productId,
+        name: a.name,
+        unit: a.unit,
+        required: a.required,
+        inStock,
+        shortfall,
+        packageSize: a.packageSize ?? undefined,
+        toBuy,
+        packages,
+      });
+    }
+    return needs.sort((x, y) => x.name.localeCompare(y.name, 'pl'));
+  }
+
+  private toPantryResponse(item: PantryItem, product: Product): PantryItemResponse {
+    return {
+      id: item.id,
+      productId: item.productId,
+      name: product.name,
+      baseUnit: product.baseUnit,
+      packageSize: product.packageSize ?? undefined,
+      quantity: item.quantity,
+    };
   }
 
   // ---- internals ----

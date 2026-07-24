@@ -6,14 +6,16 @@ import { RecipesView } from './RecipesView';
 import { PlannerView } from './PlannerView';
 import { ShoppingView } from './ShoppingView';
 import { ProductsView } from './ProductsView';
-import { IconCalendar, IconBook, IconCart, IconTag } from './icons';
+import { PantryView } from './PantryView';
+import { IconCalendar, IconBook, IconCart, IconTag, IconBox } from './icons';
 
-type MealsTab = 'planner' | 'recipes' | 'products' | 'shopping';
+type MealsTab = 'planner' | 'recipes' | 'products' | 'pantry' | 'shopping';
 
 const TABS: { id: MealsTab; label: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { id: 'planner', label: 'Planer', Icon: IconCalendar },
   { id: 'recipes', label: 'Przepisy', Icon: IconBook },
   { id: 'products', label: 'Produkty', Icon: IconTag },
+  { id: 'pantry', label: 'Spiżarnia', Icon: IconBox },
   { id: 'shopping', label: 'Zakupy', Icon: IconCart },
 ];
 
@@ -58,14 +60,14 @@ export function MealsSection({ storage, households = [], householdId, onSelectHo
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium border-b-2 transition-all ${
+              className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-1 py-2.5 text-[11px] sm:text-xs font-medium border-b-2 transition-all ${
                 tab === id
                   ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                   : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              {label}
+              <span className="truncate">{label}</span>
             </button>
           ))}
         </div>
@@ -75,6 +77,7 @@ export function MealsSection({ storage, households = [], householdId, onSelectHo
         {tab === 'planner' && <PlannerView storage={storage} liveKey={liveKey} />}
         {tab === 'recipes' && <RecipesView storage={storage} liveKey={liveKey} />}
         {tab === 'products' && <ProductsView storage={storage} liveKey={liveKey} />}
+        {tab === 'pantry' && <PantryView storage={storage} liveKey={liveKey} />}
         {tab === 'shopping' && <ShoppingView storage={storage} liveKey={liveKey} />}
       </main>
     </>

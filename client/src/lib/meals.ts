@@ -27,6 +27,27 @@ export interface ProductInput {
   trackInPantry: boolean;
 }
 
+export interface PantryItem {
+  id: string;
+  productId: string;
+  name: string;
+  baseUnit: string;
+  packageSize?: number;
+  quantity: number;
+}
+
+export interface NeedItem {
+  productId: string | null;
+  name: string;
+  unit: string;
+  required: number;
+  inStock: number;
+  shortfall: number;
+  packageSize?: number;
+  toBuy: number;
+  packages?: number;
+}
+
 export interface RecipeIngredient {
   ingredientId: string;
   name: string; // denormalised for display and shopping aggregation
@@ -87,11 +108,12 @@ export interface RecipeInput {
 // --- IndexedDB ---
 
 const DB_NAME = 'lista-zadan-meals';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const RECIPES = 'recipes';
 const ENTRIES = 'mealEntries';
 const SHOPPING = 'shopping';
 const PRODUCTS = 'products';
+const PANTRY = 'pantry';
 
 function generateId(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -118,6 +140,9 @@ function getDB(): Promise<IDBPDatabase> {
         }
         if (!db.objectStoreNames.contains(PRODUCTS)) {
           db.createObjectStore(PRODUCTS, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(PANTRY)) {
+          db.createObjectStore(PANTRY, { keyPath: 'id' });
         }
       },
     });
@@ -335,36 +360,19 @@ export async function removeShoppingItem(id: string): Promise<void> {
   await db.delete(SHOPPING, id);
 }
 
-// Aggregates every ingredient across the week's planned recipes into one list.
+// Pantry-aware: buys only what's missing, rounded up to whole packages.
 export async function generateShoppingFromPlan(weekStart: string): Promise<number> {
-  const entries = await getWeek(weekStart);
-  const aggregated = new Map<string, { name: string; quantity: number; unit: string }>();
-
-  for (const entry of entries) {
-    if (!entry.recipe) {
-      continue;
-    }
-    for (const ri of entry.recipe.recipeIngredients) {
-      const key = `${ri.name.toLowerCase()}__${ri.unit}`;
-      const current = aggregated.get(key);
-      if (current) {
-        current.quantity += ri.quantity;
-      } else {
-        aggregated.set(key, { name: ri.name, quantity: ri.quantity, unit: ri.unit });
-      }
-    }
-  }
-
+  const needs = (await computeNeeds(weekStart)).filter((n) => n.toBuy > 0);
   const db = await getDB();
   const now = Date.now();
   const tx = db.transaction(SHOPPING, 'readwrite');
   let count = 0;
-  for (const a of aggregated.values()) {
+  for (const n of needs) {
     const item: ShoppingItem = {
       id: generateId(),
-      name: a.name,
-      quantity: a.quantity || undefined,
-      unit: a.unit || undefined,
+      name: n.name,
+      quantity: n.toBuy || undefined,
+      unit: n.unit || undefined,
       isChecked: false,
       createdAt: now + count,
     };
@@ -373,6 +381,100 @@ export async function generateShoppingFromPlan(weekStart: string): Promise<numbe
   }
   await tx.done;
   return count;
+}
+
+// --- Pantry (spiżarnia) ---
+
+interface PantryRow {
+  id: string;
+  productId: string;
+  quantity: number;
+}
+
+export async function getPantry(): Promise<PantryItem[]> {
+  const db = await getDB();
+  const [rows, products] = await Promise.all([
+    db.getAll(PANTRY) as Promise<PantryRow[]>,
+    getProducts(),
+  ]);
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const result: PantryItem[] = [];
+  for (const r of rows) {
+    const p = byId.get(r.productId);
+    if (!p) {
+      continue;
+    }
+    result.push({ id: r.id, productId: r.productId, name: p.name, baseUnit: p.baseUnit, packageSize: p.packageSize, quantity: r.quantity });
+  }
+  return result.sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+}
+
+export async function setPantryStock(productId: string, quantity: number): Promise<void> {
+  const db = await getDB();
+  const rows = (await db.getAll(PANTRY)) as PantryRow[];
+  const existing = rows.find((r) => r.productId === productId);
+  const row: PantryRow = { id: existing?.id ?? generateId(), productId, quantity: Math.max(0, quantity) };
+  await db.put(PANTRY, row);
+}
+
+export async function adjustPantryStock(productId: string, delta: number): Promise<void> {
+  const db = await getDB();
+  const rows = (await db.getAll(PANTRY)) as PantryRow[];
+  const existing = rows.find((r) => r.productId === productId);
+  await setPantryStock(productId, (existing?.quantity ?? 0) + delta);
+}
+
+export async function removePantryItem(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete(PANTRY, id);
+}
+
+export async function computeNeeds(weekStart: string): Promise<NeedItem[]> {
+  const [entries, products, pantry] = await Promise.all([getWeek(weekStart), getProducts(), getPantry()]);
+  const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
+  const stock = new Map(pantry.map((x) => [x.productId, x.quantity]));
+  const agg = new Map<string, { productId: string | null; name: string; unit: string; required: number; packageSize?: number }>();
+  for (const e of entries) {
+    if (!e.recipe) {
+      continue;
+    }
+    for (const ri of e.recipe.recipeIngredients) {
+      const product = byName.get(ri.name.toLowerCase());
+      if (product && !product.trackInPantry) {
+        continue;
+      }
+      const key = product ? product.id : `name:${ri.name.toLowerCase()}`;
+      const cur = agg.get(key);
+      if (cur) {
+        cur.required += ri.quantity;
+      } else {
+        agg.set(key, {
+          productId: product?.id ?? null,
+          name: product?.name ?? ri.name,
+          unit: product?.baseUnit ?? ri.unit,
+          required: ri.quantity,
+          packageSize: product?.packageSize,
+        });
+      }
+    }
+  }
+  const needs: NeedItem[] = [];
+  for (const a of agg.values()) {
+    const inStock = a.productId ? (stock.get(a.productId) ?? 0) : 0;
+    const shortfall = Math.max(0, a.required - inStock);
+    let toBuy = 0;
+    let packages: number | undefined;
+    if (shortfall > 0) {
+      if (a.packageSize && a.packageSize > 0) {
+        packages = Math.ceil(shortfall / a.packageSize);
+        toBuy = packages * a.packageSize;
+      } else {
+        toBuy = shortfall;
+      }
+    }
+    needs.push({ productId: a.productId, name: a.name, unit: a.unit, required: a.required, inStock, shortfall, packageSize: a.packageSize, toBuy, packages });
+  }
+  return needs.sort((x, y) => x.name.localeCompare(y.name, 'pl'));
 }
 
 // --- Storage abstraction (local IndexedDB vs cloud household) ---
@@ -396,6 +498,11 @@ export interface MealStorage {
   toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;
   removeShoppingItem(id: string): Promise<void>;
   generateShoppingFromPlan(weekStart: string): Promise<number>;
+  getPantry(): Promise<PantryItem[]>;
+  setPantryStock(productId: string, quantity: number): Promise<void>;
+  adjustPantryStock(productId: string, delta: number): Promise<void>;
+  removePantryItem(id: string): Promise<void>;
+  computeNeeds(weekStart: string): Promise<NeedItem[]>;
 }
 
 export const localMealStorage: MealStorage = {
@@ -417,4 +524,9 @@ export const localMealStorage: MealStorage = {
   toggleShoppingItem,
   removeShoppingItem,
   generateShoppingFromPlan,
+  getPantry,
+  setPantryStock,
+  adjustPantryStock,
+  removePantryItem,
+  computeNeeds,
 };

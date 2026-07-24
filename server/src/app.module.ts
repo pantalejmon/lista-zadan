@@ -24,6 +24,7 @@ import { AddMealTables1763424000000 } from './migration/1763424000000-AddMealTab
 import { AddChatTable1763510400000 } from './migration/1763510400000-AddChatTable';
 import { AddPushSubscriptionTable1763596800000 } from './migration/1763596800000-AddPushSubscriptionTable';
 import { AddProductTable1763683200000 } from './migration/1763683200000-AddProductTable';
+import { AddPantryTable1763769600000 } from './migration/1763769600000-AddPantryTable';
 import configuration from './config/configuration';
 
 @Module({
@@ -55,6 +56,7 @@ import configuration from './config/configuration';
           AddChatTable1763510400000,
           AddPushSubscriptionTable1763596800000,
           AddProductTable1763683200000,
+          AddPantryTable1763769600000,
         ],
       }),
     }),

@@ -30,8 +30,9 @@ export class SharingService {
   async getListsForUser(userId: string): Promise<TodoListResponse[]> {
     const memberships = await this.memberRepo.findByUserId(userId);
     if (memberships.length === 0) {
-      await this.createDefaultList(userId);
-      return this.getListsForUser(userId);
+      // No household yet — the client runs onboarding (setupHousehold / accept invitation).
+      // We no longer auto-create a household silently.
+      return [];
     }
 
     const householdIds = memberships.map((m) => m.householdId);
@@ -117,6 +118,24 @@ export class SharingService {
     const household = Household.create(name);
     await this.householdRepo.save(household);
     await this.memberRepo.save(HouseholdMember.create(household.id, userId, 'owner'));
+    return household.toResponse('owner');
+  }
+
+  // First-login onboarding: create the user's first household + a default list.
+  // Idempotent — if the user already belongs to a household, returns it without creating a duplicate.
+  async setupHousehold(name: string, userId: string): Promise<HouseholdResponse> {
+    const memberships = await this.memberRepo.findByUserId(userId);
+    if (memberships.length > 0) {
+      const existing = await this.householdRepo.findById(memberships[0].householdId);
+      if (existing) {
+        return existing.toResponse(memberships[0].role);
+      }
+    }
+    const household = Household.create(name.trim() || 'Mój dom');
+    await this.householdRepo.save(household);
+    await this.memberRepo.save(HouseholdMember.create(household.id, userId, 'owner'));
+    const list = TodoList.createDefault(userId, household.id);
+    await this.listRepo.save(list);
     return household.toResponse('owner');
   }
 

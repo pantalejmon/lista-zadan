@@ -19,6 +19,7 @@ import { Onboarding } from './components/Onboarding';
 import { setupHousehold } from './lib/api';
 import { MealsSection } from './components/meals/MealsSection';
 import { HomeSection } from './components/home/HomeSection';
+import { FinanceSection } from './components/finance/FinanceSection';
 import { ChatView } from './components/ChatView';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
@@ -217,7 +218,10 @@ export default function App() {
     : null;
 
   const sectionTitle =
-    section === 'meals' ? 'Posiłki' : section === 'home' ? 'Serwis domu' : section === 'chat' ? 'Czat' : 'Zadania';
+    section === 'meals' ? 'Posiłki'
+      : section === 'home' ? 'Serwis domu'
+        : section === 'finance' ? 'Finanse'
+          : section === 'chat' ? 'Czat' : 'Zadania';
 
   // First-login onboarding: logged in but no household yet → name your home or accept an invitation.
   if (isCloud && user && !householdsLoading && households.length === 0) {
@@ -304,6 +308,10 @@ export default function App() {
 
       {section === 'home' && (
         <HomeSection householdId={mealHousehold?.id} />
+      )}
+
+      {section === 'finance' && (
+        <FinanceSection householdId={mealHousehold?.id} />
       )}
 
       {section === 'chat' && (

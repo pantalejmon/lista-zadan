@@ -13,7 +13,8 @@ import { ListSettings } from './components/ListSettings';
 import { HouseholdSettings } from './components/HouseholdSettings';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
-import { SideMenu } from './components/SideMenu';
+import { AppSidebar, type AppSection } from './components/AppSidebar';
+import { MealsSection } from './components/meals/MealsSection';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
@@ -25,6 +26,7 @@ import { useHouseholds } from './hooks/useHouseholds';
 import { useInvitations } from './hooks/useInvitations';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useOfflineSync } from './hooks/useOfflineSync';
+import { useMealStorage } from './hooks/useMealStorage';
 
 type View = 'calendar' | 'all' | 'unassigned';
 
@@ -48,6 +50,7 @@ export default function App() {
   } = useHouseholds(isCloud);
   const { invitations, accept: acceptInvite, decline: declineInvite } = useInvitations(isCloud);
   const [view, setView] = useState<View>('calendar');
+  const [section, setSection] = useState<AppSection>('tasks');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [refreshKey, setRefreshKey] = useState(0);
@@ -59,6 +62,7 @@ export default function App() {
   const { todos, loading, add, addShopping, addRecurring, toggle, update, updateFull, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
   const { dark, toggle: toggleDark } = useDark();
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
+  const mealStorage = useMealStorage(mode, activeList?.householdId);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -174,46 +178,14 @@ export default function App() {
     ? households.find((h) => h.id === householdSettingsId)
     : null;
 
-  return (
-    <div className="min-h-dvh flex flex-col overflow-x-hidden">
-      {/* Top bar */}
-      <header className="sticky top-0 z-20 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
-        <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-1 min-w-0">
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="p-2 -ml-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
-              aria-label="Menu"
-            >
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <svg className="w-6 h-6 text-primary-500 shrink-0" viewBox="0 0 100 100" fill="none">
-              <rect width="100" height="100" rx="20" fill="currentColor" />
-              <path d="M25 52l15 15 35-35" stroke="white" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {isCloud ? (
-              <ListSelector
-                households={households}
-                lists={lists}
-                activeList={activeList}
-                onSelect={setActiveListId}
-                onCreateList={createList}
-                onCreateHousehold={handleCreateHousehold}
-                onOpenListSettings={setSettingsListId}
-                onOpenHouseholdSettings={setHouseholdSettingsId}
-              />
-            ) : (
-              <h1 className="text-sm font-semibold truncate">Lista Zadań</h1>
-            )}
-          </div>
-          <ThemeToggle dark={dark} onToggle={toggleDark} />
-        </div>
-      </header>
+  const sectionTitle = section === 'meals' ? 'Posiłki' : 'Zadania';
 
-      {/* Side menu */}
-      <SideMenu
+  return (
+    <div className="min-h-dvh lg:flex overflow-x-hidden">
+      {/* Left main navigation */}
+      <AppSidebar
+        section={section}
+        onSection={setSection}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         user={user}
@@ -226,13 +198,50 @@ export default function App() {
         syncStatus={syncStatus}
         pendingCount={pendingCount}
         isCloud={isCloud}
-        lists={lists}
-        activeList={activeList}
-        onSelectList={setActiveListId}
-        onCreateList={createList}
-        onOpenSettings={setSettingsListId}
       />
 
+      {/* Content column */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-dvh">
+      {/* Top bar */}
+      <header className="sticky top-0 z-20 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
+        <div className="max-w-lg lg:max-w-none mx-auto flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-1 min-w-0">
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
+              aria-label="Menu"
+            >
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <svg className="w-6 h-6 lg:hidden text-primary-500 shrink-0" viewBox="0 0 100 100" fill="none">
+              <rect width="100" height="100" rx="20" fill="currentColor" />
+              <path d="M25 52l15 15 35-35" stroke="white" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {section === 'tasks' && isCloud ? (
+              <ListSelector
+                households={households}
+                lists={lists}
+                activeList={activeList}
+                onSelect={setActiveListId}
+                onCreateList={createList}
+                onCreateHousehold={handleCreateHousehold}
+                onOpenListSettings={setSettingsListId}
+                onOpenHouseholdSettings={setHouseholdSettingsId}
+              />
+            ) : (
+              <h1 className="text-sm font-semibold truncate">{sectionTitle}</h1>
+            )}
+          </div>
+          <ThemeToggle dark={dark} onToggle={toggleDark} />
+        </div>
+      </header>
+
+      {section === 'meals' && <MealsSection storage={mealStorage} />}
+
+      {section === 'tasks' && (
+      <>
       {/* Migration banner */}
       {user && <MigrationBanner storage={storage} listId={activeListId ?? undefined} onMigrated={triggerRefresh} />}
 
@@ -382,6 +391,8 @@ export default function App() {
           <UnassignedView storage={storage} listId={activeListId ?? undefined} refreshKey={refreshKey} onRefresh={triggerRefresh} />
         </main>
       )}
+      </>
+      )}
 
       {/* List settings modal */}
       {settingsList && (
@@ -401,6 +412,7 @@ export default function App() {
           onRename={handleRenameHousehold}
         />
       )}
+      </div>
     </div>
   );
 }

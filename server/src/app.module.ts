@@ -7,6 +7,7 @@ import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
 import { TodoModule } from './todo/todo.module';
 import { SharingModule } from './sharing/sharing.module';
+import { MealModule } from './meal/meal.module';
 import { CreateTodoTable1711612800000 } from './migration/1711612800000-CreateTodoTable';
 import { CreateUserTable1711612900000 } from './migration/1711612900000-CreateUserTable';
 import { AddUserIdToTodo1711613000000 } from './migration/1711613000000-AddUserIdToTodo';
@@ -17,6 +18,7 @@ import { AddUpdatedAtToTodo1711613400000 } from './migration/1711613400000-AddUp
 import { AddHouseholdTables1721800000000 } from './migration/1721800000000-AddHouseholdTables';
 import { AddStorageQuotaToUser1743206400000 } from './migration/1743206400000-AddStorageQuotaToUser';
 import { AddShoppingListSupport1763251200000 } from './migration/1763251200000-AddShoppingListSupport';
+import { AddMealTables1763424000000 } from './migration/1763424000000-AddMealTables';
 import configuration from './config/configuration';
 
 @Module({
@@ -44,6 +46,7 @@ import configuration from './config/configuration';
           AddHouseholdTables1721800000000,
           AddStorageQuotaToUser1743206400000,
           AddShoppingListSupport1763251200000,
+          AddMealTables1763424000000,
         ],
       }),
     }),
@@ -54,6 +57,7 @@ import configuration from './config/configuration';
     AuthModule,
     TodoModule,
     SharingModule,
+    MealModule,
   ],
   controllers: [HealthController],
 })

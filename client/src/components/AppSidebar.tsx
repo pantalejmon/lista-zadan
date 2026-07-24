@@ -6,7 +6,7 @@ import type { Household } from '../lib/types';
 import type { WsStatus } from '../hooks/useWebSocket';
 import type { SyncStatus } from '../lib/offlineQueue';
 
-export type AppSection = 'tasks' | 'meals' | 'home' | 'chat';
+export type AppSection = 'tasks' | 'meals' | 'home' | 'finance' | 'chat';
 
 interface NavItem {
   id: AppSection;
@@ -43,6 +43,16 @@ const NAV_ITEMS: NavItem[] = [
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    ),
+  },
+  {
+    id: 'finance',
+    label: 'Finanse',
+    description: 'Portfele, wydatki, statystyki',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 10a2 2 0 012-2h14a2 2 0 012 2m-18 0v8a2 2 0 002 2h14a2 2 0 002-2v-8m-5 4h2" />
       </svg>
     ),
   },

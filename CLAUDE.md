@@ -27,6 +27,10 @@ doc in the same commit** — the docs are the source of truth for the intent beh
 - `docs/home-service.md` — Serwis domu module: home assets + cyclic maintenance, `nextDueAt` derivation
   (`addMonths`), date-relative status (`overdue`/`soon`/`ok`/`none` with a 30-day soon threshold), and the
   "mark done" loop closer that rolls the next due date forward. Cloud-only, per household.
+- `docs/finance.md` — Finanse module (ported from the standalone `finansowy-notatnik` app): wallets +
+  transactions (positive = income, negative = expense, rounded to grosze), recurring-transaction catch-up
+  (`materialiseDue`, idempotent, capped) and server-side stats. Also records why the category breakdown is
+  single-hue bars rather than a 9-colour donut.
 - `docs/api-tokens.md` — machine tokens for agent/MCP access: `api_token` model (SHA-256 hashed secret,
   scopes, household binding, expiry), the `<module>:<read|write>` scope grammar with `write⇒read`, and the
   `MachineOrJwtAuthGuard` that accepts a session cookie OR a `Bearer lz_…` token and enforces `@RequireScopes`.

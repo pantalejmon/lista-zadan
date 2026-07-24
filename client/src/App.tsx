@@ -11,6 +11,7 @@ import { MigrationBanner } from './components/MigrationBanner';
 import { ListSelector } from './components/ListSelector';
 import { ListSettings } from './components/ListSettings';
 import { HouseholdSettings } from './components/HouseholdSettings';
+import { TokensSettings } from './components/TokensSettings';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
 import { AppSidebar, type AppSection } from './components/AppSidebar';
@@ -61,6 +62,7 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [settingsListId, setSettingsListId] = useState<string | null>(null);
   const [householdSettingsId, setHouseholdSettingsId] = useState<string | null>(null);
+  const [tokensOpen, setTokensOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -229,6 +231,7 @@ export default function App() {
         syncStatus={syncStatus}
         pendingCount={pendingCount}
         isCloud={isCloud}
+        onOpenTokens={() => setTokensOpen(true)}
       />
 
       {/* Content column */}
@@ -458,6 +461,11 @@ export default function App() {
           onUpdate={(listId, name) => { updateList(listId, name); }}
           onDelete={handleDeleteList}
         />
+      )}
+
+      {/* API/MCP tokens modal */}
+      {tokensOpen && (
+        <TokensSettings households={households} onClose={() => setTokensOpen(false)} />
       )}
 
       {/* Household settings modal */}

@@ -14,7 +14,8 @@ import { HouseholdSettings } from './components/HouseholdSettings';
 import { TokensSettings } from './components/TokensSettings';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
-import { AppSidebar, type AppSection } from './components/AppSidebar';
+import { AppSidebar } from './components/AppSidebar';
+import { NAV_ITEMS, type AppSection } from './lib/navigation';
 import { Onboarding } from './components/Onboarding';
 import { setupHousehold } from './lib/api';
 import { MealsSection } from './components/meals/MealsSection';
@@ -64,6 +65,7 @@ export default function App() {
   const [householdSettingsId, setHouseholdSettingsId] = useState<string | null>(null);
   const [tokensOpen, setTokensOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const { todos, loading, add, addShopping, addRecurring, toggle, update, updateFull, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
@@ -102,6 +104,14 @@ export default function App() {
       setSection('tasks');
     }
   }, [isCloud, section]);
+
+  // Belka dostaje delikatny cień dopiero, gdy jest co pod nią przewinąć
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -223,6 +233,9 @@ export default function App() {
         : section === 'finance' ? 'Finanse'
           : section === 'chat' ? 'Czat' : 'Zadania';
 
+  // Ikona bieżącej sekcji w belce — ta sama, co w menu
+  const SectionIcon = NAV_ITEMS.find((item) => item.id === section)?.Icon ?? NAV_ITEMS[0].Icon;
+
   // First-login onboarding: logged in but no household yet → name your home or accept an invitation.
   if (isCloud && user && !householdsLoading && households.length === 0) {
     return (
@@ -240,8 +253,10 @@ export default function App() {
     );
   }
 
+  // Od tabletu (md) pasek boczny i treść stoją obok siebie — breakpoint musi się
+  // zgadzać z widocznością paska w AppSidebar, inaczej treść ląduje pod paskiem.
   return (
-    <div className="min-h-dvh lg:flex overflow-x-hidden">
+    <div className="min-h-dvh md:flex overflow-x-hidden">
       {/* Left main navigation */}
       <AppSidebar
         section={section}
@@ -268,35 +283,54 @@ export default function App() {
 
       {/* Content column */}
       <div className="flex-1 min-w-0 flex flex-col min-h-dvh">
-      {/* Top bar */}
-      <header className="sticky top-0 z-20 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
-        <div className="max-w-lg lg:max-w-none mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-1 min-w-0">
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="lg:hidden p-2.5 -ml-2 min-w-11 min-h-11 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
-              aria-label="Menu"
-            >
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <svg className="w-6 h-6 lg:hidden text-primary-500 shrink-0" viewBox="0 0 100 100" fill="none">
-              <rect width="100" height="100" rx="20" fill="currentColor" />
-              <path d="M25 52l15 15 35-35" stroke="white" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Górna belka — pełna szerokość, więc hamburger siedzi przy lewej krawędzi.
+          Kreska u dołu pojawia się dopiero po przewinięciu, żeby w spoczynku
+          belka wtapiała się w tło zamiast ciąć ekran linią. */}
+      <header
+        className={`sticky top-0 z-20 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 transition-shadow duration-200 ${
+          scrolled
+            ? 'shadow-[0_1px_0_0_rgba(0,0,0,0.06),0_4px_16px_-8px_rgba(0,0,0,0.15)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
+            : ''
+        }`}
+      >
+        <div className="flex items-center gap-2 px-3 sm:px-4 h-14">
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
+            aria-label="Menu"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
+          </button>
+
+          {/* Ikona bieżącej sekcji — ten sam kafelek co w menu, więc belka niesie
+              tożsamość miejsca, w którym jesteś */}
+          <SectionIcon className="w-7 h-7 text-primary-500 shrink-0" />
+
+          <div className="min-w-0 flex-1">
             {section === 'tasks' && isCloud ? (
-              <ListSelector
-                lists={householdLists}
-                activeList={activeList}
-                activeHouseholdId={mealHousehold?.id ?? null}
-                canCreate={mealHousehold?.role !== 'viewer'}
-                onSelect={setActiveListId}
-                onCreateList={createList}
-                onOpenListSettings={setSettingsListId}
-              />
+              <>
+                <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 leading-none mb-0.5 hidden sm:block">
+                  Zadania
+                </p>
+                <ListSelector
+                  lists={householdLists}
+                  activeList={activeList}
+                  activeHouseholdId={mealHousehold?.id ?? null}
+                  canCreate={mealHousehold?.role !== 'viewer'}
+                  onSelect={setActiveListId}
+                  onCreateList={createList}
+                  onOpenListSettings={setSettingsListId}
+                />
+              </>
             ) : (
-              <h1 className="text-sm font-semibold truncate">{sectionTitle}</h1>
+              <>
+                <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 leading-none mb-0.5 hidden sm:block">
+                  {mealHousehold?.name ?? 'Dom'}
+                </p>
+                <h1 className="text-sm font-semibold truncate leading-tight">{sectionTitle}</h1>
+              </>
             )}
           </div>
         </div>
@@ -339,7 +373,7 @@ export default function App() {
       )}
 
       {/* Tab bar */}
-      <div className="sticky top-[53px] z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50 overflow-x-hidden">
+      <div className="sticky top-14 z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50 overflow-x-hidden">
         <div className="max-w-lg mx-auto flex px-2">
           <button
             onClick={() => setView('calendar')}

@@ -1,72 +1,14 @@
 import { useEffect } from 'react';
 import { PushToggle } from './PushToggle';
 import { HouseholdSwitcher } from './HouseholdSwitcher';
+import { IconBrandHome } from './AppIcons';
+import { NAV_ITEMS, type AppSection } from '../lib/navigation';
 import type { AuthUser } from '../hooks/useAuth';
 import type { Household } from '../lib/types';
 import type { WsStatus } from '../hooks/useWebSocket';
 import type { SyncStatus } from '../lib/offlineQueue';
 
-export type AppSection = 'tasks' | 'meals' | 'home' | 'finance' | 'chat';
-
-interface NavItem {
-  id: AppSection;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    id: 'tasks',
-    label: 'Zadania',
-    description: 'Kalendarz i listy',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-      </svg>
-    ),
-  },
-  {
-    id: 'meals',
-    label: 'Posiłki',
-    description: 'Planer, przepisy, zakupy',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18M7 3v6a2 2 0 01-2 2H3m4-8v18M14 5c0-1.1.9-2 2-2s2 .9 2 2v6h-4V5zm0 6v10" />
-      </svg>
-    ),
-  },
-  {
-    id: 'home',
-    label: 'Serwis domu',
-    description: 'Przeglądy, gwarancje, koszty',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-  },
-  {
-    id: 'finance',
-    label: 'Finanse',
-    description: 'Portfele, wydatki, statystyki',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 10a2 2 0 012-2h14a2 2 0 012 2m-18 0v8a2 2 0 002 2h14a2 2 0 002-2v-8m-5 4h2" />
-      </svg>
-    ),
-  },
-  {
-    id: 'chat',
-    label: 'Czat',
-    description: 'Rozmowy domowników',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.9 9.9 0 01-4-.8L3 20l.8-3.2A7.9 7.9 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-      </svg>
-    ),
-  },
-];
+export type { AppSection };
 
 interface AppSidebarProps {
   section: AppSection;
@@ -101,14 +43,14 @@ export function AppSidebar(props: AppSidebarProps) {
 
   return (
     <>
-      {/* Desktop: persistent rail */}
-      <aside className="hidden lg:flex lg:flex-col w-64 shrink-0 border-r border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-gray-950/60 h-dvh sticky top-0">
+      {/* Tablet i większe: stały pasek (na tablecie węższy, żeby zostało miejsce na treść) */}
+      <aside className="hidden md:flex md:flex-col w-56 lg:w-64 shrink-0 border-r border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-gray-950/60 h-dvh sticky top-0">
         <SidebarContent {...props} />
       </aside>
 
-      {/* Mobile: slide-out drawer */}
+      {/* Telefon: wysuwana szuflada */}
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" onClick={onClose} />
           <div className="absolute top-0 left-0 bottom-0 w-72 bg-white dark:bg-gray-950 shadow-2xl flex flex-col animate-slide-in-left">
             <SidebarContent {...props} />
@@ -151,10 +93,7 @@ function SidebarContent({
     <div className="flex flex-col h-full">
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-        <svg className="w-7 h-7 text-primary-500 shrink-0" viewBox="0 0 100 100" fill="none">
-          <rect width="100" height="100" rx="24" fill="currentColor" />
-          <path d="M25 52l15 15 35-35" stroke="white" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <IconBrandHome className="w-8 h-8 text-primary-500 shrink-0" />
         <div className="min-w-0">
           <p className="text-sm font-bold leading-tight">Dom</p>
           <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">Twój domowy asystent</p>
@@ -176,20 +115,24 @@ function SidebarContent({
       {/* Feature navigation — Posiłki/Czat wymagają konta (gospodarstwa); lokalnie tylko Zadania */}
       <nav className="px-3 py-4 space-y-1">
         <p className="px-2 mb-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Aplikacje</p>
-        {NAV_ITEMS.filter((item) => isCloud || item.id === 'tasks').map((item) => (
+        {NAV_ITEMS.filter((item) => isCloud || item.id === 'tasks').map(({ id, label, description, Icon }) => (
           <button
-            key={item.id}
-            onClick={() => selectSection(item.id)}
+            key={id}
+            onClick={() => selectSection(id)}
             className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-colors ${
-              section === item.id
-                ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400'
+              section === id
+                ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
             }`}
           >
-            <span className="shrink-0">{item.icon}</span>
+            {/* Kafelek nabiera koloru marki dopiero dla aktywnej sekcji — reszta
+                zostaje stonowana, żeby menu nie było kolorową choinką */}
+            <Icon className={`w-8 h-8 shrink-0 transition-colors ${
+              section === id ? 'text-primary-500' : 'text-gray-400 dark:text-gray-600'
+            }`} />
             <span className="min-w-0 text-left">
-              <span className="block text-sm font-medium truncate">{item.label}</span>
-              <span className="block text-[11px] text-gray-400 dark:text-gray-500 truncate">{item.description}</span>
+              <span className="block text-sm font-medium truncate">{label}</span>
+              <span className="block text-[11px] text-gray-400 dark:text-gray-500 truncate">{description}</span>
             </span>
           </button>
         ))}

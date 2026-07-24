@@ -34,11 +34,17 @@ export function StatsView({ householdId, wallet, liveKey }: StatsViewProps) {
 
   return (
     <div className="space-y-4">
-      {/* KPI row */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* KPI row — na wąskim ekranie saldo (najważniejsze) dostaje całą szerokość,
+          bo w trzech kolumnach kwoty się nie mieszczą i były ucinane */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         <StatTile label="Przychody" value={stats.income} tone="income" />
         <StatTile label="Wydatki" value={stats.expenses} tone="expense" />
-        <StatTile label="Saldo" value={stats.balance} tone={stats.balance >= 0 ? 'income' : 'expense'} />
+        <StatTile
+          label="Saldo"
+          value={stats.balance}
+          tone={stats.balance >= 0 ? 'income' : 'expense'}
+          className="col-span-2 sm:col-span-1"
+        />
       </div>
 
       {empty ? (
@@ -55,11 +61,21 @@ export function StatsView({ householdId, wallet, liveKey }: StatsViewProps) {
   );
 }
 
-function StatTile({ label, value, tone }: { label: string; value: number; tone: 'income' | 'expense' }) {
+function StatTile({
+  label,
+  value,
+  tone,
+  className = '',
+}: {
+  label: string;
+  value: number;
+  tone: 'income' | 'expense';
+  className?: string;
+}) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-3 py-3">
+    <div className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-3 py-3 ${className}`}>
       <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-0.5">{label}</p>
-      <p className={`text-base sm:text-lg font-bold tabular-nums truncate ${
+      <p className={`text-base sm:text-lg font-bold tabular-nums ${
         tone === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
       }`}>
         {formatCurrency(value)}

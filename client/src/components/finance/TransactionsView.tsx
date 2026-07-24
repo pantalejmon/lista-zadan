@@ -315,39 +315,41 @@ function TransactionRow({
   }
 
   return (
-    <li className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium truncate">{transaction.description}</span>
-          {transaction.category && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-              {transaction.category}
-            </span>
-          )}
-          {transaction.recurringId && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400" title="Z transakcji cyklicznej">
-              cykliczna
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-gray-400 mt-0.5">{formatMoment(transaction.occurredAt)}</p>
+    // Dwa poziomy: opis + kwota, a niżej metadane i akcje. W jednym wierszu
+    // kwota i dwie ikony zjadały opis („Biedronka duże zaku…") na telefonie.
+    <li className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 px-4 py-2.5">
+      <div className="flex items-baseline gap-3">
+        <span className="text-sm font-medium truncate min-w-0 flex-1">{transaction.description}</span>
+        <span className={`text-sm font-semibold tabular-nums shrink-0 ${
+          isExpense ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
+        }`}>
+          {formatCurrency(transaction.amount)}
+        </span>
       </div>
-      <span className={`text-sm font-semibold tabular-nums shrink-0 ${
-        isExpense ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
-      }`}>
-        {formatCurrency(transaction.amount)}
-      </span>
-      <div className="flex items-center gap-1 shrink-0">
-        <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Edytuj">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
-        <button onClick={onDelete} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" aria-label="Usuń">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+      <div className="flex items-center gap-2 mt-0.5">
+        <span className="text-xs text-gray-400 shrink-0">{formatMoment(transaction.occurredAt)}</span>
+        {transaction.category && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 truncate">
+            {transaction.category}
+          </span>
+        )}
+        {transaction.recurringId && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 shrink-0" title="Z transakcji cyklicznej">
+            cykliczna
+          </span>
+        )}
+        <div className="flex items-center gap-1 ml-auto shrink-0 -mr-2">
+          <button onClick={() => setEditing(true)} className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Edytuj">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button onClick={onDelete} className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" aria-label="Usuń">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
       </div>
     </li>
   );

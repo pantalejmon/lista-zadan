@@ -274,7 +274,7 @@ export default function App() {
           <div className="flex items-center gap-1 min-w-0">
             <button
               onClick={() => setMenuOpen(true)}
-              className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
+              className="lg:hidden p-2.5 -ml-2 min-w-11 min-h-11 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
               aria-label="Menu"
             >
               <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

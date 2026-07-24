@@ -233,7 +233,7 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
               <h2 className="font-semibold">Wybierz przepis</h2>
               <button
                 onClick={() => setPickerSlot(null)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="p-2 -mr-1 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Zamknij"
               >
                 <IconClose className="w-4 h-4" />

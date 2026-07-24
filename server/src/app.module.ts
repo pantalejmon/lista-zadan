@@ -10,6 +10,7 @@ import { SharingModule } from './sharing/sharing.module';
 import { MealModule } from './meal/meal.module';
 import { HomeModule } from './home/home.module';
 import { ApiTokenModule } from './api-token/api-token.module';
+import { McpModule } from './mcp/mcp.module';
 import { ChatModule } from './chat/chat.module';
 import { PushModule } from './push/push.module';
 import { CreateTodoTable1711612800000 } from './migration/1711612800000-CreateTodoTable';
@@ -78,6 +79,7 @@ import configuration from './config/configuration';
     MealModule,
     HomeModule,
     ApiTokenModule,
+    McpModule,
     ChatModule,
     PushModule,
   ],

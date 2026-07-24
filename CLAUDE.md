@@ -30,6 +30,9 @@ doc in the same commit** — the docs are the source of truth for the intent beh
 - `docs/api-tokens.md` — machine tokens for agent/MCP access: `api_token` model (SHA-256 hashed secret,
   scopes, household binding, expiry), the `<module>:<read|write>` scope grammar with `write⇒read`, and the
   `MachineOrJwtAuthGuard` that accepts a session cookie OR a `Bearer lz_…` token and enforces `@RequireScopes`.
+- `docs/mcp-setup.md` — MCP server: JSON-RPC over Streamable HTTP at `POST /api/mcp`, bearer-token auth,
+  the tool registry (`server/src/mcp/domain/tools/`), per-tool scope gating, and how to connect an agent
+  (Cowork). Tools reuse the domain services, so UI permissions apply unchanged.
 - `docs/google-oauth-setup.md`, `docs/push-setup.md` — deployment/config guides.
 
 ## Build & Run Commands

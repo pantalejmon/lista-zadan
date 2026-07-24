@@ -82,6 +82,7 @@ export interface MealEntry {
   dayOfWeek: number; // 0 = Monday ... 6 = Sunday
   mealType: MealType;
   recipeId: string;
+  cooked: boolean;
 }
 
 export interface PlannerEntry extends MealEntry {
@@ -297,7 +298,7 @@ export async function getWeek(weekStart: string): Promise<PlannerEntry[]> {
   const result: PlannerEntry[] = [];
   for (const entry of entries) {
     const recipe = (await db.get(RECIPES, entry.recipeId)) as Recipe | undefined;
-    result.push({ ...entry, recipe: recipe ?? null });
+    result.push({ ...entry, cooked: entry.cooked ?? false, recipe: recipe ?? null });
   }
   return result;
 }
@@ -317,6 +318,7 @@ export async function addEntry(
     dayOfWeek,
     mealType,
     recipeId,
+    cooked: false, // changing the slot's recipe resets the cooked flag
   };
   await db.put(ENTRIES, entry);
 }
@@ -324,6 +326,33 @@ export async function addEntry(
 export async function removeEntry(id: string): Promise<void> {
   const db = await getDB();
   await db.delete(ENTRIES, id);
+}
+
+// Loop closer: cooking a meal subtracts its ingredients from the pantry;
+// un-marking restores them. Idempotent.
+export async function setCooked(id: string, cooked: boolean): Promise<void> {
+  const db = await getDB();
+  const entry = (await db.get(ENTRIES, id)) as MealEntry | undefined;
+  if (!entry || (entry.cooked ?? false) === cooked) {
+    return;
+  }
+  const recipe = (await db.get(RECIPES, entry.recipeId)) as Recipe | undefined;
+  if (recipe) {
+    await applyRecipeToPantry(recipe, cooked ? -1 : 1);
+  }
+  await db.put(ENTRIES, { ...entry, cooked });
+}
+
+async function applyRecipeToPantry(recipe: Recipe, sign: number): Promise<void> {
+  const products = await getProducts();
+  const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
+  for (const ri of recipe.recipeIngredients) {
+    const product = byName.get(ri.name.toLowerCase());
+    if (!product || !product.trackInPantry || ri.quantity <= 0) {
+      continue;
+    }
+    await adjustPantryStock(product.id, sign * ri.quantity);
+  }
 }
 
 // --- Shopping ---
@@ -350,9 +379,19 @@ export async function addShoppingItem(name: string, quantity?: number, unit?: st
 export async function toggleShoppingItem(id: string, isChecked: boolean): Promise<void> {
   const db = await getDB();
   const item = (await db.get(SHOPPING, id)) as ShoppingItem | undefined;
-  if (item) {
-    await db.put(SHOPPING, { ...item, isChecked });
+  if (!item) {
+    return;
   }
+  // Loop closer: buying a quantified, pantry-tracked item adds it to the pantry;
+  // un-checking reverses that.
+  if ((item.isChecked ?? false) !== isChecked && item.quantity && item.quantity > 0) {
+    const products = await getProducts();
+    const product = products.find((p) => p.name.toLowerCase() === item.name.trim().toLowerCase());
+    if (product && product.trackInPantry) {
+      await adjustPantryStock(product.id, isChecked ? item.quantity : -item.quantity);
+    }
+  }
+  await db.put(SHOPPING, { ...item, isChecked });
 }
 
 export async function removeShoppingItem(id: string): Promise<void> {
@@ -493,6 +532,7 @@ export interface MealStorage {
   getWeek(weekStart: string): Promise<PlannerEntry[]>;
   addEntry(weekStart: string, recipeId: string, dayOfWeek: number, mealType: MealType): Promise<void>;
   removeEntry(id: string): Promise<void>;
+  setCooked(id: string, cooked: boolean): Promise<void>;
   getShopping(): Promise<ShoppingItem[]>;
   addShoppingItem(name: string): Promise<void>;
   toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;
@@ -519,6 +559,7 @@ export const localMealStorage: MealStorage = {
   getWeek,
   addEntry,
   removeEntry,
+  setCooked,
   getShopping,
   addShoppingItem: (name) => addShoppingItem(name),
   toggleShoppingItem,

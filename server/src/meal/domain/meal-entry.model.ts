@@ -7,6 +7,7 @@ export interface MealEntryResponse {
   dayOfWeek: number;
   mealType: MealType;
   recipeId: string;
+  cooked: boolean;
 }
 
 export class MealEntry {
@@ -17,6 +18,7 @@ export class MealEntry {
     readonly dayOfWeek: number,
     readonly mealType: MealType,
     readonly recipeId: string,
+    readonly cooked: boolean = false,
   ) {}
 
   static create(
@@ -26,11 +28,16 @@ export class MealEntry {
     mealType: MealType,
     recipeId: string,
   ): MealEntry {
-    return new MealEntry(randomUUID(), householdId, weekStart, dayOfWeek, mealType, recipeId);
+    return new MealEntry(randomUUID(), householdId, weekStart, dayOfWeek, mealType, recipeId, false);
   }
 
   withRecipe(recipeId: string): MealEntry {
-    return new MealEntry(this.id, this.householdId, this.weekStart, this.dayOfWeek, this.mealType, recipeId);
+    // Changing the recipe resets the cooked flag.
+    return new MealEntry(this.id, this.householdId, this.weekStart, this.dayOfWeek, this.mealType, recipeId, false);
+  }
+
+  withCooked(cooked: boolean): MealEntry {
+    return new MealEntry(this.id, this.householdId, this.weekStart, this.dayOfWeek, this.mealType, this.recipeId, cooked);
   }
 
   toResponse(): MealEntryResponse {
@@ -40,6 +47,7 @@ export class MealEntry {
       dayOfWeek: this.dayOfWeek,
       mealType: this.mealType,
       recipeId: this.recipeId,
+      cooked: this.cooked,
     };
   }
 }

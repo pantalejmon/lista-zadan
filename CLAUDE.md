@@ -15,6 +15,17 @@ write bad code.
 PWA todo application with React 19 frontend and NestJS backend. Supports local-only mode (IndexedDB) and
 cloud mode (server storage with Google OAuth). Polish language UI.
 
+## Feature Documentation
+
+Non-trivial feature algorithms are documented under `docs/`. **When you change how a feature works, update its
+doc in the same commit** — the docs are the source of truth for the intent behind the code.
+
+- `docs/meals.md` — Posiłki module: pantry-aware shopping (`computeNeeds` + package rounding), loop closers
+  (cooked → subtract from pantry, bought → add to pantry), and shopping-list export to a todo list. **Critical:**
+  the meal algorithms are duplicated between `client/src/lib/meals.ts` (offline/local) and
+  `server/src/meal/domain/meal.service.ts` (cloud) — a change to one must be mirrored in the other.
+- `docs/google-oauth-setup.md`, `docs/push-setup.md` — deployment/config guides.
+
 ## Build & Run Commands
 
 The project uses **npm workspaces** — root `package.json` orchestrates `client/` and `server/`.

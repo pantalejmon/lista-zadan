@@ -10,7 +10,7 @@ import {
   type Recipe,
   type MealType,
 } from '../../lib/meals';
-import { IconChevronLeft, IconChevronRight, IconClose, IconPlus } from './icons';
+import { IconChevronLeft, IconChevronRight, IconClose, IconPlus, IconCheck } from './icons';
 
 export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
@@ -39,6 +39,11 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
 
   const handleRemove = async (id: string) => {
     await storage.removeEntry(id);
+    load();
+  };
+
+  const handleCook = async (entry: PlannerEntry) => {
+    await storage.setCooked(entry.id, !entry.cooked);
     load();
   };
 
@@ -103,13 +108,40 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                   return (
                     <td key={dayIdx} className="py-1 px-1 align-top">
                       {entry ? (
-                        <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-500/30 rounded-lg p-1.5 text-xs group relative min-h-12">
-                          <p className="font-medium text-primary-900 dark:text-primary-200 truncate pr-4">
+                        <div className={`rounded-lg p-1.5 text-xs group relative min-h-12 border ${
+                          entry.cooked
+                            ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/30'
+                            : 'bg-primary-50 dark:bg-primary-500/10 border-primary-200 dark:border-primary-500/30'
+                        }`}>
+                          <p className={`font-medium truncate pr-4 ${
+                            entry.cooked
+                              ? 'text-green-800 dark:text-green-300 line-through decoration-green-500/60'
+                              : 'text-primary-900 dark:text-primary-200'
+                          }`}>
                             {entry.recipe?.title ?? '—'}
                           </p>
                           <button
+                            onClick={() => handleCook(entry)}
+                            className={`mt-1 inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors ${
+                              entry.cooked
+                                ? 'text-green-700 dark:text-green-400'
+                                : 'text-gray-400 hover:text-green-600 dark:hover:text-green-400'
+                            }`}
+                            aria-label={entry.cooked ? 'Cofnij ugotowanie' : 'Oznacz jako ugotowane'}
+                            title={entry.cooked ? 'Odjęto składniki ze spiżarni' : 'Ugotowane — odejmie składniki ze spiżarni'}
+                          >
+                            <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${
+                              entry.cooked
+                                ? 'bg-green-500 border-green-500 text-white'
+                                : 'border-gray-300 dark:border-gray-600'
+                            }`}>
+                              {entry.cooked && <IconCheck className="w-2.5 h-2.5" />}
+                            </span>
+                            <span>Zrobione</span>
+                          </button>
+                          <button
                             onClick={() => handleRemove(entry.id)}
-                            className="absolute top-1 right-1 text-primary-400 hover:text-red-500 hidden group-hover:block"
+                            className="absolute top-1 right-1 text-gray-400 hover:text-red-500 hidden group-hover:block"
                             aria-label="Usuń"
                           >
                             <IconClose className="w-3.5 h-3.5" />
@@ -151,11 +183,26 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                     <div key={type} className="px-4 py-2 flex items-center justify-between gap-3">
                       <span className="text-xs text-gray-400 w-20 shrink-0">{label}</span>
                       {entry ? (
-                        <div className="flex-1 flex items-center justify-between min-w-0">
-                          <span className="text-sm font-medium truncate">{entry.recipe?.title ?? '—'}</span>
+                        <div className="flex-1 flex items-center justify-between min-w-0 gap-2">
+                          <button
+                            onClick={() => handleCook(entry)}
+                            className={`w-5 h-5 shrink-0 rounded flex items-center justify-center border transition-colors ${
+                              entry.cooked
+                                ? 'bg-green-500 border-green-500 text-white'
+                                : 'border-gray-300 dark:border-gray-600 text-transparent'
+                            }`}
+                            aria-label={entry.cooked ? 'Cofnij ugotowanie' : 'Oznacz jako ugotowane'}
+                          >
+                            <IconCheck className="w-3 h-3" />
+                          </button>
+                          <span className={`text-sm font-medium truncate flex-1 ${
+                            entry.cooked ? 'line-through text-gray-400 dark:text-gray-500' : ''
+                          }`}>
+                            {entry.recipe?.title ?? '—'}
+                          </span>
                           <button
                             onClick={() => handleRemove(entry.id)}
-                            className="text-gray-300 hover:text-red-500 ml-2 shrink-0 p-1"
+                            className="text-gray-300 hover:text-red-500 shrink-0 p-1"
                             aria-label="Usuń"
                           >
                             <IconClose className="w-4 h-4" />

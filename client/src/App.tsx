@@ -30,6 +30,7 @@ import { useInvitations } from './hooks/useInvitations';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { useMealStorage } from './hooks/useMealStorage';
+import { useMealHousehold } from './hooks/useMealHousehold';
 
 type View = 'calendar' | 'all' | 'unassigned';
 
@@ -65,7 +66,8 @@ export default function App() {
   const { todos, loading, add, addShopping, addRecurring, toggle, update, updateFull, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
   const { dark, toggle: toggleDark } = useDark();
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
-  const mealStorage = useMealStorage(mode, activeList?.householdId);
+  const { mealHousehold, setMealHouseholdId } = useMealHousehold(households);
+  const mealStorage = useMealStorage(mode, mealHousehold?.id);
 
   // Posiłki i Czat wymagają konta (gospodarstwa). W trybie lokalnym trzymamy usera na Zadaniach.
   useEffect(() => {
@@ -265,7 +267,14 @@ export default function App() {
         </div>
       </header>
 
-      {section === 'meals' && <MealsSection storage={mealStorage} />}
+      {section === 'meals' && (
+        <MealsSection
+          storage={mealStorage}
+          households={households}
+          householdId={mealHousehold?.id}
+          onSelectHousehold={setMealHouseholdId}
+        />
+      )}
 
       {section === 'chat' && (
         <ChatView

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getMonday, type MealStorage, type ShoppingItem } from '../../lib/meals';
 import { IconCalendar, IconCart, IconClose, IconCheck } from './icons';
 
-export function ShoppingView({ storage }: { storage: MealStorage }) {
+export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState('');
@@ -13,7 +13,7 @@ export function ShoppingView({ storage }: { storage: MealStorage }) {
     setLoading(false);
   }, [storage]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, liveKey]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();

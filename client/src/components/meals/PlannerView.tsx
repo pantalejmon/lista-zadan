@@ -12,7 +12,7 @@ import {
 } from '../../lib/meals';
 import { IconChevronLeft, IconChevronRight, IconClose, IconPlus } from './icons';
 
-export function PlannerView({ storage }: { storage: MealStorage }) {
+export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [entries, setEntries] = useState<PlannerEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -22,8 +22,8 @@ export function PlannerView({ storage }: { storage: MealStorage }) {
     setEntries(await storage.getWeek(weekStart));
   }, [storage, weekStart]);
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { storage.getRecipes().then(setRecipes); }, [storage]);
+  useEffect(() => { load(); }, [load, liveKey]);
+  useEffect(() => { storage.getRecipes().then(setRecipes); }, [storage, liveKey]);
 
   const getEntry = (day: number, mealType: MealType) =>
     entries.find((e) => e.dayOfWeek === day && e.mealType === mealType);

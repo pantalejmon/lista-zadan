@@ -4,11 +4,19 @@ import * as api from '../lib/api';
 
 interface HouseholdSettingsProps {
   household: Household;
+  currentUserId?: string;
   onClose: () => void;
   onRename: (householdId: string, name: string) => void;
+  onLeft?: () => void;
 }
 
-export function HouseholdSettings({ household, onClose, onRename }: HouseholdSettingsProps) {
+const ROLE_LABEL: Record<ListRole, string> = {
+  owner: 'właściciel',
+  editor: 'edytor',
+  viewer: 'podgląd',
+};
+
+export function HouseholdSettings({ household, currentUserId, onClose, onRename, onLeft }: HouseholdSettingsProps) {
   const [name, setName] = useState(household.name);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [contacts, setContacts] = useState<ContactSuggestion[]>([]);
@@ -16,7 +24,10 @@ export function HouseholdSettings({ household, onClose, onRename }: HouseholdSet
   const [inviteRole, setInviteRole] = useState<ListRole>('editor');
   const [loading, setLoading] = useState(true);
   const [inviteSuccess, setInviteSuccess] = useState('');
+  const [error, setError] = useState('');
   const canManage = household.role === 'owner';
+
+  const ownersCount = members.filter((m) => m.role === 'owner').length;
 
   const loadMembers = useCallback(async () => {
     const result = await api.getHouseholdMembers(household.id);
@@ -49,8 +60,41 @@ export function HouseholdSettings({ household, onClose, onRename }: HouseholdSet
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    await api.removeHouseholdMember(household.id, memberId);
-    await loadMembers();
+    setError('');
+    try {
+      await api.removeHouseholdMember(household.id, memberId);
+      await loadMembers();
+    } catch {
+      setError('Nie udało się usunąć członka.');
+    }
+  };
+
+  const handleChangeRole = async (memberId: string, role: ListRole) => {
+    setError('');
+    try {
+      await api.changeMemberRole(household.id, memberId, role);
+      await loadMembers();
+    } catch {
+      setError('Nie udało się zmienić roli — w gospodarstwie musi zostać co najmniej jeden właściciel.');
+    }
+  };
+
+  const handleLeave = async () => {
+    if (household.role === 'owner' && ownersCount <= 1) {
+      setError('Jesteś jedynym właścicielem — najpierw nadaj komuś rolę właściciela.');
+      return;
+    }
+    if (!confirm(`Opuścić gospodarstwo „${household.name}”?`)) {
+      return;
+    }
+    setError('');
+    try {
+      await api.leaveHousehold(household.id);
+      onLeft?.();
+      onClose();
+    } catch {
+      setError('Nie udało się opuścić gospodarstwa.');
+    }
   };
 
   // suggest only contacts who are not already members
@@ -96,31 +140,51 @@ export function HouseholdSettings({ household, onClose, onRename }: HouseholdSet
                 <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
-              members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{member.displayName || member.email}</p>
-                    {member.displayName && (
-                      <p className="text-xs text-gray-400 truncate">{member.email}</p>
-                    )}
+              members.map((member) => {
+                const isSelf = member.userId === currentUserId;
+                const editable = canManage && !isSelf;
+                return (
+                  <div key={member.id} className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {member.displayName || member.email}
+                        {isSelf && <span className="ml-1 text-xs text-gray-400">(Ty)</span>}
+                      </p>
+                      {member.displayName && (
+                        <p className="text-xs text-gray-400 truncate">{member.email}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {editable ? (
+                        <select
+                          value={member.role}
+                          onChange={(e) => handleChangeRole(member.id, e.target.value as ListRole)}
+                          className="text-xs px-1.5 py-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                        >
+                          <option value="owner">właściciel</option>
+                          <option value="editor">edytor</option>
+                          <option value="viewer">podgląd</option>
+                        </select>
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                          {ROLE_LABEL[member.role]}
+                        </span>
+                      )}
+                      {editable && (
+                        <button
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="p-0.5 text-gray-400 hover:text-red-500 transition-colors"
+                          aria-label="Usuń członka"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                      {member.role === 'owner' ? 'właściciel' : member.role === 'editor' ? 'edytor' : 'podgląd'}
-                    </span>
-                    {canManage && member.role !== 'owner' && (
-                      <button
-                        onClick={() => handleRemoveMember(member.id)}
-                        className="p-0.5 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -167,6 +231,22 @@ export function HouseholdSettings({ household, onClose, onRename }: HouseholdSet
                 Zaproszenie wysłane do {inviteSuccess}
               </p>
             )}
+          </div>
+        )}
+
+        {error && (
+          <p className="text-xs text-red-500 animate-fadeIn">{error}</p>
+        )}
+
+        {/* Leave household */}
+        {!loading && members.some((m) => m.userId === currentUserId) && (
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+            <button
+              onClick={handleLeave}
+              className="w-full text-sm font-medium px-3 py-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+            >
+              Opuść gospodarstwo
+            </button>
           </div>
         )}
       </div>

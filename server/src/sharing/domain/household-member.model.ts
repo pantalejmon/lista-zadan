@@ -35,4 +35,8 @@ export class HouseholdMember {
   static create(householdId: string, userId: string, role: ListRole): HouseholdMember {
     return new HouseholdMember(randomUUID(), householdId, userId, role, Date.now());
   }
+
+  withRole(role: ListRole): HouseholdMember {
+    return new HouseholdMember(this.id, this.householdId, this.userId, role, this.joinedAt);
+  }
 }

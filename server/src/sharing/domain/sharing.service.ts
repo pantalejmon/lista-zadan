@@ -149,7 +149,64 @@ export class SharingService {
 
   async removeMember(householdId: string, memberId: string, userId: string): Promise<void> {
     await this.assertHouseholdPermission(householdId, userId, ['owner']);
+    const members = await this.memberRepo.findByHouseholdId(householdId);
+    const target = members.find((m) => m.id === memberId);
+    if (!target) {
+      throw new NotFoundException('Member not found');
+    }
+    if (target.role === 'owner' && members.filter((m) => m.role === 'owner').length <= 1) {
+      throw new BadRequestException('Nie można usunąć ostatniego właściciela gospodarstwa');
+    }
     await this.memberRepo.delete(memberId);
+  }
+
+  async changeMemberRole(
+    householdId: string,
+    memberId: string,
+    role: ListRole,
+    userId: string,
+  ): Promise<HouseholdMemberResponse> {
+    await this.assertHouseholdPermission(householdId, userId, ['owner']);
+    const members = await this.memberRepo.findByHouseholdId(householdId);
+    const target = members.find((m) => m.id === memberId);
+    if (!target) {
+      throw new NotFoundException('Member not found');
+    }
+    if (
+      target.role === 'owner' &&
+      role !== 'owner' &&
+      members.filter((m) => m.role === 'owner').length <= 1
+    ) {
+      throw new BadRequestException('Nie można zdegradować ostatniego właściciela gospodarstwa');
+    }
+    const updated = target.withRole(role);
+    await this.memberRepo.save(updated);
+    const user = await this.authService.findUserById(updated.userId);
+    return {
+      id: updated.id,
+      householdId: updated.householdId,
+      userId: updated.userId,
+      email: user?.email ?? '',
+      displayName: user?.displayName ?? '',
+      role: updated.role,
+      joinedAt: updated.joinedAt,
+    };
+  }
+
+  async leaveHousehold(householdId: string, userId: string): Promise<void> {
+    const member = await this.memberRepo.findByHouseholdAndUser(householdId, userId);
+    if (!member) {
+      throw new NotFoundException('Nie należysz do tego gospodarstwa');
+    }
+    if (member.role === 'owner') {
+      const members = await this.memberRepo.findByHouseholdId(householdId);
+      if (members.filter((m) => m.role === 'owner').length <= 1) {
+        throw new BadRequestException(
+          'Jesteś jedynym właścicielem — przekaż rolę właściciela innej osobie przed opuszczeniem gospodarstwa',
+        );
+      }
+    }
+    await this.memberRepo.delete(member.id);
   }
 
   async getContactSuggestions(userId: string): Promise<ContactSuggestion[]> {

@@ -419,8 +419,14 @@ export default function App() {
       {settingsHousehold && (
         <HouseholdSettings
           household={settingsHousehold}
+          currentUserId={user?.id}
           onClose={() => setHouseholdSettingsId(null)}
           onRename={handleRenameHousehold}
+          onLeft={async () => {
+            await refreshHouseholds();
+            await refreshLists();
+            triggerRefresh();
+          }}
         />
       )}
       </div>

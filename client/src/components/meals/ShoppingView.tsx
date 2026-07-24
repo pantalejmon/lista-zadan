@@ -1,15 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getMonday, type MealStorage, type ShoppingItem } from '../../lib/meals';
+import { getMonday, type MealStorage, type ShoppingItem, type NeedItem } from '../../lib/meals';
 import { IconCalendar, IconCart, IconClose, IconCheck } from './icons';
 
 export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
   const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [needs, setNeeds] = useState<NeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [showNeeds, setShowNeeds] = useState(false);
 
   const load = useCallback(async () => {
-    setItems(await storage.getShopping());
+    const [shopping, weekNeeds] = await Promise.all([
+      storage.getShopping(),
+      storage.computeNeeds(getMonday(new Date())),
+    ]);
+    setItems(shopping);
+    setNeeds(weekNeeds);
     setLoading(false);
   }, [storage]);
 
@@ -62,6 +69,34 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
           {generating ? 'Generowanie...' : 'Generuj z planu'}
         </button>
       </div>
+
+      {/* Czego brakuje — planer minus spiżarnia, zaokrąglone do opakowań */}
+      {needs.some((n) => n.shortfall > 0) && (
+        <div className="mb-5 rounded-2xl border border-primary-100 dark:border-primary-500/20 bg-primary-50/50 dark:bg-primary-500/5 overflow-hidden">
+          <button
+            onClick={() => setShowNeeds((s) => !s)}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary-700 dark:text-primary-300"
+          >
+            <span>Czego brakuje w tym tygodniu ({needs.filter((n) => n.shortfall > 0).length})</span>
+            <svg className={`w-4 h-4 ml-auto transition-transform ${showNeeds ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showNeeds && (
+            <ul className="px-4 pb-3 space-y-1.5">
+              {needs.filter((n) => n.shortfall > 0).map((n, i) => (
+                <li key={i} className="text-xs text-gray-600 dark:text-gray-300 flex items-center justify-between gap-2">
+                  <span className="font-medium truncate">{n.name}</span>
+                  <span className="text-gray-500 dark:text-gray-400 shrink-0 tabular-nums">
+                    potrzeba {n.required} {n.unit} · masz {n.inStock} → <span className="text-primary-600 dark:text-primary-400 font-medium">kup {n.toBuy} {n.unit}</span>
+                    {n.packages ? ` (${n.packages} opak.)` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleAdd} className="flex gap-2 mb-6">
         <input

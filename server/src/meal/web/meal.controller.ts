@@ -19,8 +19,11 @@ import { CreateEntryDto } from './dto/create-entry.dto';
 import { CreateShoppingItemDto } from './dto/create-shopping-item.dto';
 import { UpdateShoppingItemDto } from './dto/update-shopping-item.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { SetPantryStockDto, AdjustPantryStockDto } from './dto/set-pantry-stock.dto';
 import { RecipeResponse } from '../domain/recipe.model';
 import { ProductResponse } from '../domain/product.model';
+import { PantryItemResponse } from '../domain/pantry-item.model';
+import { NeedResponse } from '../domain/meal.service';
 import { MealEntryResponse } from '../domain/meal-entry.model';
 import { MealShoppingItemResponse } from '../domain/meal-shopping-item.model';
 import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
@@ -180,6 +183,53 @@ export class MealController {
       week,
     );
     return { count };
+  }
+
+  // ---- pantry ----
+
+  @Get('pantry')
+  getPantry(
+    @Req() req: Request,
+    @Query('householdId') householdId?: string,
+  ): Promise<PantryItemResponse[]> {
+    return this.mealService.getPantry(this.requireHousehold(householdId), this.userId(req));
+  }
+
+  @Post('pantry')
+  setStock(
+    @Req() req: Request,
+    @Body() dto: SetPantryStockDto,
+    @Query('householdId') householdId?: string,
+  ): Promise<PantryItemResponse> {
+    return this.mealService.setStock(this.requireHousehold(householdId), this.userId(req), dto.productId, dto.quantity);
+  }
+
+  @Patch('pantry')
+  adjustStock(
+    @Req() req: Request,
+    @Body() dto: AdjustPantryStockDto,
+    @Query('householdId') householdId?: string,
+  ): Promise<PantryItemResponse> {
+    return this.mealService.adjustStock(this.requireHousehold(householdId), this.userId(req), dto.productId, dto.delta);
+  }
+
+  @Delete('pantry/:id')
+  removePantryItem(@Req() req: Request, @Param('id') id: string): Promise<void> {
+    return this.mealService.removePantryItem(id, this.userId(req));
+  }
+
+  // ---- needs (planer vs spiżarnia) ----
+
+  @Get('needs')
+  computeNeeds(
+    @Req() req: Request,
+    @Query('householdId') householdId?: string,
+    @Query('week') week?: string,
+  ): Promise<NeedResponse[]> {
+    if (!week) {
+      throw new BadRequestException('week query parameter is required');
+    }
+    return this.mealService.computeNeeds(this.requireHousehold(householdId), this.userId(req), week);
   }
 
   private userId(req: Request): string {

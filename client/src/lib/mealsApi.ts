@@ -3,6 +3,8 @@ import type {
   Recipe,
   Product,
   ProductInput,
+  PantryItem,
+  NeedItem,
   PlannerEntry,
   ShoppingItem,
   RecipeInput,
@@ -106,5 +108,26 @@ export function createCloudMealStorage(householdId: string): MealStorage {
       );
       return res.count;
     },
+
+    getPantry: () => request<PantryItem[]>(`/meals/pantry?householdId=${hh}`),
+
+    setPantryStock: async (productId, quantity) => {
+      await request<unknown>(`/meals/pantry?householdId=${hh}`, {
+        method: 'POST',
+        body: JSON.stringify({ productId, quantity }),
+      });
+    },
+
+    adjustPantryStock: async (productId, delta) => {
+      await request<unknown>(`/meals/pantry?householdId=${hh}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ productId, delta }),
+      });
+    },
+
+    removePantryItem: (id) => request<void>(`/meals/pantry/${id}`, { method: 'DELETE' }),
+
+    computeNeeds: (weekStart) =>
+      request<NeedItem[]>(`/meals/needs?householdId=${hh}&week=${weekStart}`),
   };
 }

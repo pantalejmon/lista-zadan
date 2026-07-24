@@ -7,6 +7,7 @@ import { RecipeEntity } from './infrastructure/recipe.entity';
 import { MealEntryEntity } from './infrastructure/meal-entry.entity';
 import { MealShoppingItemEntity } from './infrastructure/meal-shopping-item.entity';
 import { ProductEntity } from './infrastructure/product.entity';
+import { PantryItemEntity } from './infrastructure/pantry-item.entity';
 import { RecipeRepositoryPort } from './domain/recipe.repository.port';
 import { RecipeRepositoryAdapter } from './infrastructure/recipe.repository.adapter';
 import { MealEntryRepositoryPort } from './domain/meal-entry.repository.port';
@@ -15,13 +16,15 @@ import { MealShoppingItemRepositoryPort } from './domain/meal-shopping-item.repo
 import { MealShoppingItemRepositoryAdapter } from './infrastructure/meal-shopping-item.repository.adapter';
 import { ProductRepositoryPort } from './domain/product.repository.port';
 import { ProductRepositoryAdapter } from './infrastructure/product.repository.adapter';
+import { PantryItemRepositoryPort } from './domain/pantry-item.repository.port';
+import { PantryItemRepositoryAdapter } from './infrastructure/pantry-item.repository.adapter';
 import { MealService } from './domain/meal.service';
 import { MealController } from './web/meal.controller';
 import { MealGateway } from './web/meal.gateway';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RecipeEntity, MealEntryEntity, MealShoppingItemEntity, ProductEntity]),
+    TypeOrmModule.forFeature([RecipeEntity, MealEntryEntity, MealShoppingItemEntity, ProductEntity, PantryItemEntity]),
     AuthModule,
     SharingModule,
   ],
@@ -31,6 +34,7 @@ import { MealGateway } from './web/meal.gateway';
     { provide: MealEntryRepositoryPort, useClass: MealEntryRepositoryAdapter },
     { provide: MealShoppingItemRepositoryPort, useClass: MealShoppingItemRepositoryAdapter },
     { provide: ProductRepositoryPort, useClass: ProductRepositoryAdapter },
+    { provide: PantryItemRepositoryPort, useClass: PantryItemRepositoryAdapter },
     MealGateway,
     {
       provide: MealService,
@@ -39,14 +43,16 @@ import { MealGateway } from './web/meal.gateway';
         entryRepo: MealEntryRepositoryPort,
         shoppingRepo: MealShoppingItemRepositoryPort,
         productRepo: ProductRepositoryPort,
+        pantryRepo: PantryItemRepositoryPort,
         sharingService: SharingService,
         gateway: MealGateway,
-      ) => new MealService(recipeRepo, entryRepo, shoppingRepo, productRepo, sharingService, gateway),
+      ) => new MealService(recipeRepo, entryRepo, shoppingRepo, productRepo, pantryRepo, sharingService, gateway),
       inject: [
         RecipeRepositoryPort,
         MealEntryRepositoryPort,
         MealShoppingItemRepositoryPort,
         ProductRepositoryPort,
+        PantryItemRepositoryPort,
         SharingService,
         MealGateway,
       ],

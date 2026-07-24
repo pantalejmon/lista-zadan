@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -13,6 +14,7 @@ import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
 import { SharingService } from '../domain/sharing.service';
 import { CreateHouseholdDto } from './dto/create-household.dto';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import type { User } from '../../auth/domain/user.model';
 
 @Controller('households')
@@ -44,6 +46,16 @@ export class HouseholdController {
     return this.sharingService.getHouseholdMembers(id, req.user.id);
   }
 
+  @Patch(':id/members/:memberId')
+  async changeMemberRole(
+    @Req() req: { user: User },
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+    @Body() dto: UpdateMemberRoleDto,
+  ) {
+    return this.sharingService.changeMemberRole(id, memberId, dto.role, req.user.id);
+  }
+
   @Delete(':id/members/:memberId')
   async removeMember(
     @Req() req: { user: User },
@@ -51,6 +63,11 @@ export class HouseholdController {
     @Param('memberId') memberId: string,
   ) {
     await this.sharingService.removeMember(id, memberId, req.user.id);
+  }
+
+  @Post(':id/leave')
+  async leaveHousehold(@Req() req: { user: User }, @Param('id') id: string) {
+    await this.sharingService.leaveHousehold(id, req.user.id);
   }
 
   @Post(':id/invitations')

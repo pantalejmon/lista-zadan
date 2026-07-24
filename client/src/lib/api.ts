@@ -179,6 +179,21 @@ export async function removeHouseholdMember(householdId: string, memberId: strin
   return request(`/households/${householdId}/members/${memberId}`, { method: 'DELETE' });
 }
 
+export async function changeMemberRole(
+  householdId: string,
+  memberId: string,
+  role: ListRole,
+): Promise<HouseholdMember> {
+  return request<HouseholdMember>(`/households/${householdId}/members/${memberId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function leaveHousehold(householdId: string): Promise<void> {
+  return request(`/households/${householdId}/leave`, { method: 'POST' });
+}
+
 export async function inviteToHousehold(
   householdId: string,
   email: string,

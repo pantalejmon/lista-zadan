@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local config with secrets (JWT, VAPID, Google OAuth) — never commit
+config.local.yaml
+**/config.local.yaml
+
 # SQLite
 *.sqlite
 *.sqlite-journal

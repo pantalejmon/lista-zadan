@@ -17,6 +17,14 @@ jwt:
   secret: 'change-me-in-config-local-yaml'
   expiresIn: '7d'
 
+# Web Push (VAPID). Generate real keys and put them in config.local.yaml:
+#   npx web-push generate-vapid-keys
+# When publicKey is empty, push is disabled gracefully.
+vapid:
+  subject: 'mailto:admin@example.com'
+  publicKey: ''
+  privateKey: ''
+
 rateLimiter:
   maxCreatesPerMinute: 60
 

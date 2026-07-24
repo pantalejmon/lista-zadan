@@ -127,10 +127,10 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Feature navigation */}
+      {/* Feature navigation — Posiłki/Czat wymagają konta (gospodarstwa); lokalnie tylko Zadania */}
       <nav className="px-3 py-4 space-y-1">
         <p className="px-2 mb-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Aplikacje</p>
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.filter((item) => isCloud || item.id === 'tasks').map((item) => (
           <button
             key={item.id}
             onClick={() => selectSection(item.id)}
@@ -147,6 +147,20 @@ function SidebarContent({
             </span>
           </button>
         ))}
+        {!isCloud && (
+          <button
+            onClick={() => { onLogin(); onClose(); }}
+            className="flex items-start gap-3 w-full px-3 py-2.5 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+          >
+            <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span className="min-w-0 text-left">
+              <span className="block text-sm font-medium truncate">Posiłki i Czat</span>
+              <span className="block text-[11px] leading-tight">Zaloguj się, aby odblokować</span>
+            </span>
+          </button>
+        )}
       </nav>
 
       <div className="flex-1" />

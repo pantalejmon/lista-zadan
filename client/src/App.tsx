@@ -14,6 +14,8 @@ import { HouseholdSettings } from './components/HouseholdSettings';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
 import { AppSidebar, type AppSection } from './components/AppSidebar';
+import { Onboarding } from './components/Onboarding';
+import { setupHousehold } from './lib/api';
 import { MealsSection } from './components/meals/MealsSection';
 import { ChatView } from './components/ChatView';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -47,7 +49,7 @@ export default function App() {
     createList, updateList, deleteList, refresh: refreshLists,
   } = useLists(isCloud);
   const {
-    households, createHousehold, renameHousehold, refresh: refreshHouseholds,
+    households, loading: householdsLoading, createHousehold, renameHousehold, refresh: refreshHouseholds,
   } = useHouseholds(isCloud);
   const { invitations, accept: acceptInvite, decline: declineInvite } = useInvitations(isCloud);
   const [view, setView] = useState<View>('calendar');
@@ -187,6 +189,23 @@ export default function App() {
     : null;
 
   const sectionTitle = section === 'meals' ? 'Posiłki' : section === 'chat' ? 'Czat' : 'Zadania';
+
+  // First-login onboarding: logged in but no household yet → name your home or accept an invitation.
+  if (isCloud && user && !householdsLoading && households.length === 0) {
+    return (
+      <Onboarding
+        user={user}
+        invitations={invitations}
+        onCreate={async (name) => {
+          await setupHousehold(name);
+          await refreshHouseholds();
+          await refreshLists();
+          triggerRefresh();
+        }}
+        onAccept={handleAcceptInvite}
+      />
+    );
+  }
 
   return (
     <div className="min-h-dvh lg:flex overflow-x-hidden">

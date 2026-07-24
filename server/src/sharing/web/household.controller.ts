@@ -32,6 +32,11 @@ export class HouseholdController {
     return this.sharingService.createHousehold(dto.name, req.user.id);
   }
 
+  @Post('setup')
+  async setupHousehold(@Req() req: { user: User }, @Body() dto: CreateHouseholdDto) {
+    return this.sharingService.setupHousehold(dto.name, req.user.id);
+  }
+
   @Put(':id')
   async renameHousehold(
     @Req() req: { user: User },

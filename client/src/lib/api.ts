@@ -164,6 +164,13 @@ export async function createHousehold(name: string): Promise<Household> {
   });
 }
 
+export async function setupHousehold(name: string): Promise<Household> {
+  return request<Household>('/households/setup', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
 export async function renameHousehold(householdId: string, name: string): Promise<Household> {
   return request<Household>(`/households/${householdId}`, {
     method: 'PUT',

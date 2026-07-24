@@ -11,6 +11,13 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      // Socket.io (todos/meal/home/chat gateways) — without this the dev client
+      // opens the socket against Vite's port and hangs on "connecting".
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
 })

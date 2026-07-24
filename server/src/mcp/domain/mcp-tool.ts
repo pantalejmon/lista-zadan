@@ -14,7 +14,9 @@ export interface ToolContext {
 export interface McpTool {
   name: string;
   description: string;
-  requiredScope: ApiScope;
+  // Every scope here must be satisfied by the caller's token. Cross-module tools
+  // (e.g. read meals + write todo) list more than one.
+  requiredScopes: ApiScope[];
   // JSON Schema for the tool arguments (advertised to the client via tools/list).
   inputSchema: Record<string, unknown>;
   handler: (args: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;

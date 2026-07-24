@@ -35,5 +35,6 @@ import { HomeGateway } from './web/home.gateway';
       inject: [HomeAssetRepositoryPort, MaintenanceRepositoryPort, SharingService, HomeGateway],
     },
   ],
+  exports: [HomeService],
 })
 export class HomeModule {}

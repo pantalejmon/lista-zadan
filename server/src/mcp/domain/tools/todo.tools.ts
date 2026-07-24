@@ -11,7 +11,7 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
     {
       name: 'list_todo_lists',
       description: 'Zwraca listy zadań dostępne dla użytkownika (id, nazwa, gospodarstwo, rola).',
-      requiredScope: 'todo:read',
+      requiredScopes: ['todo:read'],
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       handler: async (_args, ctx) => {
         const lists = await sharingService.getListsForUser(ctx.userId);
@@ -29,7 +29,7 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
       name: 'list_todos',
       description:
         'Zwraca zadania z listy. Podaj listId. Opcjonalnie date (YYYY-MM-DD) aby ograniczyć do jednego dnia.',
-      requiredScope: 'todo:read',
+      requiredScopes: ['todo:read'],
       inputSchema: {
         type: 'object',
         properties: {
@@ -51,7 +51,7 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
       name: 'add_todo',
       description:
         'Dodaje zadanie do listy. Wymaga listId i text. Opcjonalnie date (YYYY-MM-DD) — bez daty trafia do „luźnych".',
-      requiredScope: 'todo:write',
+      requiredScopes: ['todo:write'],
       inputSchema: {
         type: 'object',
         properties: {
@@ -84,7 +84,7 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
     {
       name: 'complete_todo',
       description: 'Oznacza zadanie jako wykonane (lub cofa). Wymaga todoId; completed domyślnie true.',
-      requiredScope: 'todo:write',
+      requiredScopes: ['todo:write'],
       inputSchema: {
         type: 'object',
         properties: {

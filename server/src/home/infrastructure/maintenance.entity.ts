@@ -32,6 +32,9 @@ export class MaintenanceEntity {
   @Column('varchar', { nullable: true })
   notes!: string | null;
 
+  @Column('varchar', { nullable: true })
+  providerId!: string | null;
+
   @Column('bigint')
   createdAt!: number;
 
@@ -46,6 +49,7 @@ export class MaintenanceEntity {
       this.nextDueAt,
       this.cost === null ? null : Number(this.cost),
       this.notes,
+      this.providerId,
       Number(this.createdAt),
     );
   }
@@ -61,6 +65,7 @@ export class MaintenanceEntity {
     entity.nextDueAt = maintenance.nextDueAt;
     entity.cost = maintenance.cost;
     entity.notes = maintenance.notes;
+    entity.providerId = maintenance.providerId;
     entity.createdAt = maintenance.createdAt;
     return entity;
   }

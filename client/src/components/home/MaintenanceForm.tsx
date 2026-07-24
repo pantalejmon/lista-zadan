@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   createMaintenance,
   updateMaintenance,
+  getProviders,
   type Maintenance,
   type MaintenanceInput,
+  type Provider,
 } from '../../lib/homeApi';
 
 interface MaintenanceFormProps {
@@ -32,7 +34,13 @@ export function MaintenanceForm({ householdId, assetId, maintenance, onClose, on
   const [nextDueAt, setNextDueAt] = useState(maintenance?.nextDueAt ?? '');
   const [cost, setCost] = useState(maintenance?.cost?.toString() ?? '');
   const [notes, setNotes] = useState(maintenance?.notes ?? '');
+  const [providerId, setProviderId] = useState(maintenance?.providerId ?? '');
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getProviders(householdId).then(setProviders).catch(() => undefined);
+  }, [householdId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +58,7 @@ export function MaintenanceForm({ householdId, assetId, maintenance, onClose, on
       nextDueAt: nextDueAt || undefined,
       cost: Number.isFinite(costNum) && costNum >= 0 ? costNum : undefined,
       notes: notes.trim() || undefined,
+      providerId: providerId || undefined,
     };
     try {
       if (maintenance) {
@@ -98,6 +107,14 @@ export function MaintenanceForm({ householdId, assetId, maintenance, onClose, on
           </p>
           <Field label="Koszt (zł)" htmlFor="m-cost">
             <input id="m-cost" type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="Wykonawca" htmlFor="m-provider">
+            <select id="m-provider" value={providerId} onChange={(e) => setProviderId(e.target.value)} className={inputClass}>
+              <option value="">— brak —</option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}{p.trade ? ` (${p.trade})` : ''}</option>
+              ))}
+            </select>
           </Field>
           <Field label="Notatki" htmlFor="m-notes">
             <textarea id="m-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={inputClass} />

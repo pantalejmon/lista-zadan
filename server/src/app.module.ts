@@ -31,6 +31,7 @@ import { AddPantryTable1763769600000 } from './migration/1763769600000-AddPantry
 import { AddCookedToMealEntry1763856000000 } from './migration/1763856000000-AddCookedToMealEntry';
 import { AddHomeServiceTables1763942400000 } from './migration/1763942400000-AddHomeServiceTables';
 import { AddApiTokenTable1764028800000 } from './migration/1764028800000-AddApiTokenTable';
+import { AddHomeProvidersRenovations1764115200000 } from './migration/1764115200000-AddHomeProvidersRenovations';
 import configuration from './config/configuration';
 
 @Module({
@@ -66,6 +67,7 @@ import configuration from './config/configuration';
           AddCookedToMealEntry1763856000000,
           AddHomeServiceTables1763942400000,
           AddApiTokenTable1764028800000,
+          AddHomeProvidersRenovations1764115200000,
         ],
       }),
     }),

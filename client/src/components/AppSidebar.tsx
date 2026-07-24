@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
+import { PushToggle } from './PushToggle';
 import type { AuthUser } from '../hooks/useAuth';
 import type { WsStatus } from '../hooks/useWebSocket';
 import type { SyncStatus } from '../lib/offlineQueue';
 
-export type AppSection = 'tasks' | 'meals';
+export type AppSection = 'tasks' | 'meals' | 'chat';
 
 interface NavItem {
   id: AppSection;
@@ -30,6 +31,16 @@ const NAV_ITEMS: NavItem[] = [
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18M7 3v6a2 2 0 01-2 2H3m4-8v18M14 5c0-1.1.9-2 2-2s2 .9 2 2v6h-4V5zm0 6v10" />
+      </svg>
+    ),
+  },
+  {
+    id: 'chat',
+    label: 'Czat',
+    description: 'Rozmowy domowników',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.9 9.9 0 01-4-.8L3 20l.8-3.2A7.9 7.9 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
       </svg>
     ),
   },
@@ -150,8 +161,9 @@ function SidebarContent({
         </div>
       )}
 
-      {/* Theme toggle */}
+      {/* Notifications + theme toggle */}
       <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800">
+        {isCloud && <PushToggle />}
         <button
           onClick={onToggleDark}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"

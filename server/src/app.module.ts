@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { TodoModule } from './todo/todo.module';
 import { SharingModule } from './sharing/sharing.module';
 import { MealModule } from './meal/meal.module';
+import { ChatModule } from './chat/chat.module';
+import { PushModule } from './push/push.module';
 import { CreateTodoTable1711612800000 } from './migration/1711612800000-CreateTodoTable';
 import { CreateUserTable1711612900000 } from './migration/1711612900000-CreateUserTable';
 import { AddUserIdToTodo1711613000000 } from './migration/1711613000000-AddUserIdToTodo';
@@ -19,6 +21,8 @@ import { AddHouseholdTables1721800000000 } from './migration/1721800000000-AddHo
 import { AddStorageQuotaToUser1743206400000 } from './migration/1743206400000-AddStorageQuotaToUser';
 import { AddShoppingListSupport1763251200000 } from './migration/1763251200000-AddShoppingListSupport';
 import { AddMealTables1763424000000 } from './migration/1763424000000-AddMealTables';
+import { AddChatTable1763510400000 } from './migration/1763510400000-AddChatTable';
+import { AddPushSubscriptionTable1763596800000 } from './migration/1763596800000-AddPushSubscriptionTable';
 import configuration from './config/configuration';
 
 @Module({
@@ -47,6 +51,8 @@ import configuration from './config/configuration';
           AddStorageQuotaToUser1743206400000,
           AddShoppingListSupport1763251200000,
           AddMealTables1763424000000,
+          AddChatTable1763510400000,
+          AddPushSubscriptionTable1763596800000,
         ],
       }),
     }),
@@ -58,6 +64,8 @@ import configuration from './config/configuration';
     TodoModule,
     SharingModule,
     MealModule,
+    ChatModule,
+    PushModule,
   ],
   controllers: [HealthController],
 })

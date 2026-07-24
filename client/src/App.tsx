@@ -15,6 +15,7 @@ import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
 import { AppSidebar, type AppSection } from './components/AppSidebar';
 import { MealsSection } from './components/meals/MealsSection';
+import { ChatView } from './components/ChatView';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
@@ -178,7 +179,7 @@ export default function App() {
     ? households.find((h) => h.id === householdSettingsId)
     : null;
 
-  const sectionTitle = section === 'meals' ? 'Posiłki' : 'Zadania';
+  const sectionTitle = section === 'meals' ? 'Posiłki' : section === 'chat' ? 'Czat' : 'Zadania';
 
   return (
     <div className="min-h-dvh lg:flex overflow-x-hidden">
@@ -239,6 +240,16 @@ export default function App() {
       </header>
 
       {section === 'meals' && <MealsSection storage={mealStorage} />}
+
+      {section === 'chat' && (
+        <ChatView
+          isCloud={isCloud}
+          householdId={activeList?.householdId}
+          householdName={activeList?.householdName}
+          currentUserId={user?.id}
+          onLogin={login}
+        />
+      )}
 
       {section === 'tasks' && (
       <>

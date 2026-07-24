@@ -14,6 +14,7 @@ import { MealShoppingItemRepositoryPort } from './domain/meal-shopping-item.repo
 import { MealShoppingItemRepositoryAdapter } from './infrastructure/meal-shopping-item.repository.adapter';
 import { MealService } from './domain/meal.service';
 import { MealController } from './web/meal.controller';
+import { MealGateway } from './web/meal.gateway';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { MealController } from './web/meal.controller';
     { provide: RecipeRepositoryPort, useClass: RecipeRepositoryAdapter },
     { provide: MealEntryRepositoryPort, useClass: MealEntryRepositoryAdapter },
     { provide: MealShoppingItemRepositoryPort, useClass: MealShoppingItemRepositoryAdapter },
+    MealGateway,
     {
       provide: MealService,
       useFactory: (
@@ -33,12 +35,14 @@ import { MealController } from './web/meal.controller';
         entryRepo: MealEntryRepositoryPort,
         shoppingRepo: MealShoppingItemRepositoryPort,
         sharingService: SharingService,
-      ) => new MealService(recipeRepo, entryRepo, shoppingRepo, sharingService),
+        gateway: MealGateway,
+      ) => new MealService(recipeRepo, entryRepo, shoppingRepo, sharingService, gateway),
       inject: [
         RecipeRepositoryPort,
         MealEntryRepositoryPort,
         MealShoppingItemRepositoryPort,
         SharingService,
+        MealGateway,
       ],
     },
   ],

@@ -7,6 +7,7 @@ import { MealShoppingItem, type MealShoppingItemResponse } from './meal-shopping
 import { RecipeRepositoryPort } from './recipe.repository.port';
 import { MealEntryRepositoryPort } from './meal-entry.repository.port';
 import { MealShoppingItemRepositoryPort } from './meal-shopping-item.repository.port';
+import { MealGateway } from '../web/meal.gateway';
 import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
 import { CreateEntryDto } from '../web/dto/create-entry.dto';
 
@@ -23,6 +24,7 @@ export class MealService {
     private readonly entryRepo: MealEntryRepositoryPort,
     private readonly shoppingRepo: MealShoppingItemRepositoryPort,
     private readonly sharingService: SharingService,
+    private readonly gateway: MealGateway,
   ) {}
 
   // ---- recipes ----
@@ -45,6 +47,7 @@ export class MealService {
     await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
     const recipe = Recipe.createFromDto(dto, householdId);
     await this.recipeRepo.save(recipe);
+    this.gateway.notifyChanged(householdId);
     return recipe.toResponse();
   }
 
@@ -53,6 +56,7 @@ export class MealService {
     await this.sharingService.assertHouseholdPermission(recipe.householdId, userId, WRITE_ROLES);
     const updated = recipe.update(dto);
     await this.recipeRepo.update(updated);
+    this.gateway.notifyChanged(recipe.householdId);
     return updated.toResponse();
   }
 
@@ -61,6 +65,7 @@ export class MealService {
     await this.sharingService.assertHouseholdPermission(recipe.householdId, userId, WRITE_ROLES);
     await this.entryRepo.deleteByRecipe(id);
     await this.recipeRepo.delete(id);
+    this.gateway.notifyChanged(recipe.householdId);
   }
 
   async searchIngredients(householdId: string, userId: string, query: string): Promise<string[]> {
@@ -107,10 +112,12 @@ export class MealService {
     if (existing) {
       const updated = existing.withRecipe(dto.recipeId);
       await this.entryRepo.update(updated);
+      this.gateway.notifyChanged(householdId);
       return updated.toResponse();
     }
     const entry = MealEntry.create(householdId, dto.weekStart, dto.dayOfWeek, dto.mealType, dto.recipeId);
     await this.entryRepo.save(entry);
+    this.gateway.notifyChanged(householdId);
     return entry.toResponse();
   }
 
@@ -121,6 +128,7 @@ export class MealService {
     }
     await this.sharingService.assertHouseholdPermission(entry.householdId, userId, WRITE_ROLES);
     await this.entryRepo.delete(id);
+    this.gateway.notifyChanged(entry.householdId);
   }
 
   // ---- shopping ----
@@ -135,6 +143,7 @@ export class MealService {
     await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
     const item = MealShoppingItem.create(householdId, name);
     await this.shoppingRepo.save(item);
+    this.gateway.notifyChanged(householdId);
     return item.toResponse();
   }
 
@@ -143,6 +152,7 @@ export class MealService {
     await this.sharingService.assertHouseholdPermission(item.householdId, userId, WRITE_ROLES);
     const updated = item.withChecked(isChecked);
     await this.shoppingRepo.update(updated);
+    this.gateway.notifyChanged(item.householdId);
     return updated.toResponse();
   }
 
@@ -150,6 +160,7 @@ export class MealService {
     const item = await this.findShoppingItemOrThrow(id);
     await this.sharingService.assertHouseholdPermission(item.householdId, userId, WRITE_ROLES);
     await this.shoppingRepo.delete(id);
+    this.gateway.notifyChanged(item.householdId);
   }
 
   async generateFromPlan(householdId: string, userId: string, weekStart: string): Promise<number> {
@@ -175,6 +186,7 @@ export class MealService {
       MealShoppingItem.create(householdId, a.name, a.quantity || null, a.unit || null),
     );
     await this.shoppingRepo.saveMany(items);
+    this.gateway.notifyChanged(householdId);
     return items.length;
   }
 

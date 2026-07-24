@@ -13,7 +13,7 @@ type Mode =
   | { view: 'detail'; id: string }
   | { view: 'form'; id?: string };
 
-export function RecipesView({ storage }: { storage: MealStorage }) {
+export function RecipesView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
   const [mode, setMode] = useState<Mode>({ view: 'list' });
 
   if (mode.view === 'form') {
@@ -41,13 +41,14 @@ export function RecipesView({ storage }: { storage: MealStorage }) {
   return (
     <RecipeList
       storage={storage}
+      liveKey={liveKey}
       onOpen={(id) => setMode({ view: 'detail', id })}
       onNew={() => setMode({ view: 'form' })}
     />
   );
 }
 
-function RecipeList({ storage, onOpen, onNew }: { storage: MealStorage; onOpen: (id: string) => void; onNew: () => void }) {
+function RecipeList({ storage, liveKey, onOpen, onNew }: { storage: MealStorage; liveKey: number; onOpen: (id: string) => void; onNew: () => void }) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -57,7 +58,7 @@ function RecipeList({ storage, onOpen, onNew }: { storage: MealStorage; onOpen: 
     setLoading(false);
   }, [storage]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, liveKey]);
 
   const handleDelete = async (id: string) => {
     await storage.deleteRecipe(id);

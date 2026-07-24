@@ -7,9 +7,7 @@ interface ListSelectorProps {
   activeList: TodoList | null;
   onSelect: (listId: string) => void;
   onCreateList: (name: string, householdId: string) => void;
-  onCreateHousehold: (name: string) => void;
   onOpenListSettings: (listId: string) => void;
-  onOpenHouseholdSettings: (householdId: string) => void;
 }
 
 const gearPath =
@@ -21,15 +19,11 @@ export function ListSelector({
   activeList,
   onSelect,
   onCreateList,
-  onCreateHousehold,
   onOpenListSettings,
-  onOpenHouseholdSettings,
 }: ListSelectorProps) {
   const [open, setOpen] = useState(false);
   const [creatingListFor, setCreatingListFor] = useState<string | null>(null);
   const [newListName, setNewListName] = useState('');
-  const [creatingHousehold, setCreatingHousehold] = useState(false);
-  const [newHouseholdName, setNewHouseholdName] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +31,6 @@ export function ListSelector({
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
         setCreatingListFor(null);
-        setCreatingHousehold(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -51,15 +44,6 @@ export function ListSelector({
       setNewListName('');
       setCreatingListFor(null);
       setOpen(false);
-    }
-  };
-
-  const handleCreateHousehold = () => {
-    const name = newHouseholdName.trim();
-    if (name) {
-      onCreateHousehold(name);
-      setNewHouseholdName('');
-      setCreatingHousehold(false);
     }
   };
 
@@ -84,21 +68,11 @@ export function ListSelector({
             const householdLists = lists.filter((l) => l.householdId === household.id);
             return (
               <div key={household.id} className="pb-1">
-                {/* Household header */}
-                <div className="flex items-center justify-between px-3 pt-2 pb-1">
+                {/* Household header (grouping label; management lives in the sidebar) */}
+                <div className="px-3 pt-2 pb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 truncate">
                     {household.name}
                   </span>
-                  <button
-                    onClick={() => { onOpenHouseholdSettings(household.id); setOpen(false); }}
-                    className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                    title="Ustawienia gospodarstwa"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d={gearPath} />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </button>
                 </div>
 
                 {/* Lists in household */}
@@ -166,35 +140,6 @@ export function ListSelector({
               </div>
             );
           })}
-
-          {/* New household */}
-          <div className="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
-            {creatingHousehold ? (
-              <div className="px-3 py-2 flex gap-2 min-w-0">
-                <input
-                  autoFocus
-                  value={newHouseholdName}
-                  onChange={(e) => setNewHouseholdName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { handleCreateHousehold(); } }}
-                  placeholder="Nazwa gospodarstwa..."
-                  className="min-w-0 flex-1 text-sm px-2 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-                <button
-                  onClick={handleCreateHousehold}
-                  className="shrink-0 text-xs font-medium px-2 py-1 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors"
-                >
-                  OK
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setCreatingHousehold(true)}
-                className="w-full text-left px-3 py-2 text-sm text-primary-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                + Nowe gospodarstwo
-              </button>
-            )}
-          </div>
         </div>
       )}
     </div>

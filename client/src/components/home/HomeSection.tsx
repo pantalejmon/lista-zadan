@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Household } from '../../lib/types';
 import {
   getAssets,
   deleteAsset,
@@ -16,9 +15,7 @@ import { CompleteForm } from './CompleteForm';
 import { RemindModal } from './RemindModal';
 
 interface HomeSectionProps {
-  households: Household[];
   householdId?: string;
-  onSelectHousehold?: (id: string) => void;
 }
 
 const STATUS_META: Record<MaintenanceStatus, { label: string; badge: string; dot: string }> = {
@@ -52,7 +49,7 @@ function dueLabel(m: Maintenance): string {
   return `${formatDate(m.nextDueAt)} · za ${m.daysUntilDue} dni`;
 }
 
-export function HomeSection({ households, householdId, onSelectHousehold }: HomeSectionProps) {
+export function HomeSection({ householdId }: HomeSectionProps) {
   const [assets, setAssets] = useState<HomeAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [assetForm, setAssetForm] = useState<{ asset: HomeAsset | null } | null>(null);
@@ -104,23 +101,6 @@ export function HomeSection({ households, householdId, onSelectHousehold }: Home
 
   return (
     <main className="flex-1">
-      {households.length > 1 && (
-        <div className="max-w-2xl mx-auto w-full px-4 pt-3">
-          <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            <span className="shrink-0">Gospodarstwo:</span>
-            <select
-              value={householdId ?? ''}
-              onChange={(e) => onSelectHousehold?.(e.target.value)}
-              className="flex-1 min-w-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              {households.map((h) => (
-                <option key={h.id} value={h.id}>{h.name}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
-
       <div className="max-w-2xl mx-auto w-full px-4 py-6">
         <div className="flex items-center justify-between mb-6 gap-3">
           <div>

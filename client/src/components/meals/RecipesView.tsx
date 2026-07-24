@@ -3,7 +3,7 @@ import type {
   MealStorage,
   Recipe,
   RecipeIngredient,
-  Ingredient,
+  Product,
 } from '../../lib/meals';
 import { IngredientAutocomplete } from './IngredientAutocomplete';
 import { IconPlus, IconTrash, IconPencil, IconBack, IconClose, IconBook } from './icons';
@@ -199,7 +199,7 @@ function RecipeDetail({ storage, id, onBack, onEdit }: { storage: MealStorage; i
 }
 
 interface IngredientRow {
-  ingredient: Ingredient | null;
+  product: Product | null;
   quantity: string;
   unit: string;
 }
@@ -209,7 +209,7 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [rows, setRows] = useState<IngredientRow[]>([{ ingredient: null, quantity: '', unit: '' }]);
+  const [rows, setRows] = useState<IngredientRow[]>([{ product: null, quantity: '', unit: '' }]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -225,7 +225,7 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
       setInstructions(existing.instructions);
       if (existing.recipeIngredients.length > 0) {
         setRows(existing.recipeIngredients.map((ri) => ({
-          ingredient: { id: ri.ingredientId, name: ri.name },
+          product: { id: ri.ingredientId, name: ri.name, baseUnit: 'szt', trackInPantry: true } as Product,
           quantity: ri.quantity ? String(ri.quantity) : '',
           unit: ri.unit,
         })));
@@ -233,7 +233,7 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
     });
   }, [storage, id]);
 
-  const addRow = () => setRows([...rows, { ingredient: null, quantity: '', unit: '' }]);
+  const addRow = () => setRows([...rows, { product: null, quantity: '', unit: '' }]);
   const removeRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
   const updateRow = (i: number, patch: Partial<IngredientRow>) =>
     setRows(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -241,10 +241,10 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
   const handleSave = async () => {
     setSaving(true);
     const recipeIngredients: RecipeIngredient[] = rows
-      .filter((r) => r.ingredient)
+      .filter((r) => r.product)
       .map((r) => ({
-        ingredientId: r.ingredient!.id,
-        name: r.ingredient!.name,
+        ingredientId: r.product!.id,
+        name: r.product!.name,
         quantity: parseFloat(r.quantity) || 0,
         unit: r.unit.trim(),
       }));
@@ -305,8 +305,8 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
                 <div className="flex-1 min-w-0">
                   <IngredientAutocomplete
                     storage={storage}
-                    value={row.ingredient}
-                    onChange={(ing) => updateRow(i, { ingredient: ing, unit: ing.defaultUnit ?? row.unit })}
+                    value={row.product}
+                    onChange={(p) => updateRow(i, { product: p, unit: row.unit || p.baseUnit })}
                   />
                 </div>
                 <input

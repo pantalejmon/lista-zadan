@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import type { MealStorage, Ingredient } from '../../lib/meals';
+import type { MealStorage, Product } from '../../lib/meals';
 
 interface Props {
   storage: MealStorage;
-  value?: Ingredient | null;
-  onChange: (ingredient: Ingredient) => void;
+  value?: Product | null;
+  onChange: (product: Product) => void;
   placeholder?: string;
 }
 
-export function IngredientAutocomplete({ storage, value, onChange, placeholder = 'Szukaj składnika...' }: Props) {
+// Picks a product from the household dictionary (or quick-creates one by name).
+export function IngredientAutocomplete({ storage, value, onChange, placeholder = 'Szukaj produktu...' }: Props) {
   const [query, setQuery] = useState(value?.name ?? '');
-  const [results, setResults] = useState<Ingredient[]>([]);
+  const [results, setResults] = useState<Product[]>([]);
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const ref = useRef<HTMLDivElement>(null);
@@ -34,7 +35,7 @@ export function IngredientAutocomplete({ storage, value, onChange, placeholder =
   const runSearch = (q: string) => {
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
-      setResults(await storage.searchIngredients(q));
+      setResults(await storage.searchProducts(q));
       setOpen(true);
     }, 150);
   };
@@ -44,9 +45,9 @@ export function IngredientAutocomplete({ storage, value, onChange, placeholder =
     runSearch(e.target.value);
   };
 
-  const handleSelect = (ing: Ingredient) => {
-    onChange(ing);
-    setQuery(ing.name);
+  const handleSelect = (product: Product) => {
+    onChange(product);
+    setQuery(product.name);
     setOpen(false);
   };
 
@@ -54,7 +55,7 @@ export function IngredientAutocomplete({ storage, value, onChange, placeholder =
     if (!query.trim()) {
       return;
     }
-    handleSelect(await storage.createIngredient(query));
+    handleSelect(await storage.createProduct({ name: query, baseUnit: 'szt', trackInPantry: true }));
   };
 
   const exactMatch = results.some((r) => r.name.toLowerCase() === query.trim().toLowerCase());
@@ -71,14 +72,14 @@ export function IngredientAutocomplete({ storage, value, onChange, placeholder =
       />
       {open && (results.length > 0 || query.trim()) && (
         <ul className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-auto">
-          {results.map((ing) => (
+          {results.map((p) => (
             <li
-              key={ing.id}
-              onMouseDown={() => handleSelect(ing)}
-              className="px-3 py-2 text-sm cursor-pointer hover:bg-primary-50 dark:hover:bg-primary-500/10"
+              key={p.id}
+              onMouseDown={() => handleSelect(p)}
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-primary-50 dark:hover:bg-primary-500/10 flex items-center justify-between"
             >
-              {ing.name}
-              {ing.defaultUnit && <span className="text-gray-400 ml-1">({ing.defaultUnit})</span>}
+              <span>{p.name}</span>
+              <span className="text-gray-400 text-xs">{p.baseUnit}{p.packageSize ? ` · opak. ${p.packageSize}` : ''}</span>
             </li>
           ))}
           {!exactMatch && query.trim() && (
@@ -86,7 +87,7 @@ export function IngredientAutocomplete({ storage, value, onChange, placeholder =
               onMouseDown={handleCreateNew}
               className="px-3 py-2 text-sm cursor-pointer hover:bg-primary-50 dark:hover:bg-primary-500/10 text-primary-600 dark:text-primary-400 border-t border-gray-100 dark:border-gray-700"
             >
-              + Dodaj „{query.trim()}”
+              + Dodaj produkt „{query.trim()}”
             </li>
           )}
         </ul>

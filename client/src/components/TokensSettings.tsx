@@ -127,7 +127,7 @@ export function TokensSettings({ households, onClose }: TokensSettingsProps) {
             <h2 className="font-semibold">Dostęp API / MCP</h2>
             <p className="text-xs text-gray-400">Tokeny dla agentów (np. Claude Cowork)</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Zamknij">
+          <button onClick={onClose} className="p-2 -mr-1 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Zamknij">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -206,8 +206,9 @@ export function TokensSettings({ households, onClose }: TokensSettingsProps) {
                           return <span key={scope} className="w-16" />;
                         }
                         return (
-                          <label key={scope} className="flex items-center gap-1 text-xs cursor-pointer">
-                            <input type="checkbox" checked={selectedScopes.has(scope)} onChange={() => toggleScope(scope)} className="w-3.5 h-3.5 rounded accent-primary-500" />
+                          // Cały wiersz etykiety jest dotykalny — sam checkbox 14px był za mały na telefonie
+                          <label key={scope} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-2 -my-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <input type="checkbox" checked={selectedScopes.has(scope)} onChange={() => toggleScope(scope)} className="w-4 h-4 rounded accent-primary-500" />
                             {access}
                           </label>
                         );

@@ -117,12 +117,12 @@ export function RenovationsView({ householdId }: { householdId?: string }) {
                     {r.description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{r.description}</p>}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => setEditing(r)} className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Edytuj">
+                    <button onClick={() => setEditing(r)} className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Edytuj">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
-                    <button onClick={() => handleDelete(r)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" aria-label="Usuń">
+                    <button onClick={() => handleDelete(r)} className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" aria-label="Usuń">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
@@ -222,8 +222,14 @@ function RenovationForm({
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-3 space-y-3">
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nazwa remontu (np. Remont łazienki)" className={inputClass} />
-      <div className="grid grid-cols-3 gap-2">
-        <select value={status} onChange={(e) => setStatus(e.target.value as RenovationStatus)} className={inputClass}>
+      {/* Na wąskim ekranie status bierze całą szerokość — w trzech kolumnach
+          etykieta „Planowany" była ucinana przez natywny select */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as RenovationStatus)}
+          className={`${inputClass} col-span-2 sm:col-span-1`}
+        >
           <option value="planned">Planowany</option>
           <option value="in_progress">W toku</option>
           <option value="done">Zakończony</option>

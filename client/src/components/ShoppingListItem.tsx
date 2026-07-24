@@ -211,7 +211,7 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
         {/* Edit title */}
         <button
           onClick={(e) => { e.stopPropagation(); setTitleText(todo.text); setEditingTitle(true); setExpanded(true); }}
-          className="flex-shrink-0 p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
+          className="flex-shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
           aria-label="Zmień nazwę"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -222,7 +222,7 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
         {/* Delete entire list */}
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(todo.id); }}
-          className="flex-shrink-0 p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+          className="flex-shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
           aria-label="Usuń listę"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -233,7 +233,7 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
         {/* Expand chevron */}
         <button
           onClick={(e) => { e.stopPropagation(); setExpanded((s) => !s); }}
-          className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+          className="flex-shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
           aria-label={expanded ? 'Zwiń' : 'Rozwiń'}
         >
           <svg

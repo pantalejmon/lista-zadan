@@ -168,7 +168,7 @@ function PantryRow({
       ) : null}
       <button
         onClick={onRemove}
-        className="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all shrink-0"
+        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all shrink-0"
         aria-label="Usuń"
       >
         <IconTrash className="w-4 h-4" />

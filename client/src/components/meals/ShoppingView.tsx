@@ -286,7 +286,7 @@ function ExportModal({ items, onClose }: { items: ShoppingItem[]; onClose: () =>
           <h2 className="font-semibold">Eksport do listy zadań</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-2 -mr-1 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="Zamknij"
           >
             <IconClose className="w-4 h-4" />

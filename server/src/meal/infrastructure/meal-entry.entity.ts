@@ -23,6 +23,9 @@ export class MealEntryEntity {
   @Column('varchar')
   recipeId!: string;
 
+  @Column('boolean', { default: false })
+  cooked!: boolean;
+
   toDomain(): MealEntry {
     return new MealEntry(
       this.id,
@@ -31,6 +34,7 @@ export class MealEntryEntity {
       this.dayOfWeek,
       this.mealType,
       this.recipeId,
+      this.cooked,
     );
   }
 
@@ -42,6 +46,7 @@ export class MealEntryEntity {
     entity.dayOfWeek = entry.dayOfWeek;
     entity.mealType = entry.mealType;
     entity.recipeId = entry.recipeId;
+    entity.cooked = entry.cooked;
     return entity;
   }
 }

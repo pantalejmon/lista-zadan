@@ -25,6 +25,7 @@ import { AddChatTable1763510400000 } from './migration/1763510400000-AddChatTabl
 import { AddPushSubscriptionTable1763596800000 } from './migration/1763596800000-AddPushSubscriptionTable';
 import { AddProductTable1763683200000 } from './migration/1763683200000-AddProductTable';
 import { AddPantryTable1763769600000 } from './migration/1763769600000-AddPantryTable';
+import { AddCookedToMealEntry1763856000000 } from './migration/1763856000000-AddCookedToMealEntry';
 import configuration from './config/configuration';
 
 @Module({
@@ -57,6 +58,7 @@ import configuration from './config/configuration';
           AddPushSubscriptionTable1763596800000,
           AddProductTable1763683200000,
           AddPantryTable1763769600000,
+          AddCookedToMealEntry1763856000000,
         ],
       }),
     }),

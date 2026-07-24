@@ -186,6 +186,29 @@ export class MealService {
     this.gateway.notifyChanged(entry.householdId);
   }
 
+  // Loop closer: marking a planned meal as cooked subtracts its ingredients from
+  // the pantry; un-marking adds them back. Idempotent — toggling to the same
+  // state does nothing.
+  async setCooked(id: string, userId: string, cooked: boolean): Promise<MealEntryResponse> {
+    const entry = await this.entryRepo.findById(id);
+    if (!entry) {
+      throw new NotFoundException(`Meal entry ${id} not found`);
+    }
+    await this.sharingService.assertHouseholdPermission(entry.householdId, userId, WRITE_ROLES);
+    if (entry.cooked === cooked) {
+      return entry.toResponse();
+    }
+    const recipe = await this.recipeRepo.findById(entry.recipeId);
+    if (recipe) {
+      // Cooking consumes stock (negative), un-cooking restores it (positive).
+      await this.applyRecipeToPantry(entry.householdId, recipe, cooked ? -1 : 1);
+    }
+    const updated = entry.withCooked(cooked);
+    await this.entryRepo.update(updated);
+    this.gateway.notifyChanged(entry.householdId);
+    return updated.toResponse();
+  }
+
   // ---- shopping ----
 
   async getShopping(householdId: string, userId: string): Promise<MealShoppingItemResponse[]> {
@@ -205,6 +228,15 @@ export class MealService {
   async toggleShoppingItem(id: string, userId: string, isChecked: boolean): Promise<MealShoppingItemResponse> {
     const item = await this.findShoppingItemOrThrow(id);
     await this.sharingService.assertHouseholdPermission(item.householdId, userId, WRITE_ROLES);
+    // Loop closer: checking off a purchase adds it to the pantry; un-checking
+    // reverses that. Only items with a known quantity and a name-matched,
+    // pantry-tracked product move stock.
+    if (item.isChecked !== isChecked && item.quantity && item.quantity > 0) {
+      const product = await this.findTrackedProductByName(item.householdId, item.name);
+      if (product) {
+        await this.adjustPantryInternal(item.householdId, product.id, isChecked ? item.quantity : -item.quantity);
+      }
+    }
     const updated = item.withChecked(isChecked);
     await this.shoppingRepo.update(updated);
     this.gateway.notifyChanged(item.householdId);
@@ -348,6 +380,35 @@ export class MealService {
       });
     }
     return needs.sort((x, y) => x.name.localeCompare(y.name, 'pl'));
+  }
+
+  // Applies a recipe's ingredients to the pantry with the given sign
+  // (-1 consumes, +1 restores). Only pantry-tracked, name-matched products move.
+  private async applyRecipeToPantry(householdId: string, recipe: Recipe, sign: number): Promise<void> {
+    const products = await this.productRepo.findByHousehold(householdId);
+    const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
+    for (const ri of recipe.recipeIngredients) {
+      const product = byName.get(ri.name.toLowerCase());
+      if (!product || !product.trackInPantry || ri.quantity <= 0) {
+        continue;
+      }
+      await this.adjustPantryInternal(householdId, product.id, sign * ri.quantity);
+    }
+  }
+
+  // Adjusts pantry stock without re-checking permissions — callers own the
+  // permission gate. Floors at zero.
+  private async adjustPantryInternal(householdId: string, productId: string, delta: number): Promise<void> {
+    const existing = await this.pantryRepo.findByHouseholdAndProduct(householdId, productId);
+    const next = Math.max(0, (existing?.quantity ?? 0) + delta);
+    const item = existing ? existing.withQuantity(next) : PantryItem.create(householdId, productId, next);
+    await this.pantryRepo.save(item);
+  }
+
+  private async findTrackedProductByName(householdId: string, name: string): Promise<Product | null> {
+    const products = await this.productRepo.findByHousehold(householdId);
+    const match = products.find((p) => p.name.toLowerCase() === name.trim().toLowerCase());
+    return match && match.trackInPantry ? match : null;
   }
 
   private toPantryResponse(item: PantryItem, product: Product): PantryItemResponse {

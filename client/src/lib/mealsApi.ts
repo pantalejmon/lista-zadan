@@ -83,6 +83,13 @@ export function createCloudMealStorage(householdId: string): MealStorage {
 
     removeEntry: (id) => request<void>(`/meals/planner/entry/${id}`, { method: 'DELETE' }),
 
+    setCooked: async (id, cooked) => {
+      await request<unknown>(`/meals/planner/entry/${id}/cooked`, {
+        method: 'PATCH',
+        body: JSON.stringify({ cooked }),
+      });
+    },
+
     getShopping: () => request<ShoppingItem[]>(`/meals/shopping?householdId=${hh}`),
 
     addShoppingItem: async (name) => {

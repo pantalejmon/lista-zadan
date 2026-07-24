@@ -16,6 +16,7 @@ import { Request } from 'express';
 import { MealService, type PlannerEntryResponse } from '../domain/meal.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { CreateEntryDto } from './dto/create-entry.dto';
+import { SetCookedDto } from './dto/set-cooked.dto';
 import { CreateShoppingItemDto } from './dto/create-shopping-item.dto';
 import { UpdateShoppingItemDto } from './dto/update-shopping-item.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -128,6 +129,15 @@ export class MealController {
     @Query('householdId') householdId?: string,
   ): Promise<MealEntryResponse> {
     return this.mealService.addEntry(this.requireHousehold(householdId), this.userId(req), dto);
+  }
+
+  @Patch('planner/entry/:id/cooked')
+  setCooked(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() dto: SetCookedDto,
+  ): Promise<MealEntryResponse> {
+    return this.mealService.setCooked(id, this.userId(req), dto.cooked);
   }
 
   @Delete('planner/entry/:id')

@@ -11,6 +11,7 @@ import { useFinanceRealtime } from '../../hooks/useFinanceRealtime';
 import { TransactionsView } from './TransactionsView';
 import { RecurringView } from './RecurringView';
 import { StatsView } from './StatsView';
+import { STICKY_UNDER_HEADER } from '../../lib/layout';
 
 interface FinanceSectionProps {
   householdId?: string;
@@ -82,7 +83,7 @@ export function FinanceSection({ householdId }: FinanceSectionProps) {
   return (
     <>
       {/* Sub-tab bar */}
-      <div className="sticky top-14 z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
+      <div className={`${STICKY_UNDER_HEADER} z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50`}>
         <div className="max-w-lg mx-auto flex px-2">
           {TABS.map(({ id, label, Icon }) => (
             <button

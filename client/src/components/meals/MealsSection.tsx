@@ -4,6 +4,7 @@ import { useMealsRealtime } from '../../hooks/useMealsRealtime';
 import { RecipesView } from './RecipesView';
 import { PlannerView } from './PlannerView';
 import { ShoppingView } from './ShoppingView';
+import { STICKY_UNDER_HEADER } from '../../lib/layout';
 import { ProductsView } from './ProductsView';
 import { PantryView } from './PantryView';
 import { IconCalendar, IconBook, IconCart, IconTag, IconBox } from './icons';
@@ -33,7 +34,7 @@ export function MealsSection({ storage, householdId }: MealsSectionProps) {
   return (
     <>
       {/* Sub-tab bar */}
-      <div className="sticky top-14 z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50">
+      <div className={`${STICKY_UNDER_HEADER} z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50`}>
         <div className="max-w-lg mx-auto flex px-2">
           {TABS.map(({ id, label, Icon }) => (
             <button

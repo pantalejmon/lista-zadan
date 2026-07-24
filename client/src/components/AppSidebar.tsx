@@ -91,12 +91,15 @@ function SidebarContent({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Brand */}
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-        <IconBrandHome className="w-8 h-8 text-primary-500 shrink-0" />
-        <div className="min-w-0">
-          <p className="text-sm font-bold leading-tight">Dom</p>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">Twój domowy asystent</p>
+      {/* Brand — wysokość i padding górny zgrane z belką (h-14 + notch), żeby
+          kreski pod paskiem i pod belką układały się w jedną linię */}
+      <div className="pt-[env(safe-area-inset-top)] border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center gap-2.5 px-5 h-14">
+          <IconBrandHome className="w-8 h-8 text-primary-500 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-bold leading-tight">Dom</p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight truncate">Twój domowy asystent</p>
+          </div>
         </div>
       </div>
 

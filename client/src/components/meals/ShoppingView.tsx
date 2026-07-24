@@ -261,6 +261,8 @@ function ExportModal({ items, onClose }: { items: ShoppingItem[]; onClose: () =>
         completed: false,
         listId: selected,
         kind: 'shopping',
+        // Unassigned todo needs a month bucket when it has no date.
+        month: now.toISOString().slice(0, 7),
       });
       const shoppingItems: TodoShoppingItem[] = source.map((it, idx) => ({
         id: crypto.randomUUID?.() ?? `${Date.now()}-${idx}`,

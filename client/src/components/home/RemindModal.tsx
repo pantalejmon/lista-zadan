@@ -46,6 +46,8 @@ export function RemindModal({ maintenance, assetName, onClose }: RemindModalProp
         completed: false,
         listId: selected,
         date: maintenance.nextDueAt ?? undefined,
+        // Without a due date the todo is unassigned and needs a month bucket.
+        month: maintenance.nextDueAt ? undefined : new Date().toISOString().slice(0, 7),
       });
       setDone(true);
     } catch {

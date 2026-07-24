@@ -7,9 +7,12 @@ import { MealShoppingItem, type MealShoppingItemResponse } from './meal-shopping
 import { RecipeRepositoryPort } from './recipe.repository.port';
 import { MealEntryRepositoryPort } from './meal-entry.repository.port';
 import { MealShoppingItemRepositoryPort } from './meal-shopping-item.repository.port';
+import { ProductRepositoryPort } from './product.repository.port';
+import { Product, type ProductResponse } from './product.model';
 import { MealGateway } from '../web/meal.gateway';
 import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
 import { CreateEntryDto } from '../web/dto/create-entry.dto';
+import { CreateProductDto } from '../web/dto/create-product.dto';
 
 const WRITE_ROLES: ListRole[] = ['owner', 'editor'];
 const READ_ROLES: ListRole[] = ['owner', 'editor', 'viewer'];
@@ -23,6 +26,7 @@ export class MealService {
     private readonly recipeRepo: RecipeRepositoryPort,
     private readonly entryRepo: MealEntryRepositoryPort,
     private readonly shoppingRepo: MealShoppingItemRepositoryPort,
+    private readonly productRepo: ProductRepositoryPort,
     private readonly sharingService: SharingService,
     private readonly gateway: MealGateway,
   ) {}
@@ -68,20 +72,56 @@ export class MealService {
     this.gateway.notifyChanged(recipe.householdId);
   }
 
-  async searchIngredients(householdId: string, userId: string, query: string): Promise<string[]> {
+  // ---- products (dictionary) ----
+
+  async getProducts(householdId: string, userId: string): Promise<ProductResponse[]> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
-    const recipes = await this.recipeRepo.findByHousehold(householdId);
+    const products = await this.productRepo.findByHousehold(householdId);
+    return products
+      .sort((a, b) => a.name.localeCompare(b.name, 'pl'))
+      .map((p) => p.toResponse());
+  }
+
+  async searchProducts(householdId: string, userId: string, query: string): Promise<ProductResponse[]> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
+    const products = await this.productRepo.findByHousehold(householdId);
     const q = query.trim().toLowerCase();
-    const names = new Map<string, string>();
-    for (const recipe of recipes) {
-      for (const ri of recipe.recipeIngredients) {
-        const key = ri.name.toLowerCase();
-        if (!names.has(key) && (!q || key.includes(q))) {
-          names.set(key, ri.name);
-        }
-      }
+    return products
+      .filter((p) => !q || p.name.toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pl'))
+      .slice(0, 8)
+      .map((p) => p.toResponse());
+  }
+
+  async createProduct(householdId: string, userId: string, dto: CreateProductDto): Promise<ProductResponse> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
+    // De-dup by name within the household — return existing rather than creating a twin.
+    const existing = (await this.productRepo.findByHousehold(householdId)).find(
+      (p) => p.name.toLowerCase() === dto.name.trim().toLowerCase(),
+    );
+    if (existing) {
+      return existing.toResponse();
     }
-    return [...names.values()].sort((a, b) => a.localeCompare(b, 'pl')).slice(0, 8);
+    const product = Product.createFromDto(dto, householdId);
+    await this.productRepo.save(product);
+    this.gateway.notifyChanged(householdId);
+    return product.toResponse();
+  }
+
+  async updateProduct(id: string, userId: string, dto: CreateProductDto): Promise<ProductResponse> {
+    const product = await this.findProductOrThrow(id);
+    await this.sharingService.assertHouseholdPermission(product.householdId, userId, WRITE_ROLES);
+    const updated = product.update(dto);
+    await this.productRepo.save(updated);
+    this.gateway.notifyChanged(product.householdId);
+    return updated.toResponse();
+  }
+
+  async deleteProduct(id: string, userId: string): Promise<void> {
+    const product = await this.findProductOrThrow(id);
+    await this.sharingService.assertHouseholdPermission(product.householdId, userId, WRITE_ROLES);
+    await this.productRepo.delete(id);
+    this.gateway.notifyChanged(product.householdId);
   }
 
   // ---- planner ----
@@ -206,5 +246,13 @@ export class MealService {
       throw new NotFoundException(`Shopping item ${id} not found`);
     }
     return item;
+  }
+
+  private async findProductOrThrow(id: string): Promise<Product> {
+    const product = await this.productRepo.findById(id);
+    if (!product) {
+      throw new NotFoundException(`Product ${id} not found`);
+    }
+    return product;
   }
 }

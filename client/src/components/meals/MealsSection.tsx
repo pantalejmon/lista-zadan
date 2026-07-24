@@ -5,13 +5,15 @@ import { useMealsRealtime } from '../../hooks/useMealsRealtime';
 import { RecipesView } from './RecipesView';
 import { PlannerView } from './PlannerView';
 import { ShoppingView } from './ShoppingView';
-import { IconCalendar, IconBook, IconCart } from './icons';
+import { ProductsView } from './ProductsView';
+import { IconCalendar, IconBook, IconCart, IconTag } from './icons';
 
-type MealsTab = 'planner' | 'recipes' | 'shopping';
+type MealsTab = 'planner' | 'recipes' | 'products' | 'shopping';
 
 const TABS: { id: MealsTab; label: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { id: 'planner', label: 'Planer', Icon: IconCalendar },
   { id: 'recipes', label: 'Przepisy', Icon: IconBook },
+  { id: 'products', label: 'Produkty', Icon: IconTag },
   { id: 'shopping', label: 'Zakupy', Icon: IconCart },
 ];
 
@@ -72,6 +74,7 @@ export function MealsSection({ storage, households = [], householdId, onSelectHo
       <main className="flex-1">
         {tab === 'planner' && <PlannerView storage={storage} liveKey={liveKey} />}
         {tab === 'recipes' && <RecipesView storage={storage} liveKey={liveKey} />}
+        {tab === 'products' && <ProductsView storage={storage} liveKey={liveKey} />}
         {tab === 'shopping' && <ShoppingView storage={storage} liveKey={liveKey} />}
       </main>
     </>

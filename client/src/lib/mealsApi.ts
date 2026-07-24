@@ -1,7 +1,8 @@
 import type {
   MealStorage,
   Recipe,
-  Ingredient,
+  Product,
+  ProductInput,
   PlannerEntry,
   ShoppingItem,
   RecipeInput,
@@ -49,16 +50,24 @@ export function createCloudMealStorage(householdId: string): MealStorage {
 
     deleteRecipe: (id) => request<void>(`/meals/recipes/${id}`, { method: 'DELETE' }),
 
-    searchIngredients: async (query) => {
-      const names = await request<string[]>(
-        `/meals/ingredients?householdId=${hh}&q=${encodeURIComponent(query)}`,
-      );
-      return names.map<Ingredient>((name) => ({ id: name, name }));
-    },
+    getProducts: () => request<Product[]>(`/meals/products?householdId=${hh}`),
 
-    // Cloud stores ingredient names inline on recipes — no separate dictionary to persist.
-    createIngredient: (name, defaultUnit) =>
-      Promise.resolve<Ingredient>({ id: name.trim(), name: name.trim(), defaultUnit }),
+    searchProducts: (query) =>
+      request<Product[]>(`/meals/products?householdId=${hh}&q=${encodeURIComponent(query)}`),
+
+    createProduct: (input: ProductInput) =>
+      request<Product>(`/meals/products?householdId=${hh}`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+
+    updateProduct: (id, input: ProductInput) =>
+      request<Product>(`/meals/products/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+
+    deleteProduct: (id) => request<void>(`/meals/products/${id}`, { method: 'DELETE' }),
 
     getWeek: (weekStart) =>
       request<PlannerEntry[]>(`/meals/planner?householdId=${hh}&week=${weekStart}`),

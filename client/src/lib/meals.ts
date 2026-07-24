@@ -2,10 +2,29 @@ import { openDB, type IDBPDatabase } from 'idb';
 
 // --- Domain types (ported from the meal-planner app, adapted to local-first storage) ---
 
-export interface Ingredient {
+export type BaseUnit = 'g' | 'ml' | 'szt';
+
+export const BASE_UNITS: { value: BaseUnit; label: string }[] = [
+  { value: 'g', label: 'g (gramy)' },
+  { value: 'ml', label: 'ml (mililitry)' },
+  { value: 'szt', label: 'szt (sztuki)' },
+];
+
+export interface Product {
   id: string;
   name: string;
-  defaultUnit?: string;
+  category?: string;
+  baseUnit: BaseUnit;
+  packageSize?: number;
+  trackInPantry: boolean;
+}
+
+export interface ProductInput {
+  name: string;
+  category?: string;
+  baseUnit: BaseUnit;
+  packageSize?: number;
+  trackInPantry: boolean;
 }
 
 export interface RecipeIngredient {
@@ -68,11 +87,11 @@ export interface RecipeInput {
 // --- IndexedDB ---
 
 const DB_NAME = 'lista-zadan-meals';
-const DB_VERSION = 1;
-const INGREDIENTS = 'ingredients';
+const DB_VERSION = 2;
 const RECIPES = 'recipes';
 const ENTRIES = 'mealEntries';
 const SHOPPING = 'shopping';
+const PRODUCTS = 'products';
 
 function generateId(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -84,11 +103,22 @@ function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        db.createObjectStore(INGREDIENTS, { keyPath: 'id' });
-        db.createObjectStore(RECIPES, { keyPath: 'id' });
-        const entries = db.createObjectStore(ENTRIES, { keyPath: 'id' });
-        entries.createIndex('weekStart', 'weekStart', { unique: false });
-        db.createObjectStore(SHOPPING, { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('ingredients')) {
+          db.createObjectStore('ingredients', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(RECIPES)) {
+          db.createObjectStore(RECIPES, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(ENTRIES)) {
+          const entries = db.createObjectStore(ENTRIES, { keyPath: 'id' });
+          entries.createIndex('weekStart', 'weekStart', { unique: false });
+        }
+        if (!db.objectStoreNames.contains(SHOPPING)) {
+          db.createObjectStore(SHOPPING, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(PRODUCTS)) {
+          db.createObjectStore(PRODUCTS, { keyPath: 'id' });
+        }
       },
     });
   }
@@ -123,26 +153,56 @@ function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// --- Ingredients ---
+// --- Products (dictionary) ---
 
-export async function searchIngredients(query: string): Promise<Ingredient[]> {
+export async function getProducts(): Promise<Product[]> {
   const db = await getDB();
-  const all = (await db.getAll(INGREDIENTS)) as Ingredient[];
-  const q = query.trim().toLowerCase();
-  const matches = q ? all.filter((i) => i.name.toLowerCase().includes(q)) : all;
-  return matches.sort((a, b) => a.name.localeCompare(b.name, 'pl')).slice(0, 8);
+  const all = (await db.getAll(PRODUCTS)) as Product[];
+  return all.sort((a, b) => a.name.localeCompare(b.name, 'pl'));
 }
 
-export async function createIngredient(name: string, defaultUnit?: string): Promise<Ingredient> {
+export async function searchProducts(query: string): Promise<Product[]> {
+  const q = query.trim().toLowerCase();
+  const all = await getProducts();
+  return (q ? all.filter((p) => p.name.toLowerCase().includes(q)) : all).slice(0, 8);
+}
+
+export async function createProduct(input: ProductInput): Promise<Product> {
   const db = await getDB();
-  const all = (await db.getAll(INGREDIENTS)) as Ingredient[];
-  const existing = all.find((i) => i.name.toLowerCase() === name.trim().toLowerCase());
+  const all = (await db.getAll(PRODUCTS)) as Product[];
+  const existing = all.find((p) => p.name.toLowerCase() === input.name.trim().toLowerCase());
   if (existing) {
     return existing;
   }
-  const ingredient: Ingredient = { id: generateId(), name: name.trim(), defaultUnit };
-  await db.put(INGREDIENTS, ingredient);
-  return ingredient;
+  const product: Product = {
+    id: generateId(),
+    name: input.name.trim(),
+    category: input.category?.trim() || undefined,
+    baseUnit: input.baseUnit,
+    packageSize: input.packageSize && input.packageSize > 0 ? input.packageSize : undefined,
+    trackInPantry: input.trackInPantry,
+  };
+  await db.put(PRODUCTS, product);
+  return product;
+}
+
+export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
+  const db = await getDB();
+  const product: Product = {
+    id,
+    name: input.name.trim(),
+    category: input.category?.trim() || undefined,
+    baseUnit: input.baseUnit,
+    packageSize: input.packageSize && input.packageSize > 0 ? input.packageSize : undefined,
+    trackInPantry: input.trackInPantry,
+  };
+  await db.put(PRODUCTS, product);
+  return product;
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete(PRODUCTS, id);
 }
 
 // --- Recipes ---
@@ -323,8 +383,11 @@ export interface MealStorage {
   createRecipe(input: RecipeInput): Promise<Recipe>;
   updateRecipe(id: string, input: RecipeInput): Promise<Recipe>;
   deleteRecipe(id: string): Promise<void>;
-  searchIngredients(query: string): Promise<Ingredient[]>;
-  createIngredient(name: string, defaultUnit?: string): Promise<Ingredient>;
+  getProducts(): Promise<Product[]>;
+  searchProducts(query: string): Promise<Product[]>;
+  createProduct(input: ProductInput): Promise<Product>;
+  updateProduct(id: string, input: ProductInput): Promise<Product>;
+  deleteProduct(id: string): Promise<void>;
   getWeek(weekStart: string): Promise<PlannerEntry[]>;
   addEntry(weekStart: string, recipeId: string, dayOfWeek: number, mealType: MealType): Promise<void>;
   removeEntry(id: string): Promise<void>;
@@ -341,8 +404,11 @@ export const localMealStorage: MealStorage = {
   createRecipe,
   updateRecipe,
   deleteRecipe,
-  searchIngredients,
-  createIngredient,
+  getProducts,
+  searchProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
   getWeek,
   addEntry,
   removeEntry,

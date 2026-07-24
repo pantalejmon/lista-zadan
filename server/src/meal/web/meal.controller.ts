@@ -18,7 +18,9 @@ import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { CreateShoppingItemDto } from './dto/create-shopping-item.dto';
 import { UpdateShoppingItemDto } from './dto/update-shopping-item.dto';
+import { CreateProductDto } from './dto/create-product.dto';
 import { RecipeResponse } from '../domain/recipe.model';
+import { ProductResponse } from '../domain/product.model';
 import { MealEntryResponse } from '../domain/meal-entry.model';
 import { MealShoppingItemResponse } from '../domain/meal-shopping-item.model';
 import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
@@ -64,13 +66,42 @@ export class MealController {
     return this.mealService.deleteRecipe(id, this.userId(req));
   }
 
-  @Get('ingredients')
-  searchIngredients(
+  // ---- products (dictionary) ----
+
+  @Get('products')
+  getProducts(
     @Req() req: Request,
     @Query('householdId') householdId?: string,
     @Query('q') q?: string,
-  ): Promise<string[]> {
-    return this.mealService.searchIngredients(this.requireHousehold(householdId), this.userId(req), q ?? '');
+  ): Promise<ProductResponse[]> {
+    const hh = this.requireHousehold(householdId);
+    if (q !== undefined) {
+      return this.mealService.searchProducts(hh, this.userId(req), q);
+    }
+    return this.mealService.getProducts(hh, this.userId(req));
+  }
+
+  @Post('products')
+  createProduct(
+    @Req() req: Request,
+    @Body() dto: CreateProductDto,
+    @Query('householdId') householdId?: string,
+  ): Promise<ProductResponse> {
+    return this.mealService.createProduct(this.requireHousehold(householdId), this.userId(req), dto);
+  }
+
+  @Put('products/:id')
+  updateProduct(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() dto: CreateProductDto,
+  ): Promise<ProductResponse> {
+    return this.mealService.updateProduct(id, this.userId(req), dto);
+  }
+
+  @Delete('products/:id')
+  deleteProduct(@Req() req: Request, @Param('id') id: string): Promise<void> {
+    return this.mealService.deleteProduct(id, this.userId(req));
   }
 
   // ---- planner ----

@@ -1,27 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  getRecipes,
-  getRecipe,
-  createRecipe,
-  updateRecipe,
-  deleteRecipe,
-  type Recipe,
-  type RecipeIngredient,
-  type Ingredient,
+import type {
+  MealStorage,
+  Recipe,
+  RecipeIngredient,
+  Ingredient,
 } from '../../lib/meals';
 import { IngredientAutocomplete } from './IngredientAutocomplete';
+import { IconPlus, IconTrash, IconPencil, IconBack, IconClose, IconBook } from './icons';
 
 type Mode =
   | { view: 'list' }
   | { view: 'detail'; id: string }
   | { view: 'form'; id?: string };
 
-export function RecipesView() {
+export function RecipesView({ storage }: { storage: MealStorage }) {
   const [mode, setMode] = useState<Mode>({ view: 'list' });
 
   if (mode.view === 'form') {
     return (
       <RecipeForm
+        storage={storage}
         id={mode.id}
         onDone={(id) => setMode(id ? { view: 'detail', id } : { view: 'list' })}
         onCancel={() => setMode(mode.id ? { view: 'detail', id: mode.id } : { view: 'list' })}
@@ -32,6 +30,7 @@ export function RecipesView() {
   if (mode.view === 'detail') {
     return (
       <RecipeDetail
+        storage={storage}
         id={mode.id}
         onBack={() => setMode({ view: 'list' })}
         onEdit={() => setMode({ view: 'form', id: mode.id })}
@@ -41,26 +40,27 @@ export function RecipesView() {
 
   return (
     <RecipeList
+      storage={storage}
       onOpen={(id) => setMode({ view: 'detail', id })}
       onNew={() => setMode({ view: 'form' })}
     />
   );
 }
 
-function RecipeList({ onOpen, onNew }: { onOpen: (id: string) => void; onNew: () => void }) {
+function RecipeList({ storage, onOpen, onNew }: { storage: MealStorage; onOpen: (id: string) => void; onNew: () => void }) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
-    setRecipes(await getRecipes());
+    setRecipes(await storage.getRecipes());
     setLoading(false);
-  }, []);
+  }, [storage]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string) => {
-    await deleteRecipe(id);
+    await storage.deleteRecipe(id);
     load();
   };
 
@@ -75,9 +75,10 @@ function RecipeList({ onOpen, onNew }: { onOpen: (id: string) => void; onNew: ()
         <h1 className="text-2xl font-bold">Przepisy</h1>
         <button
           onClick={onNew}
-          className="bg-primary-500 text-white text-sm px-4 py-2 rounded-xl hover:bg-primary-600 active:scale-95 transition-all"
+          className="flex items-center gap-1.5 bg-primary-500 text-white text-sm px-4 py-2 rounded-xl hover:bg-primary-600 active:scale-95 transition-all"
         >
-          + Dodaj
+          <IconPlus className="w-4 h-4" />
+          Dodaj
         </button>
       </div>
 
@@ -95,7 +96,7 @@ function RecipeList({ onOpen, onNew }: { onOpen: (id: string) => void; onNew: ()
         </div>
       ) : displayed.length === 0 ? (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <div className="text-4xl mb-3">🍽️</div>
+          <IconBook className="w-10 h-10 mx-auto mb-3 opacity-60" />
           <p>{recipes.length === 0 ? 'Nie masz jeszcze przepisów.' : 'Brak wyników.'}</p>
           {recipes.length === 0 && <p className="text-sm mt-1">Dodaj pierwszy przepis, aby zaplanować posiłki.</p>}
         </div>
@@ -104,7 +105,7 @@ function RecipeList({ onOpen, onNew }: { onOpen: (id: string) => void; onNew: ()
           {displayed.map((recipe) => (
             <li
               key={recipe.id}
-              className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 flex items-start justify-between gap-3"
+              className="group bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all p-4 flex items-start justify-between gap-3"
             >
               <button onClick={() => onOpen(recipe.id)} className="flex-1 min-w-0 text-left">
                 <span className="font-semibold hover:text-primary-600 dark:hover:text-primary-400 block truncate">
@@ -117,9 +118,21 @@ function RecipeList({ onOpen, onNew }: { onOpen: (id: string) => void; onNew: ()
                   {recipe.recipeIngredients.length} składników
                 </p>
               </button>
-              <div className="flex gap-3 shrink-0 text-gray-400">
-                <button onClick={() => onOpen(recipe.id)} className="hover:text-gray-700 dark:hover:text-gray-200" title="Otwórz">✏️</button>
-                <button onClick={() => handleDelete(recipe.id)} className="hover:text-red-600" title="Usuń">🗑️</button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => onOpen(recipe.id)}
+                  className="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
+                  aria-label="Edytuj"
+                >
+                  <IconPencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(recipe.id)}
+                  className="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+                  aria-label="Usuń"
+                >
+                  <IconTrash className="w-4 h-4" />
+                </button>
               </div>
             </li>
           ))}
@@ -129,12 +142,12 @@ function RecipeList({ onOpen, onNew }: { onOpen: (id: string) => void; onNew: ()
   );
 }
 
-function RecipeDetail({ id, onBack, onEdit }: { id: string; onBack: () => void; onEdit: () => void }) {
+function RecipeDetail({ storage, id, onBack, onEdit }: { storage: MealStorage; id: string; onBack: () => void; onEdit: () => void }) {
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
 
   useEffect(() => {
-    getRecipe(id).then((r) => setRecipe(r ?? null));
-  }, [id]);
+    storage.getRecipe(id).then((r) => setRecipe(r ?? null));
+  }, [storage, id]);
 
   if (recipe === undefined) {
     return <div className="flex items-center justify-center h-64 text-gray-400">Ładowanie...</div>;
@@ -145,11 +158,15 @@ function RecipeDetail({ id, onBack, onEdit }: { id: string; onBack: () => void; 
 
   return (
     <div className="max-w-2xl mx-auto w-full px-4 py-6">
-      <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-4">← Wróć</button>
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-4">
+        <IconBack className="w-4 h-4" /> Wróć
+      </button>
 
       <div className="flex items-start justify-between gap-3 mb-4">
         <h1 className="text-2xl font-bold">{recipe.title}</h1>
-        <button onClick={onEdit} className="shrink-0 text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100">✏️ Edytuj</button>
+        <button onClick={onEdit} className="shrink-0 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100">
+          <IconPencil className="w-4 h-4" /> Edytuj
+        </button>
       </div>
 
       {recipe.description && <p className="text-gray-600 dark:text-gray-300 mb-6">{recipe.description}</p>}
@@ -186,7 +203,7 @@ interface IngredientRow {
   unit: string;
 }
 
-function RecipeForm({ id, onDone, onCancel }: { id?: string; onDone: (id?: string) => void; onCancel: () => void }) {
+function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; id?: string; onDone: (id?: string) => void; onCancel: () => void }) {
   const isEdit = Boolean(id);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -198,7 +215,7 @@ function RecipeForm({ id, onDone, onCancel }: { id?: string; onDone: (id?: strin
     if (!id) {
       return;
     }
-    getRecipe(id).then((existing) => {
+    storage.getRecipe(id).then((existing) => {
       if (!existing) {
         return;
       }
@@ -213,7 +230,7 @@ function RecipeForm({ id, onDone, onCancel }: { id?: string; onDone: (id?: strin
         })));
       }
     });
-  }, [id]);
+  }, [storage, id]);
 
   const addRow = () => setRows([...rows, { ingredient: null, quantity: '', unit: '' }]);
   const removeRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i));
@@ -231,7 +248,7 @@ function RecipeForm({ id, onDone, onCancel }: { id?: string; onDone: (id?: strin
         unit: r.unit.trim(),
       }));
     const input = { title, description, instructions, recipeIngredients };
-    const saved = isEdit ? await updateRecipe(id!, input) : await createRecipe(input);
+    const saved = isEdit ? await storage.updateRecipe(id!, input) : await storage.createRecipe(input);
     setSaving(false);
     onDone(saved.id);
   };
@@ -277,13 +294,16 @@ function RecipeForm({ id, onDone, onCancel }: { id?: string; onDone: (id?: strin
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Składniki</label>
-            <button onClick={addRow} className="text-sm text-primary-600 dark:text-primary-400 hover:underline">+ Dodaj wiersz</button>
+            <button onClick={addRow} className="inline-flex items-center gap-1 text-sm text-primary-600 dark:text-primary-400 hover:underline">
+              <IconPlus className="w-3.5 h-3.5" /> Dodaj wiersz
+            </button>
           </div>
           <div className="space-y-2">
             {rows.map((row, i) => (
               <div key={i} className="flex gap-2 items-center">
                 <div className="flex-1 min-w-0">
                   <IngredientAutocomplete
+                    storage={storage}
                     value={row.ingredient}
                     onChange={(ing) => updateRow(i, { ingredient: ing, unit: ing.defaultUnit ?? row.unit })}
                   />
@@ -303,7 +323,13 @@ function RecipeForm({ id, onDone, onCancel }: { id?: string; onDone: (id?: strin
                   className="w-16 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 {rows.length > 1 && (
-                  <button onClick={() => removeRow(i)} className="text-gray-300 hover:text-red-500">✕</button>
+                  <button
+                    onClick={() => removeRow(i)}
+                    className="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+                    aria-label="Usuń wiersz"
+                  >
+                    <IconClose className="w-4 h-4" />
+                  </button>
                 )}
               </div>
             ))}

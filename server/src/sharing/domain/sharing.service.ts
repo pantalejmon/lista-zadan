@@ -289,7 +289,7 @@ export class SharingService {
     return household;
   }
 
-  private async assertHouseholdPermission(
+  async assertHouseholdPermission(
     householdId: string,
     userId: string,
     requiredRoles: ListRole[],

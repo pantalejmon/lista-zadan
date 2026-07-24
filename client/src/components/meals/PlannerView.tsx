@@ -1,31 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  getWeek,
-  getRecipes,
-  addEntry,
-  removeEntry,
   getMonday,
   shiftWeek,
   weekLabel,
   MEAL_TYPES,
   WEEK_DAYS,
+  type MealStorage,
   type PlannerEntry,
   type Recipe,
   type MealType,
 } from '../../lib/meals';
+import { IconChevronLeft, IconChevronRight, IconClose, IconPlus } from './icons';
 
-export function PlannerView() {
+export function PlannerView({ storage }: { storage: MealStorage }) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [entries, setEntries] = useState<PlannerEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [pickerSlot, setPickerSlot] = useState<{ day: number; meal: MealType } | null>(null);
 
   const load = useCallback(async () => {
-    setEntries(await getWeek(weekStart));
-  }, [weekStart]);
+    setEntries(await storage.getWeek(weekStart));
+  }, [storage, weekStart]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { getRecipes().then(setRecipes); }, []);
+  useEffect(() => { storage.getRecipes().then(setRecipes); }, [storage]);
 
   const getEntry = (day: number, mealType: MealType) =>
     entries.find((e) => e.dayOfWeek === day && e.mealType === mealType);
@@ -34,18 +32,18 @@ export function PlannerView() {
     if (!pickerSlot) {
       return;
     }
-    await addEntry(weekStart, recipeId, pickerSlot.day, pickerSlot.meal);
+    await storage.addEntry(weekStart, recipeId, pickerSlot.day, pickerSlot.meal);
     setPickerSlot(null);
     load();
   };
 
   const handleRemove = async (id: string) => {
-    await removeEntry(id);
+    await storage.removeEntry(id);
     load();
   };
 
   const openPicker = async (day: number, meal: MealType) => {
-    setRecipes(await getRecipes());
+    setRecipes(await storage.getRecipes());
     setPickerSlot({ day, meal });
   };
 
@@ -57,7 +55,9 @@ export function PlannerView() {
           onClick={() => setWeekStart(shiftWeek(weekStart, -1))}
           className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 active:scale-95 transition-all"
           aria-label="Poprzedni tydzień"
-        >◀</button>
+        >
+          <IconChevronLeft className="w-5 h-5" />
+        </button>
         <div className="text-center">
           <h1 className="text-lg font-bold">Planer posiłków</h1>
           <button
@@ -71,7 +71,9 @@ export function PlannerView() {
           onClick={() => setWeekStart(shiftWeek(weekStart, 1))}
           className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 active:scale-95 transition-all"
           aria-label="Następny tydzień"
-        >▶</button>
+        >
+          <IconChevronRight className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Calendar grid — desktop */}
@@ -102,19 +104,25 @@ export function PlannerView() {
                     <td key={dayIdx} className="py-1 px-1 align-top">
                       {entry ? (
                         <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-500/30 rounded-lg p-1.5 text-xs group relative min-h-12">
-                          <p className="font-medium text-primary-900 dark:text-primary-200 truncate pr-3">
+                          <p className="font-medium text-primary-900 dark:text-primary-200 truncate pr-4">
                             {entry.recipe?.title ?? '—'}
                           </p>
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="absolute top-1 right-1 text-primary-400 hover:text-red-500 hidden group-hover:block"
-                          >✕</button>
+                            aria-label="Usuń"
+                          >
+                            <IconClose className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       ) : (
                         <button
                           onClick={() => openPicker(dayIdx, type)}
-                          className="w-full h-12 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 text-gray-300 dark:text-gray-600 hover:text-primary-500 text-xl transition-colors"
-                        >+</button>
+                          className="w-full h-12 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 text-gray-300 dark:text-gray-600 hover:text-primary-500 flex items-center justify-center transition-colors"
+                          aria-label="Dodaj posiłek"
+                        >
+                          <IconPlus className="w-4 h-4" />
+                        </button>
                       )}
                     </td>
                   );
@@ -145,14 +153,20 @@ export function PlannerView() {
                       {entry ? (
                         <div className="flex-1 flex items-center justify-between min-w-0">
                           <span className="text-sm font-medium truncate">{entry.recipe?.title ?? '—'}</span>
-                          <button onClick={() => handleRemove(entry.id)} className="text-gray-300 hover:text-red-500 ml-2 shrink-0">✕</button>
+                          <button
+                            onClick={() => handleRemove(entry.id)}
+                            className="text-gray-300 hover:text-red-500 ml-2 shrink-0 p-1"
+                            aria-label="Usuń"
+                          >
+                            <IconClose className="w-4 h-4" />
+                          </button>
                         </div>
                       ) : (
                         <button
                           onClick={() => openPicker(dayIdx, type)}
-                          className="flex-1 text-left text-sm text-gray-300 dark:text-gray-600 hover:text-primary-600 dark:hover:text-primary-400 py-1"
+                          className="flex-1 inline-flex items-center gap-1 text-sm text-gray-300 dark:text-gray-600 hover:text-primary-600 dark:hover:text-primary-400 py-1"
                         >
-                          + Dodaj
+                          <IconPlus className="w-3.5 h-3.5" /> Dodaj
                         </button>
                       )}
                     </div>
@@ -170,7 +184,13 @@ export function PlannerView() {
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm max-h-[70vh] flex flex-col shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
               <h2 className="font-semibold">Wybierz przepis</h2>
-              <button onClick={() => setPickerSlot(null)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">✕</button>
+              <button
+                onClick={() => setPickerSlot(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label="Zamknij"
+              >
+                <IconClose className="w-4 h-4" />
+              </button>
             </div>
             {recipes.length === 0 ? (
               <p className="p-6 text-center text-sm text-gray-400">

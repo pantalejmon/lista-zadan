@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { searchIngredients, createIngredient, type Ingredient } from '../../lib/meals';
+import type { MealStorage, Ingredient } from '../../lib/meals';
 
 interface Props {
+  storage: MealStorage;
   value?: Ingredient | null;
   onChange: (ingredient: Ingredient) => void;
   placeholder?: string;
 }
 
-export function IngredientAutocomplete({ value, onChange, placeholder = 'Szukaj składnika...' }: Props) {
+export function IngredientAutocomplete({ storage, value, onChange, placeholder = 'Szukaj składnika...' }: Props) {
   const [query, setQuery] = useState(value?.name ?? '');
   const [results, setResults] = useState<Ingredient[]>([]);
   const [open, setOpen] = useState(false);
@@ -33,7 +34,7 @@ export function IngredientAutocomplete({ value, onChange, placeholder = 'Szukaj 
   const runSearch = (q: string) => {
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
-      setResults(await searchIngredients(q));
+      setResults(await storage.searchIngredients(q));
       setOpen(true);
     }, 150);
   };
@@ -53,7 +54,7 @@ export function IngredientAutocomplete({ value, onChange, placeholder = 'Szukaj 
     if (!query.trim()) {
       return;
     }
-    handleSelect(await createIngredient(query));
+    handleSelect(await storage.createIngredient(query));
   };
 
   const exactMatch = results.some((r) => r.name.toLowerCase() === query.trim().toLowerCase());

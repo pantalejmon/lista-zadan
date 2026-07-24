@@ -314,3 +314,41 @@ export async function generateShoppingFromPlan(weekStart: string): Promise<numbe
   await tx.done;
   return count;
 }
+
+// --- Storage abstraction (local IndexedDB vs cloud household) ---
+
+export interface MealStorage {
+  getRecipes(): Promise<Recipe[]>;
+  getRecipe(id: string): Promise<Recipe | undefined>;
+  createRecipe(input: RecipeInput): Promise<Recipe>;
+  updateRecipe(id: string, input: RecipeInput): Promise<Recipe>;
+  deleteRecipe(id: string): Promise<void>;
+  searchIngredients(query: string): Promise<Ingredient[]>;
+  createIngredient(name: string, defaultUnit?: string): Promise<Ingredient>;
+  getWeek(weekStart: string): Promise<PlannerEntry[]>;
+  addEntry(weekStart: string, recipeId: string, dayOfWeek: number, mealType: MealType): Promise<void>;
+  removeEntry(id: string): Promise<void>;
+  getShopping(): Promise<ShoppingItem[]>;
+  addShoppingItem(name: string): Promise<void>;
+  toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;
+  removeShoppingItem(id: string): Promise<void>;
+  generateShoppingFromPlan(weekStart: string): Promise<number>;
+}
+
+export const localMealStorage: MealStorage = {
+  getRecipes,
+  getRecipe,
+  createRecipe,
+  updateRecipe,
+  deleteRecipe,
+  searchIngredients,
+  createIngredient,
+  getWeek,
+  addEntry,
+  removeEntry,
+  getShopping,
+  addShoppingItem: (name) => addShoppingItem(name),
+  toggleShoppingItem,
+  removeShoppingItem,
+  generateShoppingFromPlan,
+};

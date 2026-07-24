@@ -26,6 +26,7 @@ import { useHouseholds } from './hooks/useHouseholds';
 import { useInvitations } from './hooks/useInvitations';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useOfflineSync } from './hooks/useOfflineSync';
+import { useMealStorage } from './hooks/useMealStorage';
 
 type View = 'calendar' | 'all' | 'unassigned';
 
@@ -61,6 +62,7 @@ export default function App() {
   const { todos, loading, add, addShopping, addRecurring, toggle, update, updateFull, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
   const { dark, toggle: toggleDark } = useDark();
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
+  const mealStorage = useMealStorage(mode, activeList?.householdId);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -236,7 +238,7 @@ export default function App() {
         </div>
       </header>
 
-      {section === 'meals' && <MealsSection />}
+      {section === 'meals' && <MealsSection storage={mealStorage} />}
 
       {section === 'tasks' && (
       <>

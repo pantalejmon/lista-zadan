@@ -20,7 +20,6 @@ import { setupHousehold } from './lib/api';
 import { MealsSection } from './components/meals/MealsSection';
 import { HomeSection } from './components/home/HomeSection';
 import { ChatView } from './components/ChatView';
-import { ThemeToggle } from './components/ThemeToggle';
 import { useTodos } from './hooks/useTodos';
 import { useDark } from './hooks/useDark';
 import { useTodoCounts } from './hooks/useTodoCounts';
@@ -232,6 +231,11 @@ export default function App() {
         pendingCount={pendingCount}
         isCloud={isCloud}
         onOpenTokens={() => setTokensOpen(true)}
+        households={households}
+        activeHouseholdId={mealHousehold?.id ?? null}
+        onSelectHousehold={setMealHouseholdId}
+        onOpenHouseholdSettings={setHouseholdSettingsId}
+        onCreateHousehold={handleCreateHousehold}
       />
 
       {/* Content column */}
@@ -260,33 +264,21 @@ export default function App() {
                 activeList={activeList}
                 onSelect={setActiveListId}
                 onCreateList={createList}
-                onCreateHousehold={handleCreateHousehold}
                 onOpenListSettings={setSettingsListId}
-                onOpenHouseholdSettings={setHouseholdSettingsId}
               />
             ) : (
               <h1 className="text-sm font-semibold truncate">{sectionTitle}</h1>
             )}
           </div>
-          <ThemeToggle dark={dark} onToggle={toggleDark} />
         </div>
       </header>
 
       {section === 'meals' && (
-        <MealsSection
-          storage={mealStorage}
-          households={households}
-          householdId={mealHousehold?.id}
-          onSelectHousehold={setMealHouseholdId}
-        />
+        <MealsSection storage={mealStorage} householdId={mealHousehold?.id} />
       )}
 
       {section === 'home' && (
-        <HomeSection
-          households={households}
-          householdId={mealHousehold?.id}
-          onSelectHousehold={setMealHouseholdId}
-        />
+        <HomeSection householdId={mealHousehold?.id} />
       )}
 
       {section === 'chat' && (

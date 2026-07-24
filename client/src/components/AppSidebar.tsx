@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { PushToggle } from './PushToggle';
+import { HouseholdSwitcher } from './HouseholdSwitcher';
 import type { AuthUser } from '../hooks/useAuth';
+import type { Household } from '../lib/types';
 import type { WsStatus } from '../hooks/useWebSocket';
 import type { SyncStatus } from '../lib/offlineQueue';
 
@@ -72,6 +74,11 @@ interface AppSidebarProps {
   pendingCount: number;
   isCloud: boolean;
   onOpenTokens?: () => void;
+  households: Household[];
+  activeHouseholdId: string | null;
+  onSelectHousehold: (id: string) => void;
+  onOpenHouseholdSettings: (id: string) => void;
+  onCreateHousehold: (name: string) => void;
 }
 
 export function AppSidebar(props: AppSidebarProps) {
@@ -117,6 +124,11 @@ function SidebarContent({
   pendingCount,
   isCloud,
   onOpenTokens,
+  households,
+  activeHouseholdId,
+  onSelectHousehold,
+  onOpenHouseholdSettings,
+  onCreateHousehold,
 }: AppSidebarProps) {
   const status = statusLabel(wsStatus, syncStatus, pendingCount);
 
@@ -138,6 +150,18 @@ function SidebarContent({
           <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">Twój domowy asystent</p>
         </div>
       </div>
+
+      {/* Global household context — used by Posiłki/Serwis domu, + settings/create */}
+      {isCloud && households.length > 0 && (
+        <HouseholdSwitcher
+          households={households}
+          activeHouseholdId={activeHouseholdId}
+          onSelect={onSelectHousehold}
+          onOpenSettings={onOpenHouseholdSettings}
+          onCreate={onCreateHousehold}
+          onNavigate={onClose}
+        />
+      )}
 
       {/* Feature navigation — Posiłki/Czat wymagają konta (gospodarstwa); lokalnie tylko Zadania */}
       <nav className="px-3 py-4 space-y-1">

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, addDays, subDays } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { useSwipe } from './hooks/useSwipe';
@@ -70,6 +70,30 @@ export default function App() {
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
   const { mealHousehold, setMealHouseholdId } = useMealHousehold(households);
   const mealStorage = useMealStorage(mode, mealHousehold?.id);
+
+  // Tasks are scoped to the globally-selected household (left sidebar): only its
+  // lists are shown, and switching household re-points the active list.
+  const householdLists = useMemo(
+    () => (mealHousehold ? lists.filter((l) => l.householdId === mealHousehold.id) : lists),
+    [lists, mealHousehold],
+  );
+
+  useEffect(() => {
+    if (!isCloud || !mealHousehold) {
+      return;
+    }
+    const inHousehold = lists.filter((l) => l.householdId === mealHousehold.id);
+    if (inHousehold.length === 0) {
+      if (activeListId !== null) {
+        setActiveListId(null);
+      }
+      return;
+    }
+    if (!activeList || activeList.householdId !== mealHousehold.id) {
+      const target = inHousehold.find((l) => l.isDefault) ?? inHousehold[0];
+      setActiveListId(target.id);
+    }
+  }, [isCloud, mealHousehold, lists, activeList, activeListId, setActiveListId]);
 
   // Posiłki i Czat wymagają konta (gospodarstwa). W trybie lokalnym trzymamy usera na Zadaniach.
   useEffect(() => {
@@ -259,9 +283,10 @@ export default function App() {
             </svg>
             {section === 'tasks' && isCloud ? (
               <ListSelector
-                households={households}
-                lists={lists}
+                lists={householdLists}
                 activeList={activeList}
+                activeHouseholdId={mealHousehold?.id ?? null}
+                canCreate={mealHousehold?.role !== 'viewer'}
                 onSelect={setActiveListId}
                 onCreateList={createList}
                 onOpenListSettings={setSettingsListId}
@@ -284,8 +309,8 @@ export default function App() {
       {section === 'chat' && (
         <ChatView
           isCloud={isCloud}
-          householdId={activeList?.householdId}
-          householdName={activeList?.householdName}
+          householdId={mealHousehold?.id}
+          householdName={mealHousehold?.name}
           currentUserId={user?.id}
           onLogin={login}
         />

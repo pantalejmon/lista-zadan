@@ -13,6 +13,7 @@ import { useHomeRealtime } from '../../hooks/useHomeRealtime';
 import { AssetForm } from './AssetForm';
 import { MaintenanceForm } from './MaintenanceForm';
 import { CompleteForm } from './CompleteForm';
+import { RemindModal } from './RemindModal';
 
 interface HomeSectionProps {
   households: Household[];
@@ -57,6 +58,7 @@ export function HomeSection({ households, householdId, onSelectHousehold }: Home
   const [assetForm, setAssetForm] = useState<{ asset: HomeAsset | null } | null>(null);
   const [maintenanceForm, setMaintenanceForm] = useState<{ assetId: string; maintenance: Maintenance | null } | null>(null);
   const [completing, setCompleting] = useState<Maintenance | null>(null);
+  const [reminding, setReminding] = useState<{ maintenance: Maintenance; assetName: string } | null>(null);
 
   const load = useCallback(async () => {
     if (!householdId) {
@@ -151,6 +153,12 @@ export function HomeSection({ households, householdId, onSelectHousehold }: Home
                     <p className="text-xs text-gray-400 truncate">{asset.name} · {dueLabel(m)}</p>
                   </div>
                   <button
+                    onClick={() => setReminding({ maintenance: m, assetName: asset.name })}
+                    className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:underline shrink-0"
+                  >
+                    → Zadania
+                  </button>
+                  <button
                     onClick={() => setCompleting(m)}
                     className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline shrink-0"
                   >
@@ -216,6 +224,14 @@ export function HomeSection({ households, householdId, onSelectHousehold }: Home
           maintenance={completing}
           onClose={() => setCompleting(null)}
           onConfirm={handleComplete}
+        />
+      )}
+
+      {reminding && (
+        <RemindModal
+          maintenance={reminding.maintenance}
+          assetName={reminding.assetName}
+          onClose={() => setReminding(null)}
         />
       )}
     </main>

@@ -90,7 +90,7 @@ function SidebarContent({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Brand — wysokość i padding górny zgrane z belką (h-14 + notch), żeby
           kreski pod paskiem i pod belką układały się w jedną linię */}
       <div className="pt-[env(safe-area-inset-top)] border-b border-gray-200 dark:border-gray-800">
@@ -103,63 +103,70 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Global household context — used by Posiłki/Serwis domu, + settings/create */}
-      {isCloud && households.length > 0 && (
-        <HouseholdSwitcher
-          households={households}
-          activeHouseholdId={activeHouseholdId}
-          onSelect={onSelectHousehold}
-          onOpenSettings={onOpenHouseholdSettings}
-          onCreate={onCreateHousehold}
-          onNavigate={onClose}
-        />
-      )}
-
-      {/* Feature navigation — Posiłki/Czat wymagają konta (gospodarstwa); lokalnie tylko Zadania */}
-      <nav className="px-3 py-4 space-y-1">
-        <p className="px-2 mb-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Aplikacje</p>
-        {NAV_ITEMS.filter((item) => isCloud || item.id === 'tasks').map(({ id, label, description, Icon }) => (
-          <button
-            key={id}
-            onClick={() => selectSection(id)}
-            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-colors ${
-              section === id
-                ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
-            }`}
-          >
-            {/* Kafelek nabiera koloru marki dopiero dla aktywnej sekcji — reszta
-                zostaje stonowana, żeby menu nie było kolorową choinką */}
-            <Icon className={`w-8 h-8 shrink-0 transition-colors ${
-              section === id ? 'text-primary-500' : 'text-gray-400 dark:text-gray-600'
-            }`} />
-            <span className="min-w-0 text-left">
-              <span className="block text-sm font-medium truncate">{label}</span>
-              <span className="block text-[11px] text-gray-400 dark:text-gray-500 truncate">{description}</span>
-            </span>
-          </button>
-        ))}
-        {!isCloud && (
-          <button
-            onClick={() => { onLogin(); onClose(); }}
-            className="flex items-start gap-3 w-full px-3 py-2.5 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
-          >
-            <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <span className="min-w-0 text-left">
-              <span className="block text-sm font-medium truncate">Posiłki i Czat</span>
-              <span className="block text-[11px] leading-tight">Zaloguj się, aby odblokować</span>
-            </span>
-          </button>
+      {/* Środek przewijalny: na telefonie (S25 i mniejsze) cała zawartość szuflady
+          nie mieści się w pionie, a stopka z kontem musi zostać na swoim miejscu.
+          `min-h-0` jest konieczne, bo bez niego element flex nie skurczy się
+          poniżej wysokości treści i przewijanie nigdy nie zadziała. */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        {/* Global household context — used by Posiłki/Serwis domu, + settings/create */}
+        {isCloud && households.length > 0 && (
+          <HouseholdSwitcher
+            households={households}
+            activeHouseholdId={activeHouseholdId}
+            onSelect={onSelectHousehold}
+            onOpenSettings={onOpenHouseholdSettings}
+            onCreate={onCreateHousehold}
+            onNavigate={onClose}
+          />
         )}
-      </nav>
 
-      <div className="flex-1" />
+        {/* Feature navigation — Posiłki/Czat wymagają konta (gospodarstwa); lokalnie tylko Zadania */}
+        <nav className="px-3 py-3 space-y-0.5">
+          <p className="px-2 mb-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Aplikacje</p>
+          {NAV_ITEMS.filter((item) => isCloud || item.id === 'tasks').map(({ id, label, description, Icon }) => (
+            <button
+              key={id}
+              onClick={() => selectSection(id)}
+              className={`flex items-center gap-3 w-full px-3 py-2 rounded-xl transition-colors ${
+                section === id
+                  ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+              }`}
+            >
+              {/* Kafelek nabiera koloru marki dopiero dla aktywnej sekcji — reszta
+                  zostaje stonowana, żeby menu nie było kolorową choinką */}
+              <Icon className={`w-8 h-8 shrink-0 transition-colors ${
+                section === id ? 'text-primary-500' : 'text-gray-400 dark:text-gray-600'
+              }`} />
+              <span className="min-w-0 text-left">
+                <span className="block text-sm font-medium truncate">{label}</span>
+                {/* Podpis tylko w stałym pasku (md+) — w szufladzie na telefonie
+                    dokładałby 5×12 px i to on wypychał stopkę poza ekran */}
+                <span className="hidden md:block text-[11px] text-gray-400 dark:text-gray-500 truncate">{description}</span>
+              </span>
+            </button>
+          ))}
+          {!isCloud && (
+            <button
+              onClick={() => { onLogin(); onClose(); }}
+              className="flex items-start gap-3 w-full px-3 py-2 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+            >
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span className="min-w-0 text-left">
+                <span className="block text-sm font-medium truncate">Posiłki i Czat</span>
+                <span className="block text-[11px] leading-tight">Zaloguj się, aby odblokować</span>
+              </span>
+            </button>
+          )}
+        </nav>
+      </div>
 
+      {/* Stopka zostaje przyklejona do dołu — poniżej przewijalnego środka */}
       {/* Connection status */}
       {isCloud && (
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800">
+        <div className="px-5 py-2 border-t border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${status.color.replace('text-', 'bg-')} ${status.pulse ? 'animate-pulse' : ''}`} />
             <span className={`text-xs font-medium ${status.color}`}>{status.text}</span>
@@ -168,12 +175,12 @@ function SidebarContent({
       )}
 
       {/* Notifications + theme toggle */}
-      <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800">
+      <div className="px-3 py-1.5 border-t border-gray-100 dark:border-gray-800">
         {isCloud && <PushToggle />}
         {isCloud && onOpenTokens && (
           <button
             onClick={() => { onOpenTokens(); onClose(); }}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
           >
             <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -183,7 +190,7 @@ function SidebarContent({
         )}
         <button
           onClick={onToggleDark}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
         >
           {dark ? (
             <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -198,8 +205,8 @@ function SidebarContent({
         </button>
       </div>
 
-      {/* Account */}
-      <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800">
+      {/* Account — pb pod pasek gestów (S25 i inne telefony bez przycisków) */}
+      <div className="px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-800">
         {user ? (
           <div className="flex items-center gap-3 px-2">
             {user.avatarUrl ? (

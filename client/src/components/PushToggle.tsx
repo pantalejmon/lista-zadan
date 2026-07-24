@@ -48,7 +48,7 @@ export function PushToggle() {
     <button
       onClick={toggle}
       disabled={busy}
-      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors disabled:opacity-50"
+      className="flex items-center gap-3 w-full px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors disabled:opacity-50"
     >
       <svg
         className={`w-5 h-5 ${enabled ? 'text-primary-500' : 'text-gray-400'}`}

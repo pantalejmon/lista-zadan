@@ -4,7 +4,7 @@ import type { AuthUser } from '../hooks/useAuth';
 import type { WsStatus } from '../hooks/useWebSocket';
 import type { SyncStatus } from '../lib/offlineQueue';
 
-export type AppSection = 'tasks' | 'meals' | 'chat';
+export type AppSection = 'tasks' | 'meals' | 'home' | 'chat';
 
 interface NavItem {
   id: AppSection;
@@ -31,6 +31,16 @@ const NAV_ITEMS: NavItem[] = [
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18M7 3v6a2 2 0 01-2 2H3m4-8v18M14 5c0-1.1.9-2 2-2s2 .9 2 2v6h-4V5zm0 6v10" />
+      </svg>
+    ),
+  },
+  {
+    id: 'home',
+    label: 'Serwis domu',
+    description: 'Przeglądy, gwarancje, koszty',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
     ),
   },

@@ -24,6 +24,9 @@ doc in the same commit** — the docs are the source of truth for the intent beh
   (cooked → subtract from pantry, bought → add to pantry), and shopping-list export to a todo list. **Critical:**
   the meal algorithms are duplicated between `client/src/lib/meals.ts` (offline/local) and
   `server/src/meal/domain/meal.service.ts` (cloud) — a change to one must be mirrored in the other.
+- `docs/home-service.md` — Serwis domu module: home assets + cyclic maintenance, `nextDueAt` derivation
+  (`addMonths`), date-relative status (`overdue`/`soon`/`ok`/`none` with a 30-day soon threshold), and the
+  "mark done" loop closer that rolls the next due date forward. Cloud-only, per household.
 - `docs/google-oauth-setup.md`, `docs/push-setup.md` — deployment/config guides.
 
 ## Build & Run Commands

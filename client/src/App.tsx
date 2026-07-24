@@ -17,6 +17,7 @@ import { AppSidebar, type AppSection } from './components/AppSidebar';
 import { Onboarding } from './components/Onboarding';
 import { setupHousehold } from './lib/api';
 import { MealsSection } from './components/meals/MealsSection';
+import { HomeSection } from './components/home/HomeSection';
 import { ChatView } from './components/ChatView';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useTodos } from './hooks/useTodos';
@@ -190,7 +191,8 @@ export default function App() {
     ? households.find((h) => h.id === householdSettingsId)
     : null;
 
-  const sectionTitle = section === 'meals' ? 'Posiłki' : section === 'chat' ? 'Czat' : 'Zadania';
+  const sectionTitle =
+    section === 'meals' ? 'Posiłki' : section === 'home' ? 'Serwis domu' : section === 'chat' ? 'Czat' : 'Zadania';
 
   // First-login onboarding: logged in but no household yet → name your home or accept an invitation.
   if (isCloud && user && !householdsLoading && households.length === 0) {
@@ -270,6 +272,14 @@ export default function App() {
       {section === 'meals' && (
         <MealsSection
           storage={mealStorage}
+          households={households}
+          householdId={mealHousehold?.id}
+          onSelectHousehold={setMealHouseholdId}
+        />
+      )}
+
+      {section === 'home' && (
+        <HomeSection
           households={households}
           householdId={mealHousehold?.id}
           onSelectHousehold={setMealHouseholdId}

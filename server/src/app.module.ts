@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { TodoModule } from './todo/todo.module';
 import { SharingModule } from './sharing/sharing.module';
 import { MealModule } from './meal/meal.module';
+import { HomeModule } from './home/home.module';
 import { ChatModule } from './chat/chat.module';
 import { PushModule } from './push/push.module';
 import { CreateTodoTable1711612800000 } from './migration/1711612800000-CreateTodoTable';
@@ -26,6 +27,7 @@ import { AddPushSubscriptionTable1763596800000 } from './migration/1763596800000
 import { AddProductTable1763683200000 } from './migration/1763683200000-AddProductTable';
 import { AddPantryTable1763769600000 } from './migration/1763769600000-AddPantryTable';
 import { AddCookedToMealEntry1763856000000 } from './migration/1763856000000-AddCookedToMealEntry';
+import { AddHomeServiceTables1763942400000 } from './migration/1763942400000-AddHomeServiceTables';
 import configuration from './config/configuration';
 
 @Module({
@@ -59,6 +61,7 @@ import configuration from './config/configuration';
           AddProductTable1763683200000,
           AddPantryTable1763769600000,
           AddCookedToMealEntry1763856000000,
+          AddHomeServiceTables1763942400000,
         ],
       }),
     }),
@@ -70,6 +73,7 @@ import configuration from './config/configuration';
     TodoModule,
     SharingModule,
     MealModule,
+    HomeModule,
     ChatModule,
     PushModule,
   ],

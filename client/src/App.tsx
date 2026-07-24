@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, addDays, subDays } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { useSwipe } from './hooks/useSwipe';
@@ -64,6 +64,13 @@ export default function App() {
   const { dark, toggle: toggleDark } = useDark();
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
   const mealStorage = useMealStorage(mode, activeList?.householdId);
+
+  // Posiłki i Czat wymagają konta (gospodarstwa). W trybie lokalnym trzymamy usera na Zadaniach.
+  useEffect(() => {
+    if (!isCloud && section !== 'tasks') {
+      setSection('tasks');
+    }
+  }, [isCloud, section]);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);

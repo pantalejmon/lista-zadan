@@ -58,5 +58,6 @@ import { MealGateway } from './web/meal.gateway';
       ],
     },
   ],
+  exports: [MealService],
 })
 export class MealModule {}

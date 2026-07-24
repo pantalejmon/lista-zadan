@@ -70,8 +70,21 @@ Instalacja → przegląd cykliczny → termin się zbliża/mija
 Każda zmiana (asset/maintenance) emituje `home:changed` do pokoju gospodarstwa; front
 odświeża dane przez `useHomeRealtime`. Usunięcie instalacji kaskadowo usuwa jej przeglądy.
 
+## Wykonawcy i remonty
+
+- **Wykonawcy** (`home_provider`, #43) — kontakty (hydraulik/elektryk/kominiarz…): `name`, `trade`,
+  `phone`, `email`, `notes`. Przegląd może wskazać `providerId`; w odpowiedzi API i na liście
+  pokazujemy `providerName`. Usunięcie wykonawcy zostawia „wiszące" `providerId` → nazwa rozwiązuje
+  się na `null` (bez błędu). „Historia zleceń" = przeglądy wskazujące danego wykonawcę.
+- **Remonty** (`home_renovation`, #41) — projekty: `title`, `status`
+  (`planned`/`in_progress`/`done`), `description`, `budget` vs `cost` (koszt > budżet = „przekroczony"),
+  oraz **checklista** (JSON `[{id,text,done}]`) z odhaczaniem inline z karty.
+
+UI: sekcja „Serwis domu" ma zakładki **Przeglądy | Remonty | Wykonawcy** (analogicznie do Posiłków).
+
 ## Roadmapa (epic #37)
 
-Zrobione: **#38** (instalacje), **#39** (przeglądy + statusy + pętla), **#45** (dashboard + lewe menu).
-Następne: **#40** (przypomnienia o przeglądach → Zadania/kalendarz), **#41–#44** (remonty,
-koszty, wykonawcy, dokumenty/storage plików), **#46** (narzędzia MCP — po epiku #26).
+Zrobione: **#38** (instalacje), **#39** (przeglądy + statusy + pętla), **#40** (przypomnienia → Zadania),
+**#41** (remonty), **#43** (wykonawcy), **#45** (dashboard + zakładki), **#46** (narzędzia MCP).
+Zostaje: **#42** (koszty — rejestr/raporty; otwarta decyzja: osobno vs wspólny moduł „Wydatki"),
+**#44** (dokumenty/załączniki — otwarta decyzja: storage plików dysk vs S3).

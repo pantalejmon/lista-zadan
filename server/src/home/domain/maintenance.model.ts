@@ -13,6 +13,8 @@ export interface MaintenanceResponse {
   nextDueAt: string | null;
   cost: number | null;
   notes: string | null;
+  providerId: string | null;
+  providerName: string | null;
   status: MaintenanceStatus;
   daysUntilDue: number | null;
   createdAt: number;
@@ -29,6 +31,7 @@ export class Maintenance {
     readonly nextDueAt: string | null,
     readonly cost: number | null,
     readonly notes: string | null,
+    readonly providerId: string | null,
     readonly createdAt: number,
   ) {}
 
@@ -47,6 +50,7 @@ export class Maintenance {
       nextDueAt,
       normaliseCost(dto.cost),
       clean(dto.notes),
+      clean(dto.providerId),
       Date.now(),
     );
   }
@@ -65,6 +69,7 @@ export class Maintenance {
       nextDueAt,
       normaliseCost(dto.cost),
       clean(dto.notes),
+      clean(dto.providerId),
       this.createdAt,
     );
   }
@@ -82,6 +87,7 @@ export class Maintenance {
       deriveNextDue(doneAt, this.intervalMonths),
       cost ?? this.cost,
       this.notes,
+      this.providerId,
       this.createdAt,
     );
   }
@@ -100,7 +106,7 @@ export class Maintenance {
     return 'ok';
   }
 
-  toResponse(today: string, soonDays: number): MaintenanceResponse {
+  toResponse(today: string, soonDays: number, providerName: string | null = null): MaintenanceResponse {
     return {
       id: this.id,
       assetId: this.assetId,
@@ -110,6 +116,8 @@ export class Maintenance {
       nextDueAt: this.nextDueAt,
       cost: this.cost,
       notes: this.notes,
+      providerId: this.providerId,
+      providerName,
       status: this.statusAt(today, soonDays),
       daysUntilDue: this.nextDueAt ? daysBetween(today, this.nextDueAt) : null,
       createdAt: this.createdAt,

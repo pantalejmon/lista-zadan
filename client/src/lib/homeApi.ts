@@ -11,9 +11,58 @@ export interface Maintenance {
   nextDueAt: string | null;
   cost: number | null;
   notes: string | null;
+  providerId: string | null;
+  providerName: string | null;
   status: MaintenanceStatus;
   daysUntilDue: number | null;
   createdAt: number;
+}
+
+export interface Provider {
+  id: string;
+  name: string;
+  trade: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  createdAt: number;
+}
+
+export interface ProviderInput {
+  name: string;
+  trade?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+}
+
+export type RenovationStatus = 'planned' | 'in_progress' | 'done';
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface Renovation {
+  id: string;
+  title: string;
+  status: RenovationStatus;
+  description: string | null;
+  budget: number | null;
+  cost: number | null;
+  checklist: ChecklistItem[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface RenovationInput {
+  title: string;
+  status?: RenovationStatus;
+  description?: string;
+  budget?: number;
+  cost?: number;
+  checklist?: { id?: string; text: string; done?: boolean }[];
 }
 
 export interface HomeAsset {
@@ -49,6 +98,7 @@ export interface MaintenanceInput {
   nextDueAt?: string;
   cost?: number;
   notes?: string;
+  providerId?: string;
 }
 
 // Suggested asset types (freeform — the field accepts anything).
@@ -128,4 +178,46 @@ export function completeMaintenance(id: string, doneAt?: string, cost?: number):
 
 export function deleteMaintenance(id: string): Promise<void> {
   return request<void>(`/home/maintenance/${id}`, { method: 'DELETE' });
+}
+
+// ---- providers (wykonawcy) ----
+
+export function getProviders(householdId: string): Promise<Provider[]> {
+  return request<Provider[]>(`/home/providers?householdId=${encodeURIComponent(householdId)}`);
+}
+
+export function createProvider(householdId: string, input: ProviderInput): Promise<Provider> {
+  return request<Provider>(`/home/providers?householdId=${encodeURIComponent(householdId)}`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateProvider(id: string, input: ProviderInput): Promise<Provider> {
+  return request<Provider>(`/home/providers/${id}`, { method: 'PUT', body: JSON.stringify(input) });
+}
+
+export function deleteProvider(id: string): Promise<void> {
+  return request<void>(`/home/providers/${id}`, { method: 'DELETE' });
+}
+
+// ---- renovations (remonty) ----
+
+export function getRenovations(householdId: string): Promise<Renovation[]> {
+  return request<Renovation[]>(`/home/renovations?householdId=${encodeURIComponent(householdId)}`);
+}
+
+export function createRenovation(householdId: string, input: RenovationInput): Promise<Renovation> {
+  return request<Renovation>(`/home/renovations?householdId=${encodeURIComponent(householdId)}`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateRenovation(id: string, input: RenovationInput): Promise<Renovation> {
+  return request<Renovation>(`/home/renovations/${id}`, { method: 'PUT', body: JSON.stringify(input) });
+}
+
+export function deleteRenovation(id: string): Promise<void> {
+  return request<void>(`/home/renovations/${id}`, { method: 'DELETE' });
 }

@@ -32,4 +32,8 @@ export class CreateMaintenanceDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @IsOptional()
+  @IsUUID()
+  providerId?: string;
 }

@@ -16,8 +16,12 @@ import { HomeService, type HomeAssetWithMaintenance } from '../domain/home.servi
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { CompleteMaintenanceDto } from './dto/complete-maintenance.dto';
+import { CreateProviderDto } from './dto/create-provider.dto';
+import { CreateRenovationDto } from './dto/create-renovation.dto';
 import { HomeAssetResponse } from '../domain/home-asset.model';
 import { MaintenanceResponse } from '../domain/maintenance.model';
+import { ProviderResponse } from '../domain/provider.model';
+import { RenovationResponse } from '../domain/renovation.model';
 import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
 import { User } from '../../auth/domain/user.model';
 
@@ -91,6 +95,58 @@ export class HomeController {
   @Delete('maintenance/:id')
   deleteMaintenance(@Req() req: Request, @Param('id') id: string): Promise<void> {
     return this.homeService.deleteMaintenance(id, this.userId(req));
+  }
+
+  // ---- providers (wykonawcy) ----
+
+  @Get('providers')
+  getProviders(@Req() req: Request, @Query('householdId') householdId?: string): Promise<ProviderResponse[]> {
+    return this.homeService.getProviders(this.requireHousehold(householdId), this.userId(req));
+  }
+
+  @Post('providers')
+  createProvider(
+    @Req() req: Request,
+    @Body() dto: CreateProviderDto,
+    @Query('householdId') householdId?: string,
+  ): Promise<ProviderResponse> {
+    return this.homeService.createProvider(this.requireHousehold(householdId), this.userId(req), dto);
+  }
+
+  @Put('providers/:id')
+  updateProvider(@Req() req: Request, @Param('id') id: string, @Body() dto: CreateProviderDto): Promise<ProviderResponse> {
+    return this.homeService.updateProvider(id, this.userId(req), dto);
+  }
+
+  @Delete('providers/:id')
+  deleteProvider(@Req() req: Request, @Param('id') id: string): Promise<void> {
+    return this.homeService.deleteProvider(id, this.userId(req));
+  }
+
+  // ---- renovations (remonty) ----
+
+  @Get('renovations')
+  getRenovations(@Req() req: Request, @Query('householdId') householdId?: string): Promise<RenovationResponse[]> {
+    return this.homeService.getRenovations(this.requireHousehold(householdId), this.userId(req));
+  }
+
+  @Post('renovations')
+  createRenovation(
+    @Req() req: Request,
+    @Body() dto: CreateRenovationDto,
+    @Query('householdId') householdId?: string,
+  ): Promise<RenovationResponse> {
+    return this.homeService.createRenovation(this.requireHousehold(householdId), this.userId(req), dto);
+  }
+
+  @Put('renovations/:id')
+  updateRenovation(@Req() req: Request, @Param('id') id: string, @Body() dto: CreateRenovationDto): Promise<RenovationResponse> {
+    return this.homeService.updateRenovation(id, this.userId(req), dto);
+  }
+
+  @Delete('renovations/:id')
+  deleteRenovation(@Req() req: Request, @Param('id') id: string): Promise<void> {
+    return this.homeService.deleteRenovation(id, this.userId(req));
   }
 
   private userId(req: Request): string {

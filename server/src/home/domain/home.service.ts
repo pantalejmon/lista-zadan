@@ -3,12 +3,18 @@ import type { ListRole } from '../../sharing/domain/list-role';
 import { SharingService } from '../../sharing/domain/sharing.service';
 import { HomeAsset, type HomeAssetResponse } from './home-asset.model';
 import { Maintenance, type MaintenanceResponse } from './maintenance.model';
+import { Provider, type ProviderResponse } from './provider.model';
+import { Renovation, type RenovationResponse } from './renovation.model';
 import { HomeAssetRepositoryPort } from './home-asset.repository.port';
 import { MaintenanceRepositoryPort } from './maintenance.repository.port';
+import { ProviderRepositoryPort } from './provider.repository.port';
+import { RenovationRepositoryPort } from './renovation.repository.port';
 import { HomeGateway } from '../web/home.gateway';
 import { CreateAssetDto } from '../web/dto/create-asset.dto';
 import { CreateMaintenanceDto } from '../web/dto/create-maintenance.dto';
 import { CompleteMaintenanceDto } from '../web/dto/complete-maintenance.dto';
+import { CreateProviderDto } from '../web/dto/create-provider.dto';
+import { CreateRenovationDto } from '../web/dto/create-renovation.dto';
 
 const WRITE_ROLES: ListRole[] = ['owner', 'editor'];
 const READ_ROLES: ListRole[] = ['owner', 'editor', 'viewer'];
@@ -24,6 +30,8 @@ export class HomeService {
   constructor(
     private readonly assetRepo: HomeAssetRepositoryPort,
     private readonly maintenanceRepo: MaintenanceRepositoryPort,
+    private readonly providerRepo: ProviderRepositoryPort,
+    private readonly renovationRepo: RenovationRepositoryPort,
     private readonly sharingService: SharingService,
     private readonly gateway: HomeGateway,
   ) {}
@@ -32,15 +40,17 @@ export class HomeService {
 
   async getAssets(householdId: string, userId: string): Promise<HomeAssetWithMaintenance[]> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
-    const [assets, maintenance] = await Promise.all([
+    const [assets, maintenance, providers] = await Promise.all([
       this.assetRepo.findByHousehold(householdId),
       this.maintenanceRepo.findByHousehold(householdId),
+      this.providerRepo.findByHousehold(householdId),
     ]);
     const today = this.today();
+    const providerNames = new Map(providers.map((p) => [p.id, p.name]));
     const byAsset = new Map<string, MaintenanceResponse[]>();
     for (const m of maintenance) {
       const list = byAsset.get(m.assetId) ?? [];
-      list.push(m.toResponse(today, SOON_DAYS));
+      list.push(m.toResponse(today, SOON_DAYS, m.providerId ? providerNames.get(m.providerId) ?? null : null));
       byAsset.set(m.assetId, list);
     }
     return assets
@@ -89,10 +99,11 @@ export class HomeService {
     if (asset.householdId !== householdId) {
       throw new BadRequestException('Asset does not belong to this household');
     }
+    await this.assertProviderInHousehold(dto.providerId, householdId);
     const maintenance = Maintenance.createFromDto(dto, householdId);
     await this.maintenanceRepo.save(maintenance);
     this.gateway.notifyChanged(householdId);
-    return maintenance.toResponse(this.today(), SOON_DAYS);
+    return maintenance.toResponse(this.today(), SOON_DAYS, await this.providerNameFor(maintenance.providerId));
   }
 
   async updateMaintenance(id: string, userId: string, dto: CreateMaintenanceDto): Promise<MaintenanceResponse> {
@@ -104,10 +115,11 @@ export class HomeService {
         throw new BadRequestException('Asset does not belong to this household');
       }
     }
+    await this.assertProviderInHousehold(dto.providerId, maintenance.householdId);
     const updated = maintenance.update(dto);
     await this.maintenanceRepo.save(updated);
     this.gateway.notifyChanged(maintenance.householdId);
-    return updated.toResponse(this.today(), SOON_DAYS);
+    return updated.toResponse(this.today(), SOON_DAYS, await this.providerNameFor(updated.providerId));
   }
 
   // Loop closer: mark a maintenance as done → record the date, roll the next due
@@ -120,7 +132,7 @@ export class HomeService {
     const updated = maintenance.withCompleted(doneAt, cost);
     await this.maintenanceRepo.save(updated);
     this.gateway.notifyChanged(maintenance.householdId);
-    return updated.toResponse(this.today(), SOON_DAYS);
+    return updated.toResponse(this.today(), SOON_DAYS, await this.providerNameFor(updated.providerId));
   }
 
   async deleteMaintenance(id: string, userId: string): Promise<void> {
@@ -130,7 +142,106 @@ export class HomeService {
     this.gateway.notifyChanged(maintenance.householdId);
   }
 
+  // ---- providers (wykonawcy) ----
+
+  async getProviders(householdId: string, userId: string): Promise<ProviderResponse[]> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
+    const providers = await this.providerRepo.findByHousehold(householdId);
+    return providers.sort((a, b) => a.name.localeCompare(b.name, 'pl')).map((p) => p.toResponse());
+  }
+
+  async createProvider(householdId: string, userId: string, dto: CreateProviderDto): Promise<ProviderResponse> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
+    const provider = Provider.createFromDto(dto, householdId);
+    await this.providerRepo.save(provider);
+    this.gateway.notifyChanged(householdId);
+    return provider.toResponse();
+  }
+
+  async updateProvider(id: string, userId: string, dto: CreateProviderDto): Promise<ProviderResponse> {
+    const provider = await this.findProviderOrThrow(id);
+    await this.sharingService.assertHouseholdPermission(provider.householdId, userId, WRITE_ROLES);
+    const updated = provider.update(dto);
+    await this.providerRepo.save(updated);
+    this.gateway.notifyChanged(provider.householdId);
+    return updated.toResponse();
+  }
+
+  async deleteProvider(id: string, userId: string): Promise<void> {
+    const provider = await this.findProviderOrThrow(id);
+    await this.sharingService.assertHouseholdPermission(provider.householdId, userId, WRITE_ROLES);
+    await this.providerRepo.delete(id);
+    // Dangling providerId on maintenance resolves to a null provider name — harmless.
+    this.gateway.notifyChanged(provider.householdId);
+  }
+
+  // ---- renovations (remonty) ----
+
+  async getRenovations(householdId: string, userId: string): Promise<RenovationResponse[]> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
+    const renovations = await this.renovationRepo.findByHousehold(householdId);
+    return renovations.sort((a, b) => b.createdAt - a.createdAt).map((r) => r.toResponse());
+  }
+
+  async createRenovation(householdId: string, userId: string, dto: CreateRenovationDto): Promise<RenovationResponse> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
+    const renovation = Renovation.createFromDto(dto, householdId);
+    await this.renovationRepo.save(renovation);
+    this.gateway.notifyChanged(householdId);
+    return renovation.toResponse();
+  }
+
+  async updateRenovation(id: string, userId: string, dto: CreateRenovationDto): Promise<RenovationResponse> {
+    const renovation = await this.findRenovationOrThrow(id);
+    await this.sharingService.assertHouseholdPermission(renovation.householdId, userId, WRITE_ROLES);
+    const updated = renovation.update(dto);
+    await this.renovationRepo.save(updated);
+    this.gateway.notifyChanged(renovation.householdId);
+    return updated.toResponse();
+  }
+
+  async deleteRenovation(id: string, userId: string): Promise<void> {
+    const renovation = await this.findRenovationOrThrow(id);
+    await this.sharingService.assertHouseholdPermission(renovation.householdId, userId, WRITE_ROLES);
+    await this.renovationRepo.delete(id);
+    this.gateway.notifyChanged(renovation.householdId);
+  }
+
   // ---- internals ----
+
+  private async assertProviderInHousehold(providerId: string | undefined, householdId: string): Promise<void> {
+    if (!providerId) {
+      return;
+    }
+    const provider = await this.providerRepo.findById(providerId);
+    if (!provider || provider.householdId !== householdId) {
+      throw new BadRequestException('Provider does not belong to this household');
+    }
+  }
+
+  private async providerNameFor(providerId: string | null): Promise<string | null> {
+    if (!providerId) {
+      return null;
+    }
+    const provider = await this.providerRepo.findById(providerId);
+    return provider ? provider.name : null;
+  }
+
+  private async findProviderOrThrow(id: string): Promise<Provider> {
+    const provider = await this.providerRepo.findById(id);
+    if (!provider) {
+      throw new NotFoundException(`Provider ${id} not found`);
+    }
+    return provider;
+  }
+
+  private async findRenovationOrThrow(id: string): Promise<Renovation> {
+    const renovation = await this.renovationRepo.findById(id);
+    if (!renovation) {
+      throw new NotFoundException(`Renovation ${id} not found`);
+    }
+    return renovation;
+  }
 
   private async findAssetOrThrow(id: string): Promise<HomeAsset> {
     const asset = await this.assetRepo.findById(id);

@@ -1,4 +1,13 @@
-import type { Todo, RecurrenceConfig, TodoList, ListMember, ListInvitation, ListRole } from './types';
+import type {
+  Todo,
+  RecurrenceConfig,
+  TodoList,
+  Household,
+  HouseholdMember,
+  HouseholdInvitation,
+  ContactSuggestion,
+  ListRole,
+} from './types';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
@@ -124,10 +133,10 @@ export async function getLists(): Promise<TodoList[]> {
   return request<TodoList[]>('/lists');
 }
 
-export async function createList(name: string): Promise<TodoList> {
+export async function createList(name: string, householdId?: string): Promise<TodoList> {
   return request<TodoList>('/lists', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, householdId }),
   });
 }
 
@@ -142,25 +151,53 @@ export async function deleteList(listId: string): Promise<void> {
   return request(`/lists/${listId}`, { method: 'DELETE' });
 }
 
-export async function getListMembers(listId: string): Promise<ListMember[]> {
-  return request<ListMember[]>(`/lists/${listId}/members`);
+// --- Households ---
+
+export async function getHouseholds(): Promise<Household[]> {
+  return request<Household[]>('/households');
 }
 
-export async function removeListMember(listId: string, memberId: string): Promise<void> {
-  return request(`/lists/${listId}/members/${memberId}`, { method: 'DELETE' });
+export async function createHousehold(name: string): Promise<Household> {
+  return request<Household>('/households', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
 }
 
-export async function inviteToList(listId: string, email: string, role: ListRole): Promise<ListInvitation> {
-  return request<ListInvitation>(`/lists/${listId}/invitations`, {
+export async function renameHousehold(householdId: string, name: string): Promise<Household> {
+  return request<Household>(`/households/${householdId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function getHouseholdMembers(householdId: string): Promise<HouseholdMember[]> {
+  return request<HouseholdMember[]>(`/households/${householdId}/members`);
+}
+
+export async function removeHouseholdMember(householdId: string, memberId: string): Promise<void> {
+  return request(`/households/${householdId}/members/${memberId}`, { method: 'DELETE' });
+}
+
+export async function inviteToHousehold(
+  householdId: string,
+  email: string,
+  role: ListRole,
+): Promise<HouseholdInvitation> {
+  return request<HouseholdInvitation>(`/households/${householdId}/invitations`, {
     method: 'POST',
     body: JSON.stringify({ email, role }),
   });
 }
 
+export async function getContactSuggestions(): Promise<ContactSuggestion[]> {
+  return request<ContactSuggestion[]>('/contacts/suggestions');
+}
+
 // --- Invitations ---
 
-export async function getPendingInvitations(): Promise<ListInvitation[]> {
-  return request<ListInvitation[]>('/invitations/pending');
+export async function getPendingInvitations(): Promise<HouseholdInvitation[]> {
+  return request<HouseholdInvitation[]>('/invitations/pending');
 }
 
 export async function acceptInvitation(id: string): Promise<void> {

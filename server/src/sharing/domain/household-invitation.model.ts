@@ -3,10 +3,10 @@ import type { ListRole } from './list-role';
 
 export type InvitationStatus = 'pending' | 'accepted' | 'declined';
 
-export interface ListInvitationResponse {
+export interface HouseholdInvitationResponse {
   readonly id: string;
-  readonly listId: string;
-  readonly listName: string;
+  readonly householdId: string;
+  readonly householdName: string;
   readonly invitedByName: string;
   readonly invitedEmail: string;
   readonly role: ListRole;
@@ -14,9 +14,9 @@ export interface ListInvitationResponse {
   readonly createdAt: number;
 }
 
-export class ListInvitation {
+export class HouseholdInvitation {
   readonly id: string;
-  readonly listId: string;
+  readonly householdId: string;
   readonly invitedByUserId: string;
   readonly invitedEmail: string;
   readonly role: ListRole;
@@ -25,7 +25,7 @@ export class ListInvitation {
 
   constructor(
     id: string,
-    listId: string,
+    householdId: string,
     invitedByUserId: string,
     invitedEmail: string,
     role: ListRole,
@@ -33,7 +33,7 @@ export class ListInvitation {
     createdAt: number,
   ) {
     this.id = id;
-    this.listId = listId;
+    this.householdId = householdId;
     this.invitedByUserId = invitedByUserId;
     this.invitedEmail = invitedEmail;
     this.role = role;
@@ -42,14 +42,14 @@ export class ListInvitation {
   }
 
   static create(
-    listId: string,
+    householdId: string,
     invitedByUserId: string,
     email: string,
     role: ListRole,
-  ): ListInvitation {
-    return new ListInvitation(
+  ): HouseholdInvitation {
+    return new HouseholdInvitation(
       randomUUID(),
-      listId,
+      householdId,
       invitedByUserId,
       email,
       role,
@@ -58,16 +58,16 @@ export class ListInvitation {
     );
   }
 
-  accept(): ListInvitation {
-    return new ListInvitation(
-      this.id, this.listId, this.invitedByUserId, this.invitedEmail,
+  accept(): HouseholdInvitation {
+    return new HouseholdInvitation(
+      this.id, this.householdId, this.invitedByUserId, this.invitedEmail,
       this.role, 'accepted', this.createdAt,
     );
   }
 
-  decline(): ListInvitation {
-    return new ListInvitation(
-      this.id, this.listId, this.invitedByUserId, this.invitedEmail,
+  decline(): HouseholdInvitation {
+    return new HouseholdInvitation(
+      this.id, this.householdId, this.invitedByUserId, this.invitedEmail,
       this.role, 'declined', this.createdAt,
     );
   }

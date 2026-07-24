@@ -1,14 +1,14 @@
 import { Entity, PrimaryColumn, Column } from 'typeorm';
-import { ListInvitation, type InvitationStatus } from '../domain/list-invitation.model';
+import { HouseholdInvitation, type InvitationStatus } from '../domain/household-invitation.model';
 import type { ListRole } from '../domain/list-role';
 
-@Entity('list_invitation')
-export class ListInvitationEntity {
+@Entity('household_invitation')
+export class HouseholdInvitationEntity {
   @PrimaryColumn('varchar')
   id!: string;
 
   @Column('varchar')
-  listId!: string;
+  householdId!: string;
 
   @Column('varchar')
   invitedByUserId!: string;
@@ -25,17 +25,17 @@ export class ListInvitationEntity {
   @Column('bigint')
   createdAt!: number;
 
-  toDomain(): ListInvitation {
-    return new ListInvitation(
-      this.id, this.listId, this.invitedByUserId, this.invitedEmail,
+  toDomain(): HouseholdInvitation {
+    return new HouseholdInvitation(
+      this.id, this.householdId, this.invitedByUserId, this.invitedEmail,
       this.role, this.status, Number(this.createdAt),
     );
   }
 
-  static fromDomain(model: ListInvitation): ListInvitationEntity {
-    const entity = new ListInvitationEntity();
+  static fromDomain(model: HouseholdInvitation): HouseholdInvitationEntity {
+    const entity = new HouseholdInvitationEntity();
     entity.id = model.id;
-    entity.listId = model.listId;
+    entity.householdId = model.householdId;
     entity.invitedByUserId = model.invitedByUserId;
     entity.invitedEmail = model.invitedEmail;
     entity.role = model.role;

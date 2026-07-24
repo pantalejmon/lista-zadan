@@ -36,14 +36,23 @@ export interface TodoList {
   id: string;
   name: string;
   ownerId: string;
+  householdId: string;
+  householdName: string;
   isDefault: boolean;
   role: ListRole;
   createdAt: number;
 }
 
-export interface ListMember {
+export interface Household {
   id: string;
-  listId: string;
+  name: string;
+  role: ListRole;
+  createdAt: number;
+}
+
+export interface HouseholdMember {
+  id: string;
+  householdId: string;
   userId: string;
   email: string;
   displayName: string;
@@ -51,10 +60,16 @@ export interface ListMember {
   joinedAt: number;
 }
 
-export interface ListInvitation {
+export interface ContactSuggestion {
+  userId: string;
+  email: string;
+  displayName: string;
+}
+
+export interface HouseholdInvitation {
   id: string;
-  listId: string;
-  listName: string;
+  householdId: string;
+  householdName: string;
   invitedByName: string;
   invitedEmail: string;
   role: ListRole;

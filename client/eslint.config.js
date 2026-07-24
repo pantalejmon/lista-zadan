@@ -19,5 +19,11 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // This codebase intentionally loads data via setState inside mount effects
+      // (useLists, useTodos, useWebSocket, ...). The rule (added in a newer
+      // eslint-plugin-react-hooks) flags that idiom project-wide; keep it off.
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

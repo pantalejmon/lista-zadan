@@ -13,7 +13,6 @@ import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
 import { SharingService } from '../domain/sharing.service';
 import { CreateTodoListDto } from './dto/create-todo-list.dto';
 import { UpdateTodoListDto } from './dto/update-todo-list.dto';
-import { CreateInvitationDto } from './dto/create-invitation.dto';
 import type { User } from '../../auth/domain/user.model';
 
 @Controller('lists')
@@ -28,7 +27,7 @@ export class SharingController {
 
   @Post()
   async createList(@Req() req: { user: User }, @Body() dto: CreateTodoListDto) {
-    return this.sharingService.createList(dto.name, req.user.id);
+    return this.sharingService.createList(dto.name, req.user.id, dto.householdId);
   }
 
   @Put(':listId')
@@ -43,29 +42,6 @@ export class SharingController {
   @Delete(':listId')
   async deleteList(@Req() req: { user: User }, @Param('listId') listId: string) {
     await this.sharingService.deleteList(listId, req.user.id);
-  }
-
-  @Get(':listId/members')
-  async getMembers(@Req() req: { user: User }, @Param('listId') listId: string) {
-    return this.sharingService.getMembers(listId, req.user.id);
-  }
-
-  @Delete(':listId/members/:memberId')
-  async removeMember(
-    @Req() req: { user: User },
-    @Param('listId') listId: string,
-    @Param('memberId') memberId: string,
-  ) {
-    await this.sharingService.removeMember(listId, memberId, req.user.id);
-  }
-
-  @Post(':listId/invitations')
-  async inviteToList(
-    @Req() req: { user: User },
-    @Param('listId') listId: string,
-    @Body() dto: CreateInvitationDto,
-  ) {
-    return this.sharingService.inviteToList(listId, dto.email, dto.role, req.user.id);
   }
 }
 

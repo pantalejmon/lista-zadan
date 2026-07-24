@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { TodoListRepositoryPort } from '../domain/todo-list.repository.port';
 import { TodoList } from '../domain/todo-list.model';
 import { TodoListEntity } from './todo-list.entity';
@@ -19,8 +19,11 @@ export class TodoListRepositoryAdapter extends TodoListRepositoryPort {
     return entity?.toDomain() ?? null;
   }
 
-  async findByUser(userId: string): Promise<TodoList[]> {
-    const entities = await this.repo.findBy({ ownerId: userId });
+  async findByHouseholdIds(householdIds: string[]): Promise<TodoList[]> {
+    if (householdIds.length === 0) {
+      return [];
+    }
+    const entities = await this.repo.findBy({ householdId: In(householdIds) });
     return entities.map((e) => e.toDomain());
   }
 

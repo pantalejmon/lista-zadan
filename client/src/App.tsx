@@ -33,6 +33,7 @@ import { useLists } from './hooks/useLists';
 import { useHouseholds } from './hooks/useHouseholds';
 import { useInvitations } from './hooks/useInvitations';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useChatNotifications } from './hooks/useChatNotifications';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { useMealStorage } from './hooks/useMealStorage';
 import { useMealHousehold } from './hooks/useMealHousehold';
@@ -226,16 +227,43 @@ export default function App() {
     triggerRefresh();
   }, [refresh, triggerRefresh]);
 
+  // In-app notifications: flag new tasks (from other members/devices) when the
+  // change arrives over the socket while the user isn't on the Zadania section.
+  const [tasksBadge, setTasksBadge] = useState(false);
+  const sectionRef = useRef(section);
+  useEffect(() => { sectionRef.current = section; }, [section]);
+  useEffect(() => {
+    if (section === 'tasks') {
+      setTasksBadge(false);
+    }
+  }, [section]);
+
+  const handleRemoteTodoChange = useCallback(() => {
+    refresh();
+    triggerRefresh();
+    if (sectionRef.current !== 'tasks') {
+      setTasksBadge(true);
+    }
+  }, [refresh, triggerRefresh]);
+
   const { status: wsStatus } = useWebSocket({
     enabled: isCloud,
     listId: activeListId ?? undefined,
-    onTodoChange: handleWsTodoChange,
+    onTodoChange: handleRemoteTodoChange,
   });
 
   const { syncStatus, pendingCount } = useOfflineSync({
     enabled: isCloud,
     onSynced: handleWsTodoChange,
   });
+
+  // Unread chat messages → badge on the Czat nav item (cleared when chat is open).
+  const { unread: chatUnread } = useChatNotifications(
+    mealHousehold?.id,
+    isCloud,
+    section === 'chat',
+    user?.id,
+  );
 
   const handleAdd = async (text: string, time?: string) => {
     await add(text, time);
@@ -386,6 +414,7 @@ export default function App() {
         onSelectHousehold={setMealHouseholdId}
         onOpenHouseholdSettings={setHouseholdSettingsId}
         onCreateHousehold={handleCreateHousehold}
+        badges={{ chat: chatUnread, tasks: tasksBadge }}
       />
 
       {/* Content column */}
@@ -398,12 +427,15 @@ export default function App() {
         <div className="flex items-center gap-2 px-2 sm:px-4 h-12 sm:h-14">
           <button
             onClick={() => setMenuOpen(true)}
-            className="md:hidden min-w-10 min-h-10 flex items-center justify-center rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
+            className="md:hidden relative min-w-10 min-h-10 flex items-center justify-center rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
             aria-label="Menu"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
+            {(chatUnread > 0 || tasksBadge) && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-gray-50 dark:ring-gray-950" />
+            )}
           </button>
 
           {/* Ikona bieżącej sekcji — ten sam kafelek co w menu, więc belka niesie

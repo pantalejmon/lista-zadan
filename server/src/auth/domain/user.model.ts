@@ -8,6 +8,14 @@ export interface GoogleProfile {
   avatarUrl: string | null;
 }
 
+// Appearance preferences, stored per user so they follow the account across
+// devices. Persisted as a JSON string; the shape mirrors the client's Settings.
+export interface UserSettings {
+  theme: string;
+  accent: string;
+  fontSize: string;
+}
+
 export class User {
   readonly id: string;
   readonly googleId: string;
@@ -16,6 +24,7 @@ export class User {
   readonly avatarUrl: string | null;
   readonly createdAt: number;
   readonly usedStorageBytes: number;
+  readonly settings: string | null;
 
   constructor(
     id: string,
@@ -25,6 +34,7 @@ export class User {
     avatarUrl: string | null,
     createdAt: number,
     usedStorageBytes: number,
+    settings: string | null = null,
   ) {
     this.id = id;
     this.googleId = googleId;
@@ -33,6 +43,7 @@ export class User {
     this.avatarUrl = avatarUrl;
     this.createdAt = createdAt;
     this.usedStorageBytes = usedStorageBytes;
+    this.settings = settings;
   }
 
   static createFromGoogleProfile(profile: GoogleProfile): User {
@@ -44,6 +55,7 @@ export class User {
       profile.avatarUrl,
       Date.now(),
       0,
+      null,
     );
   }
 
@@ -53,6 +65,18 @@ export class User {
       email: this.email,
       displayName: this.displayName,
       avatarUrl: this.avatarUrl,
+      settings: this.parseSettings(),
     };
+  }
+
+  private parseSettings(): UserSettings | null {
+    if (!this.settings) {
+      return null;
+    }
+    try {
+      return JSON.parse(this.settings) as UserSettings;
+    } catch {
+      return null;
+    }
   }
 }

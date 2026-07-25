@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -6,6 +6,7 @@ import { AuthService } from '../domain/auth.service';
 import { User } from '../domain/user.model';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { UserResponse } from './dto/user.response';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -42,6 +43,14 @@ export class AuthController {
   me(@Req() req: Request): UserResponse {
     const user = req.user as User;
     return user.toResponse();
+  }
+
+  @Put('me/settings')
+  @UseGuards(JwtAuthGuard)
+  async updateSettings(@Req() req: Request, @Body() dto: UpdateSettingsDto): Promise<UpdateSettingsDto> {
+    const user = req.user as User;
+    await this.authService.updateUserSettings(user.id, dto);
+    return dto;
   }
 
   @Post('logout')

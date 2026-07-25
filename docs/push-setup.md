@@ -88,10 +88,30 @@ natywne i docierają przy zamkniętej aplikacji.
   a `service worker` (`sw.js`) pokazuje notyfikację.
 - Wygasłe/odwołane subskrypcje (odpowiedź `404/410`) są automatycznie usuwane.
 
+### Deep-link i odpowiedź z powiadomienia
+
+`PushPayload` (`push-subscription.model.ts`) niesie oprócz `title`/`body`/`tag`
+dwa pola sterujące zachowaniem notyfikacji:
+
+- **`url`** — cel tapnięcia jako hash SPA (np. `'/#chat'`). Aplikacja nie ma
+  routera — sekcje to stan Reacta — więc `sw.js` po tapnięciu **focusuje** otwarte
+  okno i `postMessage`’uje mu `{ type: 'notification-navigate', url, data }`, a przy
+  zimnym starcie otwiera PWA na `#sekcja`. `App.tsx` czyta hash na starcie i
+  nasłuchuje wiadomości z SW, po czym przełącza sekcję (i gospodarstwo z `data`).
+  Bez tego każde powiadomienie lądowało na liście zadań.
+- **`data`** — kontekst dla SW/appki, np. `{ type: 'chat', householdId }`.
+- **`actions`** — przyciski notyfikacji. Czat wysyła akcję
+  `{ action: 'reply', type: 'text', … }`, którą **Android** renderuje jako pole
+  odpowiedzi wprost w powiadomieniu. `sw.js` w `notificationclick` łapie
+  `event.reply` i robi `POST /api/households/:householdId/messages`
+  (`credentials: 'include'` — ciasteczko sesji jedzie z żądaniem, bo SW jest
+  same-origin). iOS ignoruje `actions` i sprowadza się do zwykłego tapnięcia →
+  deep-link do czatu.
+
 ## Zakres i plany
 
 - Obecnie zaimplementowany wyzwalacz: **nowa wiadomość czatu** → push do
-  pozostałych domowników.
+  pozostałych domowników (z deep-linkiem do czatu i akcją „Odpowiedz”).
 - W planach (osobne taski): przypomnienia o zadaniach/przeglądach (#49),
   powiadomienia o aktywności na listach i zaproszeniach (#50), granularne
   ustawienia per typ (#51).

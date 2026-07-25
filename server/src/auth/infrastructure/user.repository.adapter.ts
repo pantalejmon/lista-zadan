@@ -39,4 +39,9 @@ export class UserRepositoryAdapter extends UserRepositoryPort {
       [deltaBytes, userId],
     );
   }
+
+  async updateSettings(userId: string, settingsJson: string): Promise<void> {
+    // Targeted update so it never races with the storage-quota counter.
+    await this.repo.update({ id: userId }, { settings: settingsJson });
+  }
 }

@@ -6,4 +6,5 @@ export abstract class UserRepositoryPort {
   abstract findByEmail(email: string): Promise<User | null>;
   abstract save(user: User): Promise<void>;
   abstract addStorageUsed(userId: string, deltaBytes: number): Promise<void>;
+  abstract updateSettings(userId: string, settingsJson: string): Promise<void>;
 }

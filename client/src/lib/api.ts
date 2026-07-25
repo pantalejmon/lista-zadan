@@ -147,6 +147,13 @@ export async function updateList(listId: string, name: string): Promise<TodoList
   });
 }
 
+export async function moveList(listId: string, householdId: string): Promise<TodoList> {
+  return request<TodoList>(`/lists/${listId}/household`, {
+    method: 'PATCH',
+    body: JSON.stringify({ householdId }),
+  });
+}
+
 export async function deleteList(listId: string): Promise<void> {
   return request(`/lists/${listId}`, { method: 'DELETE' });
 }
@@ -214,6 +221,19 @@ export async function inviteToHousehold(
 
 export async function getContactSuggestions(): Promise<ContactSuggestion[]> {
   return request<ContactSuggestion[]>('/contacts/suggestions');
+}
+
+// --- User settings ---
+
+export async function updateUserSettings(settings: {
+  theme: string;
+  accent: string;
+  fontSize: string;
+}): Promise<void> {
+  await request('/auth/me/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
 }
 
 // --- Invitations ---

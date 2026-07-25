@@ -39,6 +39,12 @@ export function useOfflineSync({ enabled, onSynced }: UseOfflineSyncOptions) {
     }
     const count = await getPendingCount();
     setPendingCount(count);
+    // Nothing left to sync → a lingering 'error' is stale (the ops already
+    // reached the server). Clear it so the UI stops showing "Błąd synchronizacji"
+    // forever after the queue has actually drained.
+    if (count === 0) {
+      setSyncStatus((prev) => (prev === 'error' ? 'idle' : prev));
+    }
   }, [enabled]);
 
   // Sync when coming back online
@@ -50,6 +56,7 @@ export function useOfflineSync({ enabled, onSynced }: UseOfflineSyncOptions) {
     const doSync = async () => {
       const count = await getPendingCount();
       if (count === 0) {
+        setSyncStatus((prev) => (prev === 'error' ? 'idle' : prev));
         return;
       }
       await syncPendingOps(setSyncStatus);
@@ -60,13 +67,29 @@ export function useOfflineSync({ enabled, onSynced }: UseOfflineSyncOptions) {
     doSync();
   }, [enabled, online, refreshPendingCount]);
 
-  // Periodically check pending count (to catch new queued ops)
+  // Steady-state loop: refresh the pending count and retry queued ops every few
+  // seconds. Retrying here means a transient failure self-heals instead of
+  // freezing the status on 'error' until a reload — the queue drains, the count
+  // hits zero, and refreshPendingCount clears the stale error.
   useEffect(() => {
     if (!enabled) {
       return;
     }
-    refreshPendingCount();
-    const interval = setInterval(refreshPendingCount, 2000);
+    const tick = async () => {
+      const count = await getPendingCount();
+      setPendingCount(count);
+      if (count === 0) {
+        setSyncStatus((prev) => (prev === 'error' ? 'idle' : prev));
+        return;
+      }
+      if (navigator.onLine) {
+        await syncPendingOps(setSyncStatus);
+        await refreshPendingCount();
+        onSyncedRef.current();
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 2000);
     return () => clearInterval(interval);
   }, [enabled, refreshPendingCount]);
 

@@ -5,8 +5,34 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#ffffff" />
+    <!-- Apply saved appearance settings before first paint to avoid a theme flash.
+         Mirrors lib/settings.ts — keep the maps in sync. -->
+    <script>
+      (function () {
+        try {
+          var DEFAULT = { theme: 'light', accent: 'slate', fontSize: 'md' };
+          var FONT = { sm: '15px', md: '16px', lg: '18px', xl: '20px' };
+          var META = { light: '#ffffff', sand: '#f1e9db', dark: '#0a0a0b', midnight: '#0b1120' };
+          var s = DEFAULT;
+          var raw = localStorage.getItem('lista-zadan:settings');
+          if (raw) {
+            s = Object.assign({}, DEFAULT, JSON.parse(raw));
+          } else {
+            var legacy = localStorage.getItem('theme');
+            if (legacy === 'dark') { s.theme = 'dark'; }
+            else if (!legacy && window.matchMedia('(prefers-color-scheme: dark)').matches) { s.theme = 'dark'; }
+          }
+          var root = document.documentElement;
+          root.classList.toggle('dark', s.theme === 'dark' || s.theme === 'midnight');
+          root.dataset.theme = s.theme;
+          root.dataset.accent = s.accent;
+          root.style.fontSize = FONT[s.fontSize] || FONT.md;
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) { m.setAttribute('content', META[s.theme] || '#ffffff'); }
+        } catch (e) { /* defaults already applied */ }
+      })();
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />

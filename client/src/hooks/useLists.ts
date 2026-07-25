@@ -63,6 +63,11 @@ export function useLists(isCloud: boolean) {
     await load();
   }, [load]);
 
+  const moveList = useCallback(async (listId: string, householdId: string) => {
+    await api.moveList(listId, householdId);
+    await load();
+  }, [load]);
+
   const activeList = lists.find((l) => l.id === activeListId) ?? null;
 
   return {
@@ -74,6 +79,7 @@ export function useLists(isCloud: boolean) {
     createList,
     updateList,
     deleteList,
+    moveList,
     refresh: load,
   };
 }

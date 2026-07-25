@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -13,6 +14,7 @@ import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
 import { SharingService } from '../domain/sharing.service';
 import { CreateTodoListDto } from './dto/create-todo-list.dto';
 import { UpdateTodoListDto } from './dto/update-todo-list.dto';
+import { MoveTodoListDto } from './dto/move-todo-list.dto';
 import type { User } from '../../auth/domain/user.model';
 
 @Controller('lists')
@@ -37,6 +39,15 @@ export class SharingController {
     @Body() dto: UpdateTodoListDto,
   ) {
     return this.sharingService.updateList(listId, dto.name, req.user.id);
+  }
+
+  @Patch(':listId/household')
+  async moveList(
+    @Req() req: { user: User },
+    @Param('listId') listId: string,
+    @Body() dto: MoveTodoListDto,
+  ) {
+    return this.sharingService.moveList(listId, dto.householdId, req.user.id);
   }
 
   @Delete(':listId')

@@ -1,21 +1,36 @@
 import { useState } from 'react';
-import type { TodoList } from '../lib/types';
+import type { TodoList, Household } from '../lib/types';
 
 interface ListSettingsProps {
   list: TodoList;
+  households: Household[];
   onClose: () => void;
   onUpdate: (listId: string, name: string) => void;
+  onMove: (listId: string, householdId: string) => void;
   onDelete: (listId: string) => void;
 }
 
-export function ListSettings({ list, onClose, onUpdate, onDelete }: ListSettingsProps) {
+export function ListSettings({ list, households, onClose, onUpdate, onMove, onDelete }: ListSettingsProps) {
   const [name, setName] = useState(list.name);
   const canManage = list.role === 'owner' || list.role === 'editor';
+
+  // Można przenieść tylko do gospodarstwa, w którym mam prawo edycji.
+  const moveTargets = households.filter(
+    (h) => h.id !== list.householdId && (h.role === 'owner' || h.role === 'editor'),
+  );
+  const [targetHouseholdId, setTargetHouseholdId] = useState('');
 
   const handleRename = () => {
     const trimmed = name.trim();
     if (trimmed && trimmed !== list.name) {
       onUpdate(list.id, trimmed);
+    }
+  };
+
+  const handleMove = () => {
+    if (targetHouseholdId) {
+      onMove(list.id, targetHouseholdId);
+      onClose();
     }
   };
 
@@ -52,6 +67,37 @@ export function ListSettings({ list, onClose, onUpdate, onDelete }: ListSettings
             znajdziesz w ustawieniach gospodarstwa.
           </p>
         </div>
+
+        {/* Move to another household */}
+        {canManage && moveTargets.length > 0 && (
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              Przenieś do innego gospodarstwa
+            </label>
+            <div className="flex gap-2 mt-1">
+              <select
+                value={targetHouseholdId}
+                onChange={(e) => setTargetHouseholdId(e.target.value)}
+                className="flex-1 text-sm px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              >
+                <option value="">Wybierz gospodarstwo…</option>
+                {moveTargets.map((h) => (
+                  <option key={h.id} value={h.id}>{h.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleMove}
+                disabled={!targetHouseholdId}
+                className="text-sm font-medium px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
+              >
+                Przenieś
+              </button>
+            </div>
+            <p className="mt-1.5 text-xs text-gray-400">
+              Lista wraz ze wszystkimi zadaniami trafi do wybranego gospodarstwa.
+            </p>
+          </div>
+        )}
 
         {/* Delete */}
         {!list.isDefault && canManage && (

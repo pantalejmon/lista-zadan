@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { Settings } from '../lib/settings';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
@@ -7,6 +8,7 @@ export interface AuthUser {
   email: string;
   displayName: string;
   avatarUrl: string | null;
+  settings: Settings | null;
 }
 
 export function useAuth() {

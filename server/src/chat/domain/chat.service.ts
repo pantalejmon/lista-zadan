@@ -60,8 +60,15 @@ export class ChatService {
       await this.pushService.sendToUsers(recipientIds, {
         title: `💬 ${message.authorName}`,
         body: message.text.slice(0, 140),
-        url: '/',
+        // Deep-link straight into this household's chat (not the task list).
+        url: '/#chat',
         tag: `chat-${householdId}`,
+        data: { type: 'chat', householdId },
+        // Reply inline from the notification (Android). The SW posts the typed
+        // text back to POST /households/:householdId/messages.
+        actions: [
+          { action: 'reply', type: 'text', title: 'Odpowiedz', placeholder: 'Napisz odpowiedź…' },
+        ],
       });
     } catch {
       // ignore — chat delivery already succeeded via REST + WebSocket

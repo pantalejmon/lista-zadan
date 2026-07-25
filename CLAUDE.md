@@ -224,3 +224,10 @@ Without a migration, the app will fail on startup with a schema mismatch.
    or test files may depend on the old signature.
 4. **DTO validation** — when adding new endpoints, ensure request DTOs have proper `class-validator` decorators.
    Missing validation is a security hole.
+
+## Git Workflow
+
+- **Delete branches after merge**: once a pull request is merged, delete its branch — both the remote branch
+  and the local one. Don't leave merged branches lingering. (If the environment's git proxy blocks remote
+  branch deletion, enable "Automatically delete head branches" in the repo settings or delete it from the
+  merged PR page — and still clean up the local branch.)

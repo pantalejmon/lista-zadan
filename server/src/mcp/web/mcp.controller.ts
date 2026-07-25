@@ -27,6 +27,7 @@ export class McpController {
   ): Promise<void> {
     const caller: McpCaller = {
       userId: (req.user as User).id,
+      email: (req.user as User).email,
       token: req.apiToken ?? null,
     };
 

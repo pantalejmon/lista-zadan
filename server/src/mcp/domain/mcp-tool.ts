@@ -5,6 +5,7 @@ import { ApiScope } from '../../api-token/domain/api-scope';
 // (cookie) callers, who carry full user authority and no scope restriction.
 export interface ToolContext {
   userId: string;
+  email: string;
   token: ApiToken | null;
   // Resolves the household a tool should act on: a household-bound token pins it
   // (and rejects a mismatching argument); otherwise the argument is required.
@@ -38,4 +39,17 @@ export function requireStringArg(args: Record<string, unknown>, key: string): st
 export function boolArg(args: Record<string, unknown>, key: string): boolean | undefined {
   const value = args[key];
   return typeof value === 'boolean' ? value : undefined;
+}
+
+export function numberArg(args: Record<string, unknown>, key: string): number | undefined {
+  const value = args[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+export function requireNumberArg(args: Record<string, unknown>, key: string): number {
+  const value = numberArg(args, key);
+  if (value === undefined) {
+    throw new Error(`Missing required argument: ${key}`);
+  }
+  return value;
 }

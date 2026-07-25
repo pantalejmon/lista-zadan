@@ -1,12 +1,11 @@
 import { MealService } from '../../../meal/domain/meal.service';
 import { CreateProductDto } from '../../../meal/web/dto/create-product.dto';
+import { CreateRecipeDto } from '../../../meal/web/dto/create-recipe.dto';
+import { RecipeIngredientDto } from '../../../meal/web/dto/recipe-ingredient.dto';
+import { CreateEntryDto } from '../../../meal/web/dto/create-entry.dto';
 import type { BaseUnit } from '../../../meal/domain/product.model';
-import { McpTool, stringArg, requireStringArg } from '../mcp-tool';
-
-function numberArg(args: Record<string, unknown>, key: string): number | undefined {
-  const value = args[key];
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
+import type { MealType } from '../../../meal/domain/recipe-ingredient';
+import { McpTool, stringArg, requireStringArg, numberArg, requireNumberArg, boolArg } from '../mcp-tool';
 
 function currentMonday(): string {
   const d = new Date();
@@ -189,5 +188,312 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         return mealService.setStock(householdId, ctx.userId, productId, quantity);
       },
     },
+    // ---- recipes CRUD ----
+    {
+      name: 'get_recipe',
+      description: 'Zwraca jeden przepis ze składnikami. Wymaga recipeId.',
+      requiredScopes: ['meals:read'],
+      inputSchema: {
+        type: 'object',
+        properties: { recipeId: { type: 'string', description: 'ID przepisu' } },
+        required: ['recipeId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        return mealService.getRecipe(requireStringArg(args, 'recipeId'), ctx.userId);
+      },
+    },
+    {
+      name: 'create_recipe',
+      description:
+        'Tworzy przepis. Wymaga title i instructions. Opcjonalnie description oraz ingredients ' +
+        '(lista {name, quantity?, unit?, ingredientId?}).',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          ...householdProp,
+          title: { type: 'string', description: 'Tytuł przepisu' },
+          instructions: { type: 'string', description: 'Sposób przygotowania' },
+          description: { type: 'string', description: 'Krótki opis (opcjonalnie)' },
+          ingredients: { type: 'array', description: 'Składniki', items: ingredientSchema },
+        },
+        required: ['title', 'instructions'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
+        return mealService.createRecipe(buildRecipeDto(args), householdId, ctx.userId);
+      },
+    },
+    {
+      name: 'update_recipe',
+      description:
+        'Aktualizuje przepis (pełny zestaw pól). Wymaga recipeId, title i instructions. Opcjonalnie description, ingredients.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          recipeId: { type: 'string', description: 'ID przepisu' },
+          title: { type: 'string', description: 'Tytuł' },
+          instructions: { type: 'string', description: 'Sposób przygotowania' },
+          description: { type: 'string', description: 'Opis (opcjonalnie)' },
+          ingredients: { type: 'array', description: 'Składniki', items: ingredientSchema },
+        },
+        required: ['recipeId', 'title', 'instructions'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        return mealService.updateRecipe(requireStringArg(args, 'recipeId'), buildRecipeDto(args), ctx.userId);
+      },
+    },
+    {
+      name: 'delete_recipe',
+      description: 'Usuwa przepis (i jego wpisy w planerze). Wymaga recipeId.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: { recipeId: { type: 'string', description: 'ID przepisu' } },
+        required: ['recipeId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        await mealService.deleteRecipe(requireStringArg(args, 'recipeId'), ctx.userId);
+        return { deleted: true };
+      },
+    },
+    // ---- products update/delete ----
+    {
+      name: 'update_product',
+      description:
+        'Aktualizuje produkt (pełny zestaw pól). Wymaga productId, name i baseUnit (g/ml/szt). ' +
+        'Opcjonalnie packageSize, category, trackInPantry.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          productId: { type: 'string', description: 'ID produktu' },
+          name: { type: 'string', description: 'Nazwa' },
+          baseUnit: { type: 'string', enum: ['g', 'ml', 'szt'], description: 'Jednostka bazowa' },
+          packageSize: { type: 'number', description: 'Rozmiar opakowania' },
+          category: { type: 'string', description: 'Kategoria' },
+          trackInPantry: { type: 'boolean', description: 'Śledzić w spiżarni' },
+        },
+        required: ['productId', 'name', 'baseUnit'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const dto = new CreateProductDto();
+        dto.name = requireStringArg(args, 'name');
+        dto.baseUnit = requireStringArg(args, 'baseUnit') as BaseUnit;
+        const packageSize = numberArg(args, 'packageSize');
+        if (packageSize !== undefined) {
+          dto.packageSize = packageSize;
+        }
+        const category = stringArg(args, 'category');
+        if (category) {
+          dto.category = category;
+        }
+        const trackInPantry = boolArg(args, 'trackInPantry');
+        if (trackInPantry !== undefined) {
+          dto.trackInPantry = trackInPantry;
+        }
+        return mealService.updateProduct(requireStringArg(args, 'productId'), ctx.userId, dto);
+      },
+    },
+    {
+      name: 'delete_product',
+      description: 'Usuwa produkt ze słownika. Wymaga productId.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: { productId: { type: 'string', description: 'ID produktu' } },
+        required: ['productId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        await mealService.deleteProduct(requireStringArg(args, 'productId'), ctx.userId);
+        return { deleted: true };
+      },
+    },
+    // ---- planner ----
+    {
+      name: 'plan_meal',
+      description:
+        'Przypisuje przepis do dnia i pory w planie tygodnia (nadpisuje slot). Wymaga recipeId, weekStart (poniedziałek YYYY-MM-DD), ' +
+        'dayOfWeek (0=poniedziałek … 6=niedziela) i mealType (BREAKFAST/LUNCH/DINNER/SNACK).',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          ...householdProp,
+          recipeId: { type: 'string', description: 'ID przepisu' },
+          weekStart: { type: 'string', description: 'Poniedziałek tygodnia YYYY-MM-DD' },
+          dayOfWeek: { type: 'number', description: '0=pon … 6=niedz' },
+          mealType: { type: 'string', enum: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'], description: 'Pora posiłku' },
+        },
+        required: ['recipeId', 'weekStart', 'dayOfWeek', 'mealType'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
+        const dto = new CreateEntryDto();
+        dto.recipeId = requireStringArg(args, 'recipeId');
+        dto.weekStart = requireStringArg(args, 'weekStart');
+        dto.dayOfWeek = requireNumberArg(args, 'dayOfWeek');
+        dto.mealType = requireStringArg(args, 'mealType') as MealType;
+        return mealService.addEntry(householdId, ctx.userId, dto);
+      },
+    },
+    {
+      name: 'mark_meal_cooked',
+      description:
+        'Oznacza zaplanowany posiłek jako ugotowany (odejmuje składniki ze spiżarni) lub cofa (przywraca). ' +
+        'Wymaga entryId; cooked domyślnie true.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          entryId: { type: 'string', description: 'ID wpisu w planerze' },
+          cooked: { type: 'boolean', description: 'true = ugotowane (domyślnie), false = cofnij' },
+        },
+        required: ['entryId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const cooked = boolArg(args, 'cooked') ?? true;
+        return mealService.setCooked(requireStringArg(args, 'entryId'), ctx.userId, cooked);
+      },
+    },
+    {
+      name: 'remove_meal_entry',
+      description: 'Usuwa wpis z planera. Wymaga entryId.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: { entryId: { type: 'string', description: 'ID wpisu w planerze' } },
+        required: ['entryId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        await mealService.removeEntry(requireStringArg(args, 'entryId'), ctx.userId);
+        return { deleted: true };
+      },
+    },
+    // ---- shopping item state ----
+    {
+      name: 'check_shopping_item',
+      description:
+        'Zaznacza/odznacza pozycję na liście zakupów posiłków. Zaznaczenie pozycji o znanej ilości (produkt śledzony) ' +
+        'dodaje ją do spiżarni („kupione"), odznaczenie cofa. Wymaga itemId; isChecked domyślnie true.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itemId: { type: 'string', description: 'ID pozycji zakupowej' },
+          isChecked: { type: 'boolean', description: 'true = kupione (domyślnie), false = cofnij' },
+        },
+        required: ['itemId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const isChecked = boolArg(args, 'isChecked') ?? true;
+        return mealService.toggleShoppingItem(requireStringArg(args, 'itemId'), ctx.userId, isChecked);
+      },
+    },
+    {
+      name: 'delete_shopping_item',
+      description: 'Usuwa pozycję z listy zakupów posiłków. Wymaga itemId.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: { itemId: { type: 'string', description: 'ID pozycji zakupowej' } },
+        required: ['itemId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        await mealService.removeShoppingItem(requireStringArg(args, 'itemId'), ctx.userId);
+        return { deleted: true };
+      },
+    },
+    // ---- pantry adjust/delete ----
+    {
+      name: 'adjust_pantry_stock',
+      description: 'Zmienia stan produktu w spiżarni o wartość delta (dodatnia = dodaj, ujemna = zdejmij). Wymaga productId i delta.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          ...householdProp,
+          productId: { type: 'string', description: 'ID produktu' },
+          delta: { type: 'number', description: 'Zmiana stanu (w jednostce bazowej; +/-)' },
+        },
+        required: ['productId', 'delta'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
+        return mealService.adjustStock(householdId, ctx.userId, requireStringArg(args, 'productId'), requireNumberArg(args, 'delta'));
+      },
+    },
+    {
+      name: 'remove_pantry_item',
+      description: 'Usuwa pozycję ze spiżarni. Wymaga pantryItemId.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: { pantryItemId: { type: 'string', description: 'ID pozycji spiżarni' } },
+        required: ['pantryItemId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        await mealService.removePantryItem(requireStringArg(args, 'pantryItemId'), ctx.userId);
+        return { deleted: true };
+      },
+    },
   ];
+}
+
+const ingredientSchema = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', description: 'Nazwa składnika' },
+    quantity: { type: 'number', description: 'Ilość (opcjonalnie)' },
+    unit: { type: 'string', description: 'Jednostka (opcjonalnie)' },
+    ingredientId: { type: 'string', description: 'ID produktu ze słownika (opcjonalnie)' },
+  },
+  required: ['name'],
+  additionalProperties: false,
+} as const;
+
+function buildRecipeDto(args: Record<string, unknown>): CreateRecipeDto {
+  const dto = new CreateRecipeDto();
+  dto.title = requireStringArg(args, 'title');
+  dto.instructions = requireStringArg(args, 'instructions');
+  const description = stringArg(args, 'description');
+  if (description) {
+    dto.description = description;
+  }
+  if (Array.isArray(args.ingredients)) {
+    dto.recipeIngredients = args.ingredients
+      .filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null)
+      .map((raw) => {
+        const ing = new RecipeIngredientDto();
+        ing.name = requireStringArg(raw, 'name');
+        const quantity = numberArg(raw, 'quantity');
+        if (quantity !== undefined) {
+          ing.quantity = quantity;
+        }
+        const unit = stringArg(raw, 'unit');
+        if (unit) {
+          ing.unit = unit;
+        }
+        const ingredientId = stringArg(raw, 'ingredientId');
+        if (ingredientId) {
+          ing.ingredientId = ingredientId;
+        }
+        return ing;
+      });
+  }
+  return dto;
 }

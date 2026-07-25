@@ -22,6 +22,7 @@ interface JsonRpcResponse {
 // Identity resolved by the auth guard and handed to the JSON-RPC layer.
 export interface McpCaller {
   userId: string;
+  email: string;
   token: ApiToken | null;
 }
 
@@ -97,6 +98,7 @@ export class McpService {
     const bound = caller.token?.householdId ?? null;
     return {
       userId: caller.userId,
+      email: caller.email,
       token: caller.token,
       requireHousehold: (argHouseholdId?: string): string => {
         if (bound) {

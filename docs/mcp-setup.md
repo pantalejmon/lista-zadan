@@ -89,27 +89,46 @@ curl -X POST https://TWOJA-DOMENA/api/mcp \
 
 ## 3. Dostępne narzędzia
 
+Zestaw pokrywa **całą aplikację** — każdy moduł da się sterować przez MCP. Narzędzia
+odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który implikuje `:read`).
+
 **Todo / listy** (scope `todo:*`):
-- `list_todo_lists` — listy zadań użytkownika,
-- `list_todos` — zadania z listy (opcjonalnie z danego dnia),
-- `add_todo` — dodaj zadanie,
-- `complete_todo` — oznacz wykonane / cofnij.
+- odczyt: `list_todo_lists`, `list_todos`, `list_unassigned_todos`,
+- zadania: `add_todo`, `update_todo` (edytuj treść/datę/godzinę/stan), `complete_todo`, `delete_todo`,
+- cykliczne: `add_recurring_todos`, `delete_recurrence_group`,
+- listy: `create_todo_list`, `rename_todo_list`, `delete_todo_list`, `move_todo_list`.
 
 **Posiłki** (scope `meals:*`, gospodarstwo z tokenu lub argumentu `householdId`):
-- `list_recipes`, `get_week_plan`, `get_shopping_list`, `what_is_missing`,
-- `add_shopping_item`, `generate_shopping_from_plan`,
-- `list_products`, `get_pantry`, `create_product`, `set_pantry_stock`.
+- odczyt: `list_recipes`, `get_recipe`, `get_week_plan`, `get_shopping_list`, `what_is_missing`, `list_products`, `get_pantry`,
+- przepisy: `create_recipe`, `update_recipe`, `delete_recipe`,
+- planer: `plan_meal` (przypisz przepis do dnia/pory), `mark_meal_cooked` (odejmij ze spiżarni), `remove_meal_entry`,
+- zakupy: `add_shopping_item`, `check_shopping_item` („kupione" → do spiżarni), `delete_shopping_item`, `generate_shopping_from_plan`,
+- produkty/spiżarnia: `create_product`, `update_product`, `delete_product`, `set_pantry_stock`, `adjust_pantry_stock`, `remove_pantry_item`.
 
-**Gospodarstwo** (scope `households:read`, eksport dodatkowo `meals:read`+`todo:write`):
-- `list_households`,
-- `export_shopping_to_list` — eksportuj listę zakupów posiłków do wskazanej listy zadań.
+**Gospodarstwa i członkowie** (scope `households:*`):
+- `list_households`, `create_household`, `rename_household`, `list_contacts`,
+- członkowie: `list_household_members`, `invite_to_household`, `change_member_role`, `remove_household_member`, `leave_household`,
+- zaproszenia: `list_pending_invitations`, `accept_invitation`, `decline_invitation`,
+- `export_shopping_to_list` — eksport listy zakupów posiłków do listy zadań (dodatkowo `meals:read`+`todo:write`).
 
 **Serwis domu** (scope `home:*`):
-- `list_home_assets`, `add_home_asset`, `add_maintenance`, `complete_maintenance`.
+- instalacje: `list_home_assets`, `add_home_asset`, `update_home_asset`, `delete_home_asset`,
+- przeglądy: `add_maintenance`, `update_maintenance`, `complete_maintenance`, `delete_maintenance`,
+- wykonawcy: `list_home_providers`, `add_home_provider`, `update_home_provider`, `delete_home_provider`,
+- remonty: `list_renovations`, `add_renovation`, `update_renovation`, `delete_renovation`.
+
+**Finanse** (scope `finance:*`, gospodarstwo z tokenu lub `householdId`):
+- portfele: `list_wallets`, `create_wallet`, `rename_wallet`, `delete_wallet`,
+- transakcje: `list_transactions`, `add_transaction`, `update_transaction`, `delete_transaction`
+  (kwota dodatnia = przychód, ujemna = wydatek),
+- cykliczne: `list_recurring_transactions`, `add_recurring_transaction`, `update_recurring_transaction`, `delete_recurring_transaction`,
+- statystyki: `get_finance_stats`, `list_finance_categories`.
 
 Wszystkie narzędzia przechodzą przez te same serwisy domenowe co UI, więc obowiązują
 identyczne uprawnienia (członkostwo w gospodarstwie, role owner/editor/viewer). Narzędzia
 wymagające kilku uprawnień (np. eksport: `meals:read` + `todo:write`) egzekwują **wszystkie**.
+Narzędzie pojawia się w `tools/list` tylko, gdy token spełnia jego scope'y (przykład: token
+`finance:read` widzi wyłącznie 5 finansowych narzędzi odczytu).
 
 ## 4. Przykłady promptów dla agenta
 

@@ -1,7 +1,7 @@
 // Machine-token scopes: <module>:<access>. A token carries a set of these and
 // can only reach endpoints whose required scopes it satisfies.
 
-export const SCOPE_MODULES = ['todo', 'meals', 'home', 'households'] as const;
+export const SCOPE_MODULES = ['todo', 'meals', 'home', 'households', 'finance'] as const;
 export type ScopeModule = (typeof SCOPE_MODULES)[number];
 
 export type ScopeAccess = 'read' | 'write';
@@ -12,7 +12,7 @@ export const ALL_SCOPES: ApiScope[] = SCOPE_MODULES.flatMap(
   (m): ApiScope[] => [`${m}:read`, `${m}:write`],
 );
 
-const SCOPE_PATTERN = /^(todo|meals|home|households):(read|write)$/;
+const SCOPE_PATTERN = /^(todo|meals|home|households|finance):(read|write)$/;
 
 export function isValidScope(scope: string): scope is ApiScope {
   return SCOPE_PATTERN.test(scope);

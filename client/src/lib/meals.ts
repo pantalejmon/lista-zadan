@@ -167,6 +167,10 @@ export function shiftWeek(weekStart: string, weeks: number): string {
   return toDateStr(d);
 }
 
+export function isCurrentWeek(weekStart: string): boolean {
+  return weekStart === getMonday(new Date());
+}
+
 export function weekLabel(weekStart: string): string {
   const start = new Date(weekStart);
   const end = new Date(weekStart);
@@ -400,8 +404,8 @@ export async function removeShoppingItem(id: string): Promise<void> {
 }
 
 // Pantry-aware: buys only what's missing, rounded up to whole packages.
-export async function generateShoppingFromPlan(weekStart: string): Promise<number> {
-  const needs = (await computeNeeds(weekStart)).filter((n) => n.toBuy > 0);
+export async function generateShoppingFromPlan(weekStart: string, days?: number[]): Promise<number> {
+  const needs = (await computeNeeds(weekStart, days)).filter((n) => n.toBuy > 0);
   const db = await getDB();
   const now = Date.now();
   const tx = db.transaction(SHOPPING, 'readwrite');
@@ -468,8 +472,10 @@ export async function removePantryItem(id: string): Promise<void> {
   await db.delete(PANTRY, id);
 }
 
-export async function computeNeeds(weekStart: string): Promise<NeedItem[]> {
-  const [entries, products, pantry] = await Promise.all([getWeek(weekStart), getProducts(), getPantry()]);
+export async function computeNeeds(weekStart: string, days?: number[]): Promise<NeedItem[]> {
+  const [allEntries, products, pantry] = await Promise.all([getWeek(weekStart), getProducts(), getPantry()]);
+  // Optional day filter (0=Mon…6=Sun) so the user can shop for just part of the week.
+  const entries = days && days.length > 0 ? allEntries.filter((e) => days.includes(e.dayOfWeek)) : allEntries;
   const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
   const stock = new Map(pantry.map((x) => [x.productId, x.quantity]));
   const agg = new Map<string, { productId: string | null; name: string; unit: string; required: number; packageSize?: number }>();
@@ -537,12 +543,12 @@ export interface MealStorage {
   addShoppingItem(name: string): Promise<void>;
   toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;
   removeShoppingItem(id: string): Promise<void>;
-  generateShoppingFromPlan(weekStart: string): Promise<number>;
+  generateShoppingFromPlan(weekStart: string, days?: number[]): Promise<number>;
   getPantry(): Promise<PantryItem[]>;
   setPantryStock(productId: string, quantity: number): Promise<void>;
   adjustPantryStock(productId: string, delta: number): Promise<void>;
   removePantryItem(id: string): Promise<void>;
-  computeNeeds(weekStart: string): Promise<NeedItem[]>;
+  computeNeeds(weekStart: string, days?: number[]): Promise<NeedItem[]>;
 }
 
 export const localMealStorage: MealStorage = {

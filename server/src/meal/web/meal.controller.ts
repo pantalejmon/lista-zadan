@@ -183,6 +183,7 @@ export class MealController {
     @Req() req: Request,
     @Query('householdId') householdId?: string,
     @Query('week') week?: string,
+    @Query('days') days?: string,
   ): Promise<{ count: number }> {
     if (!week) {
       throw new BadRequestException('week query parameter is required');
@@ -191,6 +192,7 @@ export class MealController {
       this.requireHousehold(householdId),
       this.userId(req),
       week,
+      parseDays(days),
     );
     return { count };
   }
@@ -235,11 +237,12 @@ export class MealController {
     @Req() req: Request,
     @Query('householdId') householdId?: string,
     @Query('week') week?: string,
+    @Query('days') days?: string,
   ): Promise<NeedResponse[]> {
     if (!week) {
       throw new BadRequestException('week query parameter is required');
     }
-    return this.mealService.computeNeeds(this.requireHousehold(householdId), this.userId(req), week);
+    return this.mealService.computeNeeds(this.requireHousehold(householdId), this.userId(req), week, parseDays(days));
   }
 
   private userId(req: Request): string {
@@ -252,4 +255,17 @@ export class MealController {
     }
     return householdId;
   }
+}
+
+// Parses a `days` query param ("0,2,4") into weekday numbers (0=Mon…6=Sun).
+// Returns undefined when absent/empty so the whole week is used.
+function parseDays(days?: string): number[] | undefined {
+  if (!days) {
+    return undefined;
+  }
+  const parsed = days
+    .split(',')
+    .map((d) => Number(d.trim()))
+    .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  return parsed.length > 0 ? parsed : undefined;
 }

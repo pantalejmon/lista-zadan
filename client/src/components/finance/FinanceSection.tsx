@@ -50,12 +50,21 @@ const TABS: { id: FinanceTab; label: string; Icon: (p: { className?: string }) =
   },
 ];
 
+const FINANCE_TAB_KEY = 'lista-zadan:finance-tab';
+
 export function FinanceSection({ householdId }: FinanceSectionProps) {
-  const [tab, setTab] = useState<FinanceTab>('transactions');
+  const [tab, setTab] = useState<FinanceTab>(() => {
+    const saved = localStorage.getItem(FINANCE_TAB_KEY);
+    return TABS.some((t) => t.id === saved) ? (saved as FinanceTab) : 'transactions';
+  });
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [liveKey, setLiveKey] = useState(0);
+
+  useEffect(() => {
+    localStorage.setItem(FINANCE_TAB_KEY, tab);
+  }, [tab]);
 
   const load = useCallback(async () => {
     if (!householdId) {

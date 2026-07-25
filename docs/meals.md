@@ -32,9 +32,11 @@ algorytmu musi trafić w oba miejsca**: `client/src/lib/meals.ts` (lokalny) oraz
 
 ## Algorytm „Czego brakuje" (`computeNeeds`)
 
-Wejście: tydzień (`weekStart`). Wyjście: lista `NeedItem` (co i ile dokupić).
+Wejście: tydzień (`weekStart`) oraz opcjonalnie `days` — lista dni tygodnia
+(`0 = poniedziałek … 6 = niedziela`) zawężająca obliczenia do wybranych dni (pusto/brak
+= cały tydzień). Wyjście: lista `NeedItem` (co i ile dokupić).
 
-1. Pobierz wpisy planera z tygodnia, produkty i stan spiżarni gospodarstwa.
+1. Pobierz wpisy planera z tygodnia (i odfiltruj do `days`, gdy podano), produkty i stan spiżarni gospodarstwa.
 2. Zbuduj mapę produktów **po nazwie** (`name.toLowerCase() → Product`).
 3. Dla każdego wpisu → przepisu → składnika:
    - dopasuj produkt po nazwie,
@@ -51,8 +53,12 @@ Wejście: tydzień (`weekStart`). Wyjście: lista `NeedItem` (co i ile dokupić)
    > Przykład: brakuje 120 g ryżu, opakowanie 1000 g → `toBuy = 1000` (1 opak.).
    > Nie da się kupić 120 g, więc kupujemy całe opakowanie.
 
-`generateFromPlan` używa tego samego wyniku i tworzy pozycje zakupowe tylko dla
-`toBuy > 0`.
+`generateFromPlan` używa tego samego wyniku (z tym samym filtrem `days`) i tworzy pozycje
+zakupowe tylko dla `toBuy > 0`. UI zakupów pozwala wybrać tydzień (strzałki) i konkretne dni,
+więc można zrobić listę zakupów np. tylko na weekend albo na przyszły tydzień. Filtr `days`
+jest przekazywany end-to-end: `GET /meals/needs` i `POST /meals/shopping/generate` przyjmują
+`?days=0,2,4`, a narzędzia MCP `what_is_missing` / `generate_shopping_from_plan` — pole `days`.
+Zmiana jest **zdublowana** w `client/src/lib/meals.ts` (offline) i `meal.service.ts` (cloud).
 
 ## Pętle domykające (loop closers)
 

@@ -251,9 +251,9 @@ export class MealService {
   }
 
   // Pantry-aware: buys only what's missing, rounded up to whole packages.
-  async generateFromPlan(householdId: string, userId: string, weekStart: string): Promise<number> {
+  async generateFromPlan(householdId: string, userId: string, weekStart: string, days?: number[]): Promise<number> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
-    const needs = await this.computeNeedsInternal(householdId, weekStart);
+    const needs = await this.computeNeedsInternal(householdId, weekStart, days);
     const items = needs
       .filter((n) => n.toBuy > 0)
       .map((n) => MealShoppingItem.create(householdId, n.name, n.toBuy, n.unit));
@@ -311,13 +311,16 @@ export class MealService {
 
   // ---- needs (planer vs spiżarnia → czego brakuje) ----
 
-  async computeNeeds(householdId: string, userId: string, weekStart: string): Promise<NeedResponse[]> {
+  async computeNeeds(householdId: string, userId: string, weekStart: string, days?: number[]): Promise<NeedResponse[]> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
-    return this.computeNeedsInternal(householdId, weekStart);
+    return this.computeNeedsInternal(householdId, weekStart, days);
   }
 
-  private async computeNeedsInternal(householdId: string, weekStart: string): Promise<NeedResponse[]> {
-    const entries = await this.entryRepo.findByWeek(householdId, weekStart);
+  // `days` (optional) restricts the calculation to those weekdays (0=Mon…6=Sun),
+  // so the user can shop for just part of the week. Empty/undefined = whole week.
+  private async computeNeedsInternal(householdId: string, weekStart: string, days?: number[]): Promise<NeedResponse[]> {
+    const all = await this.entryRepo.findByWeek(householdId, weekStart);
+    const entries = days && days.length > 0 ? all.filter((e) => days.includes(e.dayOfWeek)) : all;
     const products = await this.productRepo.findByHousehold(householdId);
     const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
     const pantry = await this.pantryRepo.findByHousehold(householdId);

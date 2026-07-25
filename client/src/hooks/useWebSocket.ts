@@ -30,9 +30,13 @@ export function useWebSocket({ enabled, listId, onTodoChange }: UseWebSocketOpti
     }
 
     const apiUrl = import.meta.env.VITE_API_URL ?? '';
+    // Polling-first, then upgrade to websocket. Many mobile networks (and some
+    // reverse proxies) block the raw WS upgrade handshake but allow HTTP polling —
+    // websocket-first there means the socket never connects ("offline" forever),
+    // whereas polling-first connects immediately and silently upgrades when it can.
     const socket = io(apiUrl || window.location.origin, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,

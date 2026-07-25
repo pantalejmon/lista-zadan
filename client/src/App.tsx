@@ -91,6 +91,15 @@ export default function App() {
     [lists, mealHousehold],
   );
 
+  // Remember the last-opened list so a reload doesn't dump the user on the
+  // household default. Only restored when it still belongs to the active household.
+  const savedListIdRef = useRef<string | null>(localStorage.getItem('lista-zadan:activeListId'));
+  useEffect(() => {
+    if (activeListId) {
+      localStorage.setItem('lista-zadan:activeListId', activeListId);
+    }
+  }, [activeListId]);
+
   useEffect(() => {
     if (!isCloud || !mealHousehold) {
       return;
@@ -103,17 +112,24 @@ export default function App() {
       return;
     }
     if (!activeList || activeList.householdId !== mealHousehold.id) {
-      const target = inHousehold.find((l) => l.isDefault) ?? inHousehold[0];
+      const saved = savedListIdRef.current
+        ? inHousehold.find((l) => l.id === savedListIdRef.current)
+        : undefined;
+      const target = saved ?? inHousehold.find((l) => l.isDefault) ?? inHousehold[0];
+      // Consume the saved hint once so later household switches use the default.
+      savedListIdRef.current = null;
       setActiveListId(target.id);
     }
   }, [isCloud, mealHousehold, lists, activeList, activeListId, setActiveListId]);
 
   // Posiłki i Czat wymagają konta (gospodarstwa). W trybie lokalnym trzymamy usera na Zadaniach.
+  // Czekamy aż auth się rozwiąże — inaczej podczas bootowania (user jeszcze null → mode 'local')
+  // ten efekt zresetowałby przywróconą sekcję na 'tasks' i nigdy jej nie przywrócił.
   useEffect(() => {
-    if (!isCloud && section !== 'tasks') {
+    if (!authLoading && !isCloud && section !== 'tasks') {
       setSection('tasks');
     }
-  }, [isCloud, section]);
+  }, [authLoading, isCloud, section]);
 
   // Zapamiętaj ostatnie miejsce, żeby po ponownym otwarciu apki nie cofało.
   useEffect(() => {

@@ -108,9 +108,10 @@ export function createCloudMealStorage(householdId: string): MealStorage {
 
     removeShoppingItem: (id) => request<void>(`/meals/shopping/${id}`, { method: 'DELETE' }),
 
-    generateShoppingFromPlan: async (weekStart) => {
+    generateShoppingFromPlan: async (weekStart, days) => {
+      const daysParam = days && days.length > 0 ? `&days=${days.join(',')}` : '';
       const res = await request<{ count: number }>(
-        `/meals/shopping/generate?householdId=${hh}&week=${weekStart}`,
+        `/meals/shopping/generate?householdId=${hh}&week=${weekStart}${daysParam}`,
         { method: 'POST' },
       );
       return res.count;
@@ -134,7 +135,9 @@ export function createCloudMealStorage(householdId: string): MealStorage {
 
     removePantryItem: (id) => request<void>(`/meals/pantry/${id}`, { method: 'DELETE' }),
 
-    computeNeeds: (weekStart) =>
-      request<NeedItem[]>(`/meals/needs?householdId=${hh}&week=${weekStart}`),
+    computeNeeds: (weekStart, days) => {
+      const daysParam = days && days.length > 0 ? `&days=${days.join(',')}` : '';
+      return request<NeedItem[]>(`/meals/needs?householdId=${hh}&week=${weekStart}${daysParam}`);
+    },
   };
 }

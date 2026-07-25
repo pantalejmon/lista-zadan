@@ -229,6 +229,28 @@ Without a migration, the app will fail on startup with a schema mismatch.
    or test files may depend on the old signature.
 4. **DTO validation** — when adding new endpoints, ensure request DTOs have proper `class-validator` decorators.
    Missing validation is a security hole.
+5. **MCP parity** — if the change adds, removes, or alters a capability reachable from the UI (a new endpoint,
+   a new service method, a changed argument), mirror it in the MCP tools. See "MCP Tool Parity" below.
+
+## MCP Tool Parity
+
+The app is fully controllable by agents through the MCP server (`server/src/mcp/`), and it must **stay** that
+way. The rule: **every user-facing capability has an equivalent MCP tool.** When you touch the API surface,
+update MCP in the *same commit*.
+
+- **New domain-service method / REST endpoint that exposes a capability** → add a matching tool in the right
+  `server/src/mcp/domain/tools/<module>.tools.ts` (todo, meal, home, household, finance). Read-only capability →
+  a `:read`-scoped tool; mutation → a `:write`-scoped tool. Reuse the domain service (never re-implement logic in
+  the tool) so permissions and validation apply unchanged.
+- **New module** → add a new `<module>.tools.ts`, a `finance`-style scope module in
+  `server/src/api-token/domain/api-scope.ts` (`SCOPE_MODULES` + the regex), a consent label in
+  `OAuthController`'s `SCOPE_LABELS` (the `Record<ApiScope, string>` type enforces this), and wire the builder into
+  `McpModule`.
+- **Changed method signature / DTO field** → update the tool's `inputSchema` and handler to match.
+- **Removed capability** → remove the corresponding tool.
+- Always update `docs/mcp-setup.md` (tool catalogue) and, for scope changes, `docs/api-tokens.md`.
+- Tools carry no business logic of their own — they translate JSON-RPC args into a domain-service call. If a tool
+  needs logic the service doesn't have, add it to the service, not the tool.
 
 ## Git Workflow
 

@@ -12,19 +12,20 @@ import { ListSelector } from './components/ListSelector';
 import { ListSettings } from './components/ListSettings';
 import { HouseholdSettings } from './components/HouseholdSettings';
 import { TokensSettings } from './components/TokensSettings';
+import { SettingsModal } from './components/SettingsModal';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
 import { AppSidebar } from './components/AppSidebar';
 import { NAV_ITEMS, type AppSection } from './lib/navigation';
 import { STICKY_UNDER_HEADER } from './lib/layout';
 import { Onboarding } from './components/Onboarding';
-import { setupHousehold } from './lib/api';
+import { setupHousehold, updateUserSettings } from './lib/api';
 import { MealsSection } from './components/meals/MealsSection';
 import { HomeSection } from './components/home/HomeSection';
 import { FinanceSection } from './components/finance/FinanceSection';
 import { ChatView } from './components/ChatView';
 import { useTodos } from './hooks/useTodos';
-import { useDark } from './hooks/useDark';
+import { useSettings } from './hooks/useSettings';
 import { useTodoCounts } from './hooks/useTodoCounts';
 import { useAuth } from './hooks/useAuth';
 import { useStorage } from './hooks/useStorage';
@@ -57,19 +58,28 @@ export default function App() {
     households, loading: householdsLoading, createHousehold, renameHousehold, refresh: refreshHouseholds,
   } = useHouseholds(isCloud);
   const { invitations, accept: acceptInvite, decline: declineInvite } = useInvitations(isCloud);
-  const [view, setView] = useState<View>('calendar');
-  const [section, setSection] = useState<AppSection>('tasks');
+  // Restore where the user was last (section + sub-view) so reopening the app
+  // doesn't dump them back on the calendar. A push deep-link still overrides it.
+  const [view, setView] = useState<View>(() => {
+    const saved = localStorage.getItem('lista-zadan:view');
+    return saved === 'calendar' || saved === 'all' || saved === 'unassigned' ? saved : 'calendar';
+  });
+  const [section, setSection] = useState<AppSection>(() => {
+    const saved = localStorage.getItem('lista-zadan:section');
+    return saved && NAV_ITEMS.some((item) => item.id === saved) ? (saved as AppSection) : 'tasks';
+  });
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [refreshKey, setRefreshKey] = useState(0);
   const [settingsListId, setSettingsListId] = useState<string | null>(null);
   const [householdSettingsId, setHouseholdSettingsId] = useState<string | null>(null);
   const [tokensOpen, setTokensOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const { todos, loading, add, addShopping, addRecurring, toggle, update, updateFull, remove, removeRecurrenceGroup, refresh } = useTodos(dateStr, storage, activeListId ?? undefined);
-  const { dark, toggle: toggleDark } = useDark();
+  const { settings, update: updateSettings, toggleDark, hydrate: hydrateSettings, dark } = useSettings();
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
   const { mealHousehold, setMealHouseholdId } = useMealHousehold(households);
   const mealStorage = useMealStorage(mode, mealHousehold?.id);
@@ -104,6 +114,48 @@ export default function App() {
       setSection('tasks');
     }
   }, [isCloud, section]);
+
+  // Zapamiętaj ostatnie miejsce, żeby po ponownym otwarciu apki nie cofało.
+  useEffect(() => {
+    localStorage.setItem('lista-zadan:section', section);
+  }, [section]);
+  useEffect(() => {
+    localStorage.setItem('lista-zadan:view', view);
+  }, [view]);
+
+  // Appearance settings follow the account. On login: adopt the settings stored
+  // on the server (they win over this device); if the account has none yet, seed
+  // it from whatever this device is using. Afterwards every local change is
+  // pushed back (debounced) so both phones stay in sync.
+  const settingsSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!isCloud || !user || settingsSyncedRef.current) {
+      return;
+    }
+    settingsSyncedRef.current = true;
+    if (user.settings) {
+      hydrateSettings(user.settings);
+    } else {
+      updateUserSettings(settings).catch(() => {});
+    }
+  }, [isCloud, user, hydrateSettings, settings]);
+
+  useEffect(() => {
+    if (!isCloud || !settingsSyncedRef.current) {
+      return;
+    }
+    const id = setTimeout(() => {
+      updateUserSettings(settings).catch(() => {});
+    }, 500);
+    return () => clearTimeout(id);
+  }, [isCloud, settings]);
+
+  // Reset the one-time sync guard on logout so a different account re-hydrates.
+  useEffect(() => {
+    if (!user) {
+      settingsSyncedRef.current = false;
+    }
+  }, [user]);
 
   // Deep-links from push notifications. Two entry points:
   //  • the service worker focuses an open window and postMessages the target;
@@ -312,6 +364,7 @@ export default function App() {
         pendingCount={pendingCount}
         isCloud={isCloud}
         onOpenTokens={() => setTokensOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
         households={households}
         activeHouseholdId={mealHousehold?.id ?? null}
         onSelectHousehold={setMealHouseholdId}
@@ -565,6 +618,15 @@ export default function App() {
       {/* API/MCP tokens modal */}
       {tokensOpen && (
         <TokensSettings households={households} onClose={() => setTokensOpen(false)} />
+      )}
+
+      {/* Appearance settings modal (opened from the profile) */}
+      {settingsOpen && (
+        <SettingsModal
+          settings={settings}
+          onChange={updateSettings}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
 
       {/* Household settings modal */}

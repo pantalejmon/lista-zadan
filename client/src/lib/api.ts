@@ -223,6 +223,19 @@ export async function getContactSuggestions(): Promise<ContactSuggestion[]> {
   return request<ContactSuggestion[]>('/contacts/suggestions');
 }
 
+// --- User settings ---
+
+export async function updateUserSettings(settings: {
+  theme: string;
+  accent: string;
+  fontSize: string;
+}): Promise<void> {
+  await request('/auth/me/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
+}
+
 // --- Invitations ---
 
 export async function getPendingInvitations(): Promise<HouseholdInvitation[]> {

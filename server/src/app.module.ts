@@ -34,6 +34,7 @@ import { AddHomeServiceTables1763942400000 } from './migration/1763942400000-Add
 import { AddApiTokenTable1764028800000 } from './migration/1764028800000-AddApiTokenTable';
 import { AddHomeProvidersRenovations1764115200000 } from './migration/1764115200000-AddHomeProvidersRenovations';
 import { AddFinanceTables1764201600000 } from './migration/1764201600000-AddFinanceTables';
+import { AddSettingsToUser1764288000000 } from './migration/1764288000000-AddSettingsToUser';
 import configuration from './config/configuration';
 
 @Module({
@@ -71,6 +72,7 @@ import configuration from './config/configuration';
           AddApiTokenTable1764028800000,
           AddHomeProvidersRenovations1764115200000,
           AddFinanceTables1764201600000,
+          AddSettingsToUser1764288000000,
         ],
       }),
     }),

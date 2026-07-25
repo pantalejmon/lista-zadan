@@ -24,6 +24,9 @@ export class UserEntity {
   @Column('bigint', { default: 0 })
   usedStorageBytes!: number;
 
+  @Column('varchar', { nullable: true })
+  settings!: string | null;
+
   toDomain(): User {
     return new User(
       this.id,
@@ -33,6 +36,7 @@ export class UserEntity {
       this.avatarUrl,
       Number(this.createdAt),
       Number(this.usedStorageBytes),
+      this.settings ?? null,
     );
   }
 
@@ -45,6 +49,7 @@ export class UserEntity {
     entity.avatarUrl = user.avatarUrl;
     entity.createdAt = user.createdAt;
     entity.usedStorageBytes = user.usedStorageBytes;
+    entity.settings = user.settings;
     return entity;
   }
 }

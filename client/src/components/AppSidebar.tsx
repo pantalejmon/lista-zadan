@@ -26,6 +26,7 @@ interface AppSidebarProps {
   pendingCount: number;
   isCloud: boolean;
   onOpenTokens?: () => void;
+  onOpenSettings: () => void;
   households: Household[];
   activeHouseholdId: string | null;
   onSelectHousehold: (id: string) => void;
@@ -76,6 +77,7 @@ function SidebarContent({
   pendingCount,
   isCloud,
   onOpenTokens,
+  onOpenSettings,
   households,
   activeHouseholdId,
   onSelectHousehold,
@@ -208,21 +210,31 @@ function SidebarContent({
       {/* Account — pb pod pasek gestów (S25 i inne telefony bez przycisków) */}
       <div className="px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-800">
         {user ? (
-          <div className="flex items-center gap-3 px-2">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-primary-500 flex items-center justify-center text-white text-sm font-bold">
-                {user.displayName.charAt(0).toUpperCase()}
+          <div className="flex items-center gap-2 px-2">
+            {/* Kliknięcie profilu otwiera ustawienia wyglądu (motyw, akcent, tekst) */}
+            <button
+              onClick={() => { onOpenSettings(); onClose(); }}
+              className="flex items-center gap-3 flex-1 min-w-0 -mx-2 px-2 py-1 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors text-left"
+              title="Ustawienia wyglądu"
+            >
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full shrink-0" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-primary-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  {user.displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">{user.displayName}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">Ustawienia i wygląd</p>
               </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold truncate">{user.displayName}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{user.email}</p>
-            </div>
+              <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
             <button
               onClick={() => { onLogout(); onClose(); }}
-              className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+              className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0"
               title="Wyloguj"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

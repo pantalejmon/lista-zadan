@@ -1,5 +1,5 @@
 import { JwtService } from '@nestjs/jwt';
-import { GoogleProfile, User } from './user.model';
+import { GoogleProfile, User, type UserSettings } from './user.model';
 import { UserRepositoryPort } from './user.repository.port';
 
 export class AuthService {
@@ -28,6 +28,10 @@ export class AuthService {
 
   async findUserById(id: string): Promise<User | null> {
     return this.userRepository.findById(id);
+  }
+
+  async updateUserSettings(userId: string, settings: UserSettings): Promise<void> {
+    await this.userRepository.updateSettings(userId, JSON.stringify(settings));
   }
 
   async findUserByEmail(email: string): Promise<User | null> {

@@ -12,13 +12,16 @@ function generateId(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+// Keep items in the order they were added — do NOT push checked items to the
+// bottom. Reordering on check is disorienting when the user has arranged the list
+// in their head (and by store aisle), so a checked item stays exactly in place.
 function sortItems(items: ShoppingItem[]): ShoppingItem[] {
-  return [...items].sort((a, b) => {
-    if (a.checked !== b.checked) {
-      return a.checked ? 1 : -1;
-    }
-    return a.order - b.order;
-  });
+  return [...items].sort((a, b) => a.order - b.order);
+}
+
+function shortDate(date: string): string {
+  const [, m, d] = date.split('-');
+  return `${d}.${m}`;
 }
 
 export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemProps) {
@@ -114,6 +117,17 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
     setEditingTitle(false);
   };
 
+  // Assign / change / clear the shopping list's date. Setting a date moves it onto
+  // that calendar day; clearing it drops it back to "Luźne" (needs a month bucket).
+  const handleDateChange = (value: string) => {
+    if (value) {
+      void onUpdate({ ...todo, date: value, month: undefined });
+    } else {
+      const month = (todo.date ?? new Date().toISOString().slice(0, 10)).slice(0, 7);
+      void onUpdate({ ...todo, date: undefined, month });
+    }
+  };
+
   const sorted = sortItems(items);
   const circumference = 2 * Math.PI * 9; // r=9
 
@@ -205,6 +219,43 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
             ) : (
               <span className="text-xs text-gray-400 dark:text-gray-500">Pusta lista</span>
             )}
+
+            {/* Termin — przypisz listę do dnia w kalendarzu (albo zostaw w Luźnych) */}
+            <div className="ml-auto flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={todo.date ?? ''}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  aria-label="Ustaw termin zakupów"
+                />
+                <span
+                  className={`pointer-events-none flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+                    todo.date
+                      ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-500/10'
+                      : 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {todo.date ? shortDate(todo.date) : 'termin'}
+                </span>
+              </div>
+              {todo.date && (
+                <button
+                  onClick={() => handleDateChange('')}
+                  className="p-1 rounded text-gray-300 dark:text-gray-600 hover:text-red-500"
+                  aria-label="Usuń termin (do Luźnych)"
+                  title="Usuń termin (do Luźnych)"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

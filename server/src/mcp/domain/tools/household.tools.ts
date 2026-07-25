@@ -28,7 +28,8 @@ export function buildHouseholdTools(
       name: 'export_shopping_to_list',
       description:
         'Eksportuje listę zakupów posiłków do wskazanej listy zadań jako jedno zadanie zakupowe. ' +
-        'Wymaga listId. Domyślnie tylko niekupione pozycje (onlyUnchecked=true).',
+        'Wymaga listId. Domyślnie tylko niekupione pozycje (onlyUnchecked=true). ' +
+        'Opcjonalnie date (YYYY-MM-DD) przypina zadanie do dnia; bez daty trafia do „Luźne".',
       // Cross-module: reads meal shopping AND writes a todo.
       requiredScopes: ['meals:read', 'todo:write'],
       inputSchema: {
@@ -37,6 +38,7 @@ export function buildHouseholdTools(
           householdId: { type: 'string', description: 'ID gospodarstwa (pomiń, gdy token przypięty)' },
           listId: { type: 'string', description: 'ID docelowej listy zadań' },
           onlyUnchecked: { type: 'boolean', description: 'Tylko niekupione (domyślnie true)' },
+          date: { type: 'string', description: 'Termin YYYY-MM-DD (opcjonalnie; bez niego → Luźne)' },
         },
         required: ['listId'],
         additionalProperties: false,
@@ -45,6 +47,7 @@ export function buildHouseholdTools(
         const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
         const listId = requireStringArg(args, 'listId');
         const onlyUnchecked = boolArg(args, 'onlyUnchecked') ?? true;
+        const date = stringArg(args, 'date');
 
         const shopping = await mealService.getShopping(householdId, ctx.userId);
         const source = onlyUnchecked ? shopping.filter((s) => !s.isChecked) : shopping;
@@ -58,6 +61,11 @@ export function buildHouseholdTools(
         createDto.listId = listId;
         createDto.text = `Zakupy z posiłków (${dateLabel})`;
         createDto.kind = 'shopping';
+        if (date) {
+          createDto.date = date;
+        } else {
+          createDto.month = now.toISOString().slice(0, 7);
+        }
         const todo = await todoService.create(createDto, ctx.userId);
 
         const updateDto = new UpdateTodoDto();

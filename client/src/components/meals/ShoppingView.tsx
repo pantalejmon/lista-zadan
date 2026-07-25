@@ -311,6 +311,7 @@ function ExportModal({ items, onClose }: { items: ShoppingItem[]; onClose: () =>
   const [lists, setLists] = useState<TodoList[] | null>(null);
   const [selected, setSelected] = useState<string>('');
   const [onlyUnchecked, setOnlyUnchecked] = useState(true);
+  const [date, setDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -345,8 +346,8 @@ function ExportModal({ items, onClose }: { items: ShoppingItem[]; onClose: () =>
         completed: false,
         listId: selected,
         kind: 'shopping',
-        // Unassigned todo needs a month bucket when it has no date.
-        month: now.toISOString().slice(0, 7),
+        // Assign the chosen day, or fall back to the month bucket (Luźne) if none.
+        ...(date ? { date } : { month: now.toISOString().slice(0, 7) }),
       });
       const shoppingItems: TodoShoppingItem[] = source.map((it, idx) => ({
         id: crypto.randomUUID?.() ?? `${Date.now()}-${idx}`,
@@ -396,6 +397,15 @@ function ExportModal({ items, onClose }: { items: ShoppingItem[]; onClose: () =>
                 />
                 Tylko niekupione ({items.filter((i) => !i.isChecked).length})
               </label>
+
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Termin (opcjonalnie)</p>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full mb-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3 mb-4">Bez terminu trafi do „Luźne".</p>
 
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Lista docelowa</p>
               {lists === null ? (

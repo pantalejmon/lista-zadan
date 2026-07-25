@@ -39,7 +39,7 @@ export function useChat(householdId: string | undefined, enabled: boolean) {
     const origin = base || window.location.origin;
     const socket = io(`${origin}/chat`, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
     });
     socketRef.current = socket;

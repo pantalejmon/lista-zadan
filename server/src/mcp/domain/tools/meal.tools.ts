@@ -59,16 +59,17 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     {
       name: 'what_is_missing',
       description:
-        'Zwraca czego brakuje w tym tygodniu (plan minus spiżarnia, zaokrąglone do opakowań). Opcjonalnie week.',
+        'Zwraca czego brakuje (plan minus spiżarnia, zaokrąglone do opakowań). Opcjonalnie week oraz days ' +
+        '(lista dni tygodnia 0=pon…6=niedz, aby liczyć tylko wybrane dni).',
       requiredScopes: ['meals:read'],
       inputSchema: {
         type: 'object',
-        properties: { ...householdProp, week: { type: 'string', description: 'Poniedziałek tygodnia YYYY-MM-DD' } },
+        properties: { ...householdProp, week: { type: 'string', description: 'Poniedziałek tygodnia YYYY-MM-DD' }, days: daysSchema },
         additionalProperties: false,
       },
       handler: async (args, ctx) => {
         const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
-        return mealService.computeNeeds(householdId, ctx.userId, stringArg(args, 'week') ?? currentMonday());
+        return mealService.computeNeeds(householdId, ctx.userId, stringArg(args, 'week') ?? currentMonday(), parseDays(args));
       },
     },
     {
@@ -93,16 +94,22 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     {
       name: 'generate_shopping_from_plan',
       description:
-        'Generuje listę zakupów z planu tygodnia, kupując tylko braki zaokrąglone do opakowań. Opcjonalnie week.',
+        'Generuje listę zakupów z planu, kupując tylko braki zaokrąglone do opakowań. Opcjonalnie week oraz days ' +
+        '(lista dni 0=pon…6=niedz, aby kupić tylko na wybrane dni).',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
-        properties: { ...householdProp, week: { type: 'string', description: 'Poniedziałek tygodnia YYYY-MM-DD' } },
+        properties: { ...householdProp, week: { type: 'string', description: 'Poniedziałek tygodnia YYYY-MM-DD' }, days: daysSchema },
         additionalProperties: false,
       },
       handler: async (args, ctx) => {
         const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
-        const count = await mealService.generateFromPlan(householdId, ctx.userId, stringArg(args, 'week') ?? currentMonday());
+        const count = await mealService.generateFromPlan(
+          householdId,
+          ctx.userId,
+          stringArg(args, 'week') ?? currentMonday(),
+          parseDays(args),
+        );
         return { added: count };
       },
     },
@@ -214,6 +221,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         properties: {
           ...householdProp,
           title: { type: 'string', description: 'Tytuł przepisu' },
+          category: { type: 'string', description: 'Kategoria (np. Śniadanie, Zupa, Deser)' },
           instructions: { type: 'string', description: 'Sposób przygotowania' },
           description: { type: 'string', description: 'Krótki opis (opcjonalnie)' },
           ingredients: { type: 'array', description: 'Składniki', items: ingredientSchema },
@@ -236,6 +244,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         properties: {
           recipeId: { type: 'string', description: 'ID przepisu' },
           title: { type: 'string', description: 'Tytuł' },
+          category: { type: 'string', description: 'Kategoria (np. Śniadanie, Zupa, Deser)' },
           instructions: { type: 'string', description: 'Sposób przygotowania' },
           description: { type: 'string', description: 'Opis (opcjonalnie)' },
           ingredients: { type: 'array', description: 'Składniki', items: ingredientSchema },
@@ -454,6 +463,21 @@ export function buildMealTools(mealService: MealService): McpTool[] {
   ];
 }
 
+const daysSchema = {
+  type: 'array',
+  description: 'Dni tygodnia do uwzględnienia: 0=poniedziałek … 6=niedziela (pomiń = cały tydzień)',
+  items: { type: 'number', minimum: 0, maximum: 6 },
+} as const;
+
+// Extracts a valid weekday-number list (0–6) from the `days` arg, or undefined.
+function parseDays(args: Record<string, unknown>): number[] | undefined {
+  if (!Array.isArray(args.days)) {
+    return undefined;
+  }
+  const days = args.days.filter((d): d is number => typeof d === 'number' && Number.isInteger(d) && d >= 0 && d <= 6);
+  return days.length > 0 ? days : undefined;
+}
+
 const ingredientSchema = {
   type: 'object',
   properties: {
@@ -470,6 +494,10 @@ function buildRecipeDto(args: Record<string, unknown>): CreateRecipeDto {
   const dto = new CreateRecipeDto();
   dto.title = requireStringArg(args, 'title');
   dto.instructions = requireStringArg(args, 'instructions');
+  const category = stringArg(args, 'category');
+  if (category) {
+    dto.category = category;
+  }
   const description = stringArg(args, 'description');
   if (description) {
     dto.description = description;

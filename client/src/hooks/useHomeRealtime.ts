@@ -15,7 +15,7 @@ export function useHomeRealtime(householdId: string | undefined, enabled: boolea
     const origin = base || window.location.origin;
     const socket = io(`${origin}/home`, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
     });
     socketRef.current = socket;

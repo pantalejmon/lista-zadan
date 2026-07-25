@@ -15,7 +15,7 @@ export function useMealsRealtime(householdId: string | undefined, enabled: boole
     const origin = base || window.location.origin;
     const socket = io(`${origin}/meal`, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
     });
     socketRef.current = socket;

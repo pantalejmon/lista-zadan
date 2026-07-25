@@ -58,12 +58,18 @@ export interface RecipeIngredient {
 export interface Recipe {
   id: string;
   title: string;
+  category?: string;
   description?: string;
   instructions: string;
   recipeIngredients: RecipeIngredient[];
   createdAt: number;
   updatedAt: number;
 }
+
+// Suggested categories (freeform — used for datalist hints, filter chips and
+// grouping). Products = grocery aisles; recipes = meal kinds.
+export const PRODUCT_CATEGORIES = ['Nabiał', 'Warzywa', 'Owoce', 'Mięso', 'Sypkie', 'Pieczywo', 'Napoje', 'Przyprawy', 'Mrożonki', 'Inne'];
+export const RECIPE_CATEGORIES = ['Śniadanie', 'Zupa', 'Danie główne', 'Sałatka', 'Deser', 'Przekąska', 'Napój', 'Inne'];
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
 
@@ -101,6 +107,7 @@ export interface ShoppingItem {
 
 export interface RecipeInput {
   title: string;
+  category?: string;
   description?: string;
   instructions: string;
   recipeIngredients: RecipeIngredient[];
@@ -167,6 +174,10 @@ export function shiftWeek(weekStart: string, weeks: number): string {
   return toDateStr(d);
 }
 
+export function isCurrentWeek(weekStart: string): boolean {
+  return weekStart === getMonday(new Date());
+}
+
 export function weekLabel(weekStart: string): string {
   const start = new Date(weekStart);
   const end = new Date(weekStart);
@@ -177,6 +188,53 @@ export function weekLabel(weekStart: string): string {
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// --- Category grouping (products & recipes) ---
+
+export const UNCATEGORISED = 'Bez kategorii';
+
+// Ranks a category by its position in the suggested `order`, then unknowns
+// (alphabetical), then the "Bez kategorii" bucket last.
+function categoryRank(category: string, order: string[]): number {
+  if (category === UNCATEGORISED) {
+    return order.length + 1;
+  }
+  const i = order.indexOf(category);
+  return i === -1 ? order.length : i;
+}
+
+// Distinct categories actually present in the data, ordered by the suggested list
+// then alphabetically, with "Bez kategorii" last. Used to build filter chips.
+export function presentCategories<T>(items: T[], getCategory: (t: T) => string | undefined, order: string[]): string[] {
+  const set = new Set<string>();
+  for (const it of items) {
+    set.add(getCategory(it)?.trim() || UNCATEGORISED);
+  }
+  return [...set].sort(
+    (a, b) => categoryRank(a, order) - categoryRank(b, order) || a.localeCompare(b, 'pl'),
+  );
+}
+
+// Groups items by category into ordered sections (same ordering as presentCategories).
+export function groupByCategory<T>(
+  items: T[],
+  getCategory: (t: T) => string | undefined,
+  order: string[],
+): { category: string; items: T[] }[] {
+  const map = new Map<string, T[]>();
+  for (const it of items) {
+    const cat = getCategory(it)?.trim() || UNCATEGORISED;
+    const bucket = map.get(cat);
+    if (bucket) {
+      bucket.push(it);
+    } else {
+      map.set(cat, [it]);
+    }
+  }
+  return [...map.entries()]
+    .sort((a, b) => categoryRank(a[0], order) - categoryRank(b[0], order) || a[0].localeCompare(b[0], 'pl'))
+    .map(([category, groupItems]) => ({ category, items: groupItems }));
 }
 
 // --- Products (dictionary) ---
@@ -250,6 +308,7 @@ export async function createRecipe(input: RecipeInput): Promise<Recipe> {
   const recipe: Recipe = {
     id: generateId(),
     title: input.title.trim(),
+    category: input.category?.trim() || undefined,
     description: input.description?.trim() || undefined,
     instructions: input.instructions.trim(),
     recipeIngredients: input.recipeIngredients,
@@ -266,6 +325,7 @@ export async function updateRecipe(id: string, input: RecipeInput): Promise<Reci
   const recipe: Recipe = {
     id,
     title: input.title.trim(),
+    category: input.category?.trim() || undefined,
     description: input.description?.trim() || undefined,
     instructions: input.instructions.trim(),
     recipeIngredients: input.recipeIngredients,
@@ -400,8 +460,8 @@ export async function removeShoppingItem(id: string): Promise<void> {
 }
 
 // Pantry-aware: buys only what's missing, rounded up to whole packages.
-export async function generateShoppingFromPlan(weekStart: string): Promise<number> {
-  const needs = (await computeNeeds(weekStart)).filter((n) => n.toBuy > 0);
+export async function generateShoppingFromPlan(weekStart: string, days?: number[]): Promise<number> {
+  const needs = (await computeNeeds(weekStart, days)).filter((n) => n.toBuy > 0);
   const db = await getDB();
   const now = Date.now();
   const tx = db.transaction(SHOPPING, 'readwrite');
@@ -468,8 +528,10 @@ export async function removePantryItem(id: string): Promise<void> {
   await db.delete(PANTRY, id);
 }
 
-export async function computeNeeds(weekStart: string): Promise<NeedItem[]> {
-  const [entries, products, pantry] = await Promise.all([getWeek(weekStart), getProducts(), getPantry()]);
+export async function computeNeeds(weekStart: string, days?: number[]): Promise<NeedItem[]> {
+  const [allEntries, products, pantry] = await Promise.all([getWeek(weekStart), getProducts(), getPantry()]);
+  // Optional day filter (0=Mon…6=Sun) so the user can shop for just part of the week.
+  const entries = days && days.length > 0 ? allEntries.filter((e) => days.includes(e.dayOfWeek)) : allEntries;
   const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
   const stock = new Map(pantry.map((x) => [x.productId, x.quantity]));
   const agg = new Map<string, { productId: string | null; name: string; unit: string; required: number; packageSize?: number }>();
@@ -537,12 +599,12 @@ export interface MealStorage {
   addShoppingItem(name: string): Promise<void>;
   toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;
   removeShoppingItem(id: string): Promise<void>;
-  generateShoppingFromPlan(weekStart: string): Promise<number>;
+  generateShoppingFromPlan(weekStart: string, days?: number[]): Promise<number>;
   getPantry(): Promise<PantryItem[]>;
   setPantryStock(productId: string, quantity: number): Promise<void>;
   adjustPantryStock(productId: string, delta: number): Promise<void>;
   removePantryItem(id: string): Promise<void>;
-  computeNeeds(weekStart: string): Promise<NeedItem[]>;
+  computeNeeds(weekStart: string, days?: number[]): Promise<NeedItem[]>;
 }
 
 export const localMealStorage: MealStorage = {

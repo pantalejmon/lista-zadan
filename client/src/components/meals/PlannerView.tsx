@@ -11,12 +11,14 @@ import {
   type MealType,
 } from '../../lib/meals';
 import { IconChevronLeft, IconChevronRight, IconClose, IconPlus, IconCheck } from './icons';
+import { RecipePreviewModal } from './RecipePreviewModal';
 
 export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [entries, setEntries] = useState<PlannerEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [pickerSlot, setPickerSlot] = useState<{ day: number; meal: MealType } | null>(null);
+  const [preview, setPreview] = useState<Recipe | null>(null);
 
   const load = useCallback(async () => {
     setEntries(await storage.getWeek(weekStart));
@@ -113,13 +115,18 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                             ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/30'
                             : 'bg-primary-50 dark:bg-primary-500/10 border-primary-200 dark:border-primary-500/30'
                         }`}>
-                          <p className={`font-medium truncate pr-4 ${
-                            entry.cooked
-                              ? 'text-green-800 dark:text-green-300 line-through decoration-green-500/60'
-                              : 'text-primary-900 dark:text-primary-200'
-                          }`}>
+                          <button
+                            type="button"
+                            onClick={() => entry.recipe && setPreview(entry.recipe)}
+                            disabled={!entry.recipe}
+                            title={entry.recipe ? 'Podejrzyj przepis' : undefined}
+                            className={`block w-full text-left font-medium truncate pr-4 hover:underline ${
+                              entry.cooked
+                                ? 'text-green-800 dark:text-green-300 line-through decoration-green-500/60'
+                                : 'text-primary-900 dark:text-primary-200'
+                            }`}>
                             {entry.recipe?.title ?? '—'}
-                          </p>
+                          </button>
                           <button
                             onClick={() => handleCook(entry)}
                             className={`mt-1 inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors ${
@@ -141,7 +148,7 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                           </button>
                           <button
                             onClick={() => handleRemove(entry.id)}
-                            className="absolute top-1 right-1 text-gray-400 hover:text-red-500 hidden group-hover:block"
+                            className="absolute top-0.5 right-0.5 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-60 group-hover:opacity-100 transition-opacity"
                             aria-label="Usuń"
                           >
                             <IconClose className="w-3.5 h-3.5" />
@@ -195,11 +202,16 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                           >
                             <IconCheck className="w-3 h-3" />
                           </button>
-                          <span className={`text-sm font-medium truncate flex-1 ${
-                            entry.cooked ? 'line-through text-gray-400 dark:text-gray-500' : ''
-                          }`}>
+                          <button
+                            type="button"
+                            onClick={() => entry.recipe && setPreview(entry.recipe)}
+                            disabled={!entry.recipe}
+                            className={`text-sm font-medium truncate flex-1 text-left ${
+                              entry.cooked ? 'line-through text-gray-400 dark:text-gray-500' : ''
+                            }`}
+                          >
                             {entry.recipe?.title ?? '—'}
-                          </span>
+                          </button>
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="text-gray-300 hover:text-red-500 shrink-0 p-1"
@@ -230,7 +242,9 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4 md:pb-0">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm max-h-[70vh] flex flex-col shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="font-semibold">Wybierz przepis</h2>
+              <h2 className="font-semibold">
+                {WEEK_DAYS[pickerSlot.day]} · {MEAL_TYPES.find((m) => m.type === pickerSlot.meal)?.label ?? 'Wybierz przepis'}
+              </h2>
               <button
                 onClick={() => setPickerSlot(null)}
                 className="p-2 -mr-1 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -261,6 +275,8 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
           </div>
         </div>
       )}
+
+      {preview && <RecipePreviewModal recipe={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }

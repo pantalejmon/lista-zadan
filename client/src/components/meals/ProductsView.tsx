@@ -1,13 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
-import { BASE_UNITS, type MealStorage, type Product, type ProductInput, type BaseUnit } from '../../lib/meals';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  BASE_UNITS,
+  PRODUCT_CATEGORIES,
+  UNCATEGORISED,
+  presentCategories,
+  groupByCategory,
+  type MealStorage,
+  type Product,
+  type ProductInput,
+  type BaseUnit,
+} from '../../lib/meals';
+import { CategoryFilter } from './CategoryFilter';
 import { IconPlus, IconTrash, IconPencil, IconClose } from './icons';
 
-const CATEGORIES = ['Nabiał', 'Warzywa', 'Owoce', 'Mięso', 'Sypkie', 'Pieczywo', 'Napoje', 'Przyprawy', 'Mrożonki', 'Inne'];
+const CATEGORIES = PRODUCT_CATEGORIES;
 
 export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Product | 'new' | null>(null);
+  const [search, setSearch] = useState('');
+  const [activeCat, setActiveCat] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setProducts(await storage.getProducts());
@@ -15,6 +28,18 @@ export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; l
   }, [storage]);
 
   useEffect(() => { load(); }, [load, liveKey]);
+
+  const categories = useMemo(() => presentCategories(products, (p) => p.category, CATEGORIES), [products]);
+  const groups = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = products.filter((p) => {
+      const matchesText = !q || p.name.toLowerCase().includes(q) || (p.category ?? '').toLowerCase().includes(q);
+      const matchesCat = !activeCat || (p.category?.trim() || UNCATEGORISED) === activeCat;
+      return matchesText && matchesCat;
+    });
+    return groupByCategory(filtered, (p) => p.category, CATEGORIES);
+  }, [products, search, activeCat]);
+  const visibleCount = useMemo(() => groups.reduce((n, g) => n + g.items.length, 0), [groups]);
 
   const handleSave = async (input: ProductInput, id?: string) => {
     if (id) {
@@ -53,6 +78,17 @@ export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; l
         <ProductForm onSave={(input) => handleSave(input)} onCancel={() => setEditing(null)} />
       )}
 
+      {!loading && products.length > 0 && (
+        <CategoryFilter
+          search={search}
+          onSearch={setSearch}
+          placeholder="Szukaj produktu..."
+          categories={categories}
+          active={activeCat}
+          onSelect={setActiveCat}
+        />
+      )}
+
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />)}
@@ -62,45 +98,57 @@ export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; l
           <p>Brak produktów.</p>
           <p className="text-sm mt-1">Dodaj produkty lub pojawią się automatycznie ze składników przepisów.</p>
         </div>
+      ) : visibleCount === 0 ? (
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+          <p>Brak wyników.</p>
+        </div>
       ) : (
-        <ul className="space-y-2">
-          {products.map((p) =>
-            editing !== null && editing !== 'new' && editing.id === p.id ? (
-              <li key={p.id}>
-                <ProductForm product={p} onSave={(input) => handleSave(input, p.id)} onCancel={() => setEditing(null)} />
-              </li>
-            ) : (
-              <li
-                key={p.id}
-                className="bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3 flex items-center gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{p.name}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {p.category ? `${p.category} · ` : ''}
-                    jedn. {p.baseUnit}
-                    {p.packageSize ? ` · opak. ${p.packageSize} ${p.baseUnit}` : ''}
-                    {!p.trackInPantry ? ' · nie śledzone' : ''}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setEditing(p)}
-                  className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
-                  aria-label="Edytuj"
-                >
-                  <IconPencil className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(p.id)}
-                  className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
-                  aria-label="Usuń"
-                >
-                  <IconTrash className="w-4 h-4" />
-                </button>
-              </li>
-            ),
-          )}
-        </ul>
+        <div className="space-y-5">
+          {groups.map((group) => (
+            <section key={group.category}>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2 px-1">
+                {group.category} <span className="text-gray-300 dark:text-gray-600">· {group.items.length}</span>
+              </h2>
+              <ul className="space-y-2">
+                {group.items.map((p) =>
+                  editing !== null && editing !== 'new' && editing.id === p.id ? (
+                    <li key={p.id}>
+                      <ProductForm product={p} onSave={(input) => handleSave(input, p.id)} onCancel={() => setEditing(null)} />
+                    </li>
+                  ) : (
+                    <li
+                      key={p.id}
+                      className="bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3 flex items-center gap-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{p.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          jedn. {p.baseUnit}
+                          {p.packageSize ? ` · opak. ${p.packageSize} ${p.baseUnit}` : ''}
+                          {!p.trackInPantry ? ' · nie śledzone' : ''}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setEditing(p)}
+                        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
+                        aria-label="Edytuj"
+                      >
+                        <IconPencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+                        aria-label="Usuń"
+                      >
+                        <IconTrash className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ),
+                )}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );

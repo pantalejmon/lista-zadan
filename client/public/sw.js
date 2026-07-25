@@ -1,4 +1,15 @@
-const CACHE_NAME = 'lista-zadan-v1';
+// Bumping the version deletes the previous cache on activate — which also purges
+// any poisoned /api or /socket.io responses cached by older (v1) service workers.
+const CACHE_NAME = 'lista-zadan-v2';
+
+// Requests that must NEVER be cached or served from cache. The socket.io polling
+// transport uses GET handshake/poll frames tied to a live session id; caching them
+// makes the SW replay a stale `sid` on any network blip, so the websocket can never
+// finish its handshake (permanent "offline" on flaky mobile networks). API GETs must
+// stay fresh too — a cached copy would show stale data.
+function isNetworkOnly(url) {
+  return url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/');
+}
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -15,6 +26,15 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Never intercept API or socket.io traffic — let it hit the network directly so
+  // the session stays live and data stays fresh.
+  const url = new URL(event.request.url);
+  if (url.origin === self.location.origin && isNetworkOnly(url)) {
+    return;
+  }
+
+  // App shell / static assets: network-first, fall back to cache when offline.
   event.respondWith(
     fetch(event.request)
       .then((response) => {

@@ -15,6 +15,9 @@ export class RecipeEntity {
   title!: string;
 
   @Column('varchar', { nullable: true })
+  category!: string | null;
+
+  @Column('varchar', { nullable: true })
   description!: string | null;
 
   @Column('text')
@@ -34,6 +37,7 @@ export class RecipeEntity {
       this.id,
       this.householdId,
       this.title,
+      this.category,
       this.description,
       this.instructions,
       parseIngredients(this.ingredients),
@@ -47,6 +51,7 @@ export class RecipeEntity {
     entity.id = recipe.id;
     entity.householdId = recipe.householdId;
     entity.title = recipe.title;
+    entity.category = recipe.category;
     entity.description = recipe.description;
     entity.instructions = recipe.instructions;
     entity.ingredients = JSON.stringify(recipe.recipeIngredients);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MealStorage } from '../../lib/meals';
 import { useMealsRealtime } from '../../hooks/useMealsRealtime';
 import { RecipesView } from './RecipesView';
@@ -24,9 +24,19 @@ interface MealsSectionProps {
   householdId?: string;
 }
 
+const TAB_KEY = 'lista-zadan:meals-tab';
+
 export function MealsSection({ storage, householdId }: MealsSectionProps) {
-  const [tab, setTab] = useState<MealsTab>('planner');
+  // Remember the last meals sub-tab so a reload doesn't always reset to Planer.
+  const [tab, setTab] = useState<MealsTab>(() => {
+    const saved = localStorage.getItem(TAB_KEY);
+    return TABS.some((t) => t.id === saved) ? (saved as MealsTab) : 'planner';
+  });
   const [liveKey, setLiveKey] = useState(0);
+
+  useEffect(() => {
+    localStorage.setItem(TAB_KEY, tab);
+  }, [tab]);
 
   // Live updates from other household members.
   useMealsRealtime(householdId, Boolean(householdId), () => setLiveKey((k) => k + 1));

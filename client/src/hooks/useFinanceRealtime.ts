@@ -15,7 +15,7 @@ export function useFinanceRealtime(householdId: string | undefined, enabled: boo
     const origin = base || window.location.origin;
     const socket = io(`${origin}/finance`, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
     });
     socketRef.current = socket;

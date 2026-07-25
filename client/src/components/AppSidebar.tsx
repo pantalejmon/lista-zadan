@@ -10,9 +10,17 @@ import type { SyncStatus } from '../lib/offlineQueue';
 
 export type { AppSection };
 
+// In-app activity indicators per section: chat = unread message count, tasks =
+// "something new" dot.
+export interface NavBadges {
+  chat?: number;
+  tasks?: boolean;
+}
+
 interface AppSidebarProps {
   section: AppSection;
   onSection: (section: AppSection) => void;
+  badges?: NavBadges;
   open: boolean;
   onClose: () => void;
   user: AuthUser | null;
@@ -65,6 +73,7 @@ export function AppSidebar(props: AppSidebarProps) {
 function SidebarContent({
   section,
   onSection,
+  badges,
   onClose,
   user,
   authLoading,
@@ -125,29 +134,43 @@ function SidebarContent({
         {/* Feature navigation — Posiłki/Czat wymagają konta (gospodarstwa); lokalnie tylko Zadania */}
         <nav className="px-3 py-3 space-y-0.5">
           <p className="px-2 mb-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Aplikacje</p>
-          {NAV_ITEMS.filter((item) => isCloud || item.id === 'tasks').map(({ id, label, description, Icon }) => (
-            <button
-              key={id}
-              onClick={() => selectSection(id)}
-              className={`flex items-center gap-3 w-full px-3 py-2 rounded-xl transition-colors ${
-                section === id
-                  ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
-              }`}
-            >
-              {/* Kafelek nabiera koloru marki dopiero dla aktywnej sekcji — reszta
-                  zostaje stonowana, żeby menu nie było kolorową choinką */}
-              <Icon className={`w-8 h-8 shrink-0 transition-colors ${
-                section === id ? 'text-primary-500' : 'text-gray-400 dark:text-gray-600'
-              }`} />
-              <span className="min-w-0 text-left">
-                <span className="block text-sm font-medium truncate">{label}</span>
-                {/* Podpis tylko w stałym pasku (md+) — w szufladzie na telefonie
-                    dokładałby 5×12 px i to on wypychał stopkę poza ekran */}
-                <span className="hidden md:block text-[11px] text-gray-400 dark:text-gray-500 truncate">{description}</span>
-              </span>
-            </button>
-          ))}
+          {NAV_ITEMS.filter((item) => isCloud || item.id === 'tasks').map(({ id, label, description, Icon }) => {
+            const chatCount = id === 'chat' ? (badges?.chat ?? 0) : 0;
+            const tasksDot = id === 'tasks' && Boolean(badges?.tasks);
+            return (
+              <button
+                key={id}
+                onClick={() => selectSection(id)}
+                className={`flex items-center gap-3 w-full px-3 py-2 rounded-xl transition-colors ${
+                  section === id
+                    ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                }`}
+              >
+                {/* Kafelek nabiera koloru marki dopiero dla aktywnej sekcji — reszta
+                    zostaje stonowana, żeby menu nie było kolorową choinką */}
+                <span className="relative shrink-0">
+                  <Icon className={`w-8 h-8 transition-colors ${
+                    section === id ? 'text-primary-500' : 'text-gray-400 dark:text-gray-600'
+                  }`} />
+                  {tasksDot && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-950" />
+                  )}
+                </span>
+                <span className="min-w-0 text-left flex-1">
+                  <span className="block text-sm font-medium truncate">{label}</span>
+                  {/* Podpis tylko w stałym pasku (md+) — w szufladzie na telefonie
+                      dokładałby 5×12 px i to on wypychał stopkę poza ekran */}
+                  <span className="hidden md:block text-[11px] text-gray-400 dark:text-gray-500 truncate">{description}</span>
+                </span>
+                {chatCount > 0 && (
+                  <span className="ml-auto shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center">
+                    {chatCount > 9 ? '9+' : chatCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
           {!isCloud && (
             <button
               onClick={() => { onLogin(); onClose(); }}
@@ -256,6 +279,10 @@ function SidebarContent({
             Zaloguj przez Google
           </button>
         ) : null}
+        {/* Dyskretna informacja o wersji */}
+        <p className="mt-2 text-center text-[10px] text-gray-300 dark:text-gray-600">
+          v{__APP_VERSION__} · {__BUILD_DATE__}
+        </p>
       </div>
     </div>
   );

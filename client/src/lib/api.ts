@@ -147,6 +147,13 @@ export async function updateList(listId: string, name: string): Promise<TodoList
   });
 }
 
+export async function moveList(listId: string, householdId: string): Promise<TodoList> {
+  return request<TodoList>(`/lists/${listId}/household`, {
+    method: 'PATCH',
+    body: JSON.stringify({ householdId }),
+  });
+}
+
 export async function deleteList(listId: string): Promise<void> {
   return request(`/lists/${listId}`, { method: 'DELETE' });
 }

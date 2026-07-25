@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { format, isToday, isTomorrow, isYesterday, startOfMonth, addDays, subDays } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { useSwipe } from './hooks/useSwipe';
@@ -51,7 +51,7 @@ export default function App() {
   const isCloud = mode === 'cloud';
   const {
     lists, activeList, activeListId, setActiveListId,
-    createList, updateList, deleteList, refresh: refreshLists,
+    createList, updateList, deleteList, moveList, refresh: refreshLists,
   } = useLists(isCloud);
   const {
     households, loading: householdsLoading, createHousehold, renameHousehold, refresh: refreshHouseholds,
@@ -104,6 +104,50 @@ export default function App() {
       setSection('tasks');
     }
   }, [isCloud, section]);
+
+  // Deep-links from push notifications. Two entry points:
+  //  • the service worker focuses an open window and postMessages the target;
+  //  • a cold-opened PWA lands on a "#section" hash (captured once on mount).
+  // Sekcje wymagające gospodarstwa (czat itd.) stosujemy dopiero, gdy dane są
+  // gotowe — inaczej efekt „trzymaj lokalnego usera na Zadaniach" by je zresetował.
+  const pendingNavRef = useRef<{ section?: string; householdId?: string } | null>(null);
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, '');
+    if (hash) {
+      pendingNavRef.current = { section: hash };
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+  useEffect(() => {
+    const applyTarget = (target: { section?: string; householdId?: string }) => {
+      if (target.householdId) {
+        setMealHouseholdId(target.householdId);
+      }
+      if (target.section && NAV_ITEMS.some((item) => item.id === target.section)) {
+        setSection(target.section as AppSection);
+      }
+    };
+
+    // Apply a cold-start target only once the app is ready: auth resolved (so
+    // isCloud is final) and, for cloud users, households loaded. Otherwise the
+    // "keep local users on Tasks" effect could reset the section mid-boot.
+    if (pendingNavRef.current && !authLoading && (!isCloud || households.length > 0)) {
+      applyTarget(pendingNavRef.current);
+      pendingNavRef.current = null;
+    }
+
+    const onMessage = (event: MessageEvent) => {
+      const msg = event.data;
+      if (!msg || typeof msg !== 'object' || msg.type !== 'notification-navigate') {
+        return;
+      }
+      const fromHash = typeof msg.url === 'string' ? msg.url.split('#')[1] : undefined;
+      const section = (msg.data && typeof msg.data.type === 'string' ? msg.data.type : undefined) ?? fromHash;
+      applyTarget({ section, householdId: msg.data?.householdId });
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, [authLoading, isCloud, households, setMealHouseholdId]);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -510,8 +554,10 @@ export default function App() {
       {settingsList && (
         <ListSettings
           list={settingsList}
+          households={households}
           onClose={() => setSettingsListId(null)}
           onUpdate={(listId, name) => { updateList(listId, name); }}
+          onMove={(listId, householdId) => { moveList(listId, householdId); }}
           onDelete={handleDeleteList}
         />
       )}

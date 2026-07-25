@@ -91,6 +91,25 @@ export class SharingService {
     return updated.toResponse(member?.role ?? 'owner', household?.name ?? '');
   }
 
+  // Move a list (and, implicitly, all its todos — they reference listId, not
+  // householdId) into another household. Requires manage rights in BOTH the
+  // source and the destination household.
+  async moveList(listId: string, targetHouseholdId: string, userId: string): Promise<TodoListResponse> {
+    const list = await this.findListOrThrow(listId);
+    if (list.householdId === targetHouseholdId) {
+      const household = await this.householdRepo.findById(list.householdId);
+      const member = await this.memberRepo.findByHouseholdAndUser(list.householdId, userId);
+      return list.toResponse(member?.role ?? 'owner', household?.name ?? '');
+    }
+    await this.assertHouseholdPermission(list.householdId, userId, ['owner', 'editor']);
+    await this.assertHouseholdPermission(targetHouseholdId, userId, ['owner', 'editor']);
+    const target = await this.findHouseholdOrThrow(targetHouseholdId);
+    const moved = list.moveToHousehold(target.id);
+    await this.listRepo.update(moved);
+    const member = await this.memberRepo.findByHouseholdAndUser(target.id, userId);
+    return moved.toResponse(member?.role ?? 'owner', target.name);
+  }
+
   async deleteList(listId: string, userId: string): Promise<void> {
     const list = await this.findListOrThrow(listId);
     if (list.isDefault) {

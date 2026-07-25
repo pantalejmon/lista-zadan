@@ -48,6 +48,10 @@ export class TodoList {
     return new TodoList(this.id, name, this.ownerId, this.householdId, this.isDefault, this.createdAt);
   }
 
+  moveToHousehold(householdId: string): TodoList {
+    return new TodoList(this.id, this.name, this.ownerId, householdId, this.isDefault, this.createdAt);
+  }
+
   toResponse(role: ListRole, householdName: string): TodoListResponse {
     return {
       id: this.id,

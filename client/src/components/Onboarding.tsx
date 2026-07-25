@@ -45,7 +45,7 @@ export function Onboarding({ user, invitations, onCreate, onAccept }: Onboarding
   const hasInvites = invitations.length > 0;
 
   return (
-    <div className="min-h-dvh flex items-center justify-center px-4 py-10 bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-[100svh] flex items-center justify-center px-4 py-10 bg-gray-50 dark:bg-gray-950">
       <div className="w-full max-w-md">
         {/* Brand */}
         <div className="flex flex-col items-center text-center mb-6">

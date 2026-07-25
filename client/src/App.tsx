@@ -390,7 +390,7 @@ export default function App() {
   // `overflow-x-clip`, nie `-hidden`: hidden robi z tego kontenera scroll container
   // i psuje `position: sticky` w środku (belka i pasek boczny odjeżdżałyby z treścią).
   return (
-    <div className="min-h-dvh md:flex overflow-x-clip">
+    <div className="min-h-[100svh] md:flex overflow-x-clip">
       {/* Left main navigation */}
       <AppSidebar
         section={section}
@@ -418,7 +418,7 @@ export default function App() {
       />
 
       {/* Content column */}
-      <div className="flex-1 min-w-0 flex flex-col min-h-dvh">
+      <div className="flex-1 min-w-0 flex flex-col min-h-[100svh]">
       {/* Górna belka — jak w apce mobilnej: jeden niski wiersz, przyklejony do
           góry ekranu. Po lewej „gdzie jestem", po prawej kontekst (gospodarstwo),
           środek zostaje pusty, żeby belka oddychała. Padding u góry bierze pod

@@ -8,6 +8,8 @@ import { MealModule } from '../meal/meal.module';
 import { MealService } from '../meal/domain/meal.service';
 import { HomeModule } from '../home/home.module';
 import { HomeService } from '../home/domain/home.service';
+import { FinanceModule } from '../finance/finance.module';
+import { FinanceService } from '../finance/domain/finance.service';
 import { ApiTokenModule } from '../api-token/api-token.module';
 import { McpService } from './domain/mcp.service';
 import { McpController } from './web/mcp.controller';
@@ -15,9 +17,10 @@ import { buildTodoTools } from './domain/tools/todo.tools';
 import { buildMealTools } from './domain/tools/meal.tools';
 import { buildHouseholdTools } from './domain/tools/household.tools';
 import { buildHomeTools } from './domain/tools/home.tools';
+import { buildFinanceTools } from './domain/tools/finance.tools';
 
 @Module({
-  imports: [AuthModule, TodoModule, SharingModule, MealModule, HomeModule, ApiTokenModule],
+  imports: [AuthModule, TodoModule, SharingModule, MealModule, HomeModule, FinanceModule, ApiTokenModule],
   controllers: [McpController],
   providers: [
     {
@@ -27,14 +30,16 @@ import { buildHomeTools } from './domain/tools/home.tools';
         sharingService: SharingService,
         mealService: MealService,
         homeService: HomeService,
+        financeService: FinanceService,
       ) =>
         new McpService([
           ...buildTodoTools(todoService, sharingService),
           ...buildMealTools(mealService),
           ...buildHouseholdTools(sharingService, mealService, todoService),
           ...buildHomeTools(homeService),
+          ...buildFinanceTools(financeService),
         ]),
-      inject: [TodoService, SharingService, MealService, HomeService],
+      inject: [TodoService, SharingService, MealService, HomeService, FinanceService],
     },
   ],
 })

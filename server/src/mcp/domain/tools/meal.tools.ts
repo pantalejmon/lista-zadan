@@ -221,6 +221,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         properties: {
           ...householdProp,
           title: { type: 'string', description: 'Tytuł przepisu' },
+          category: { type: 'string', description: 'Kategoria (np. Śniadanie, Zupa, Deser)' },
           instructions: { type: 'string', description: 'Sposób przygotowania' },
           description: { type: 'string', description: 'Krótki opis (opcjonalnie)' },
           ingredients: { type: 'array', description: 'Składniki', items: ingredientSchema },
@@ -243,6 +244,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         properties: {
           recipeId: { type: 'string', description: 'ID przepisu' },
           title: { type: 'string', description: 'Tytuł' },
+          category: { type: 'string', description: 'Kategoria (np. Śniadanie, Zupa, Deser)' },
           instructions: { type: 'string', description: 'Sposób przygotowania' },
           description: { type: 'string', description: 'Opis (opcjonalnie)' },
           ingredients: { type: 'array', description: 'Składniki', items: ingredientSchema },
@@ -492,6 +494,10 @@ function buildRecipeDto(args: Record<string, unknown>): CreateRecipeDto {
   const dto = new CreateRecipeDto();
   dto.title = requireStringArg(args, 'title');
   dto.instructions = requireStringArg(args, 'instructions');
+  const category = stringArg(args, 'category');
+  if (category) {
+    dto.category = category;
+  }
   const description = stringArg(args, 'description');
   if (description) {
     dto.description = description;

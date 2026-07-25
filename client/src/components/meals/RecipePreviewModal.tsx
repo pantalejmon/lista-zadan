@@ -26,6 +26,11 @@ export function RecipePreviewModal({ recipe, onClose }: { recipe: Recipe; onClos
         </div>
 
         <div className="p-4 overflow-y-auto flex-1">
+          {recipe.category && (
+            <span className="inline-block mb-3 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400">
+              {recipe.category}
+            </span>
+          )}
           {recipe.description && (
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{recipe.description}</p>
           )}

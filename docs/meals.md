@@ -60,6 +60,16 @@ jest przekazywany end-to-end: `GET /meals/needs` i `POST /meals/shopping/generat
 `?days=0,2,4`, a narzędzia MCP `what_is_missing` / `generate_shopping_from_plan` — pole `days`.
 Zmiana jest **zdublowana** w `client/src/lib/meals.ts` (offline) i `meal.service.ts` (cloud).
 
+## Kategorie, wyszukiwanie i grupowanie
+
+Zarówno **produkty** (`Product.category`), jak i **przepisy** (`Recipe.category`, dodane migracją
+`AddRecipeCategory`) mają dowolne, tekstowe kategorie (podpowiedzi: `PRODUCT_CATEGORIES` /
+`RECIPE_CATEGORIES` w `client/src/lib/meals.ts`). W UI listy Produktów i Przepisów są
+**pogrupowane po kategoriach** (helpery `groupByCategory` / `presentCategories`), z wyszukiwarką
+i przewijalnymi chipami kategorii (`CategoryFilter`) — ergonomicznie na telefonie. Kategoria
+przepisu jest częścią modelu i przechodzi przez REST oraz narzędzia MCP `create_recipe` /
+`update_recipe` (pole `category`).
+
 ## Pętle domykające (loop closers)
 
 Domykają obieg **planer → spiżarnia → zakupy → spiżarnia**, żeby stan spiżarni sam

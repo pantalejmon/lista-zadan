@@ -37,6 +37,7 @@ import { AddHomeProvidersRenovations1764115200000 } from './migration/1764115200
 import { AddFinanceTables1764201600000 } from './migration/1764201600000-AddFinanceTables';
 import { AddSettingsToUser1764288000000 } from './migration/1764288000000-AddSettingsToUser';
 import { AddOAuthTables1764374400000 } from './migration/1764374400000-AddOAuthTables';
+import { AddRecipeCategory1764460800000 } from './migration/1764460800000-AddRecipeCategory';
 import configuration from './config/configuration';
 
 @Module({
@@ -76,6 +77,7 @@ import configuration from './config/configuration';
           AddFinanceTables1764201600000,
           AddSettingsToUser1764288000000,
           AddOAuthTables1764374400000,
+          AddRecipeCategory1764460800000,
         ],
       }),
     }),

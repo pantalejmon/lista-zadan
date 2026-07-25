@@ -6,6 +6,7 @@ import { RecipeIngredientDto } from '../web/dto/recipe-ingredient.dto';
 export interface RecipeResponse {
   id: string;
   title: string;
+  category?: string;
   description?: string;
   instructions: string;
   recipeIngredients: RecipeIngredient[];
@@ -18,6 +19,7 @@ export class Recipe {
     readonly id: string,
     readonly householdId: string,
     readonly title: string,
+    readonly category: string | null,
     readonly description: string | null,
     readonly instructions: string,
     readonly recipeIngredients: RecipeIngredient[],
@@ -31,6 +33,7 @@ export class Recipe {
       randomUUID(),
       householdId,
       dto.title.trim(),
+      dto.category?.trim() ? dto.category.trim() : null,
       dto.description?.trim() ? dto.description.trim() : null,
       dto.instructions.trim(),
       normaliseIngredients(dto.recipeIngredients),
@@ -44,6 +47,7 @@ export class Recipe {
       this.id,
       this.householdId,
       dto.title.trim(),
+      dto.category?.trim() ? dto.category.trim() : null,
       dto.description?.trim() ? dto.description.trim() : null,
       dto.instructions.trim(),
       normaliseIngredients(dto.recipeIngredients),
@@ -56,6 +60,7 @@ export class Recipe {
     return {
       id: this.id,
       title: this.title,
+      category: this.category ?? undefined,
       description: this.description ?? undefined,
       instructions: this.instructions,
       recipeIngredients: this.recipeIngredients,

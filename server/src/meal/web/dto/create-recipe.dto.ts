@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, ValidateNested, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RecipeIngredientDto } from './recipe-ingredient.dto';
 
@@ -6,6 +6,11 @@ export class CreateRecipeDto {
   @IsString()
   @IsNotEmpty()
   title!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  category?: string;
 
   @IsOptional()
   @IsString()

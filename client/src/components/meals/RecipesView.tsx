@@ -1,10 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
-import type {
-  MealStorage,
-  Recipe,
-  RecipeIngredient,
-  Product,
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  RECIPE_CATEGORIES,
+  UNCATEGORISED,
+  presentCategories,
+  groupByCategory,
+  type MealStorage,
+  type Recipe,
+  type RecipeIngredient,
+  type Product,
 } from '../../lib/meals';
+import { CategoryFilter } from './CategoryFilter';
 import { IngredientAutocomplete } from './IngredientAutocomplete';
 import { IconPlus, IconTrash, IconPencil, IconBack, IconClose, IconBook } from './icons';
 
@@ -52,6 +57,7 @@ function RecipeList({ storage, liveKey, onOpen, onNew }: { storage: MealStorage;
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [activeCat, setActiveCat] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setRecipes(await storage.getRecipes());
@@ -65,10 +71,18 @@ function RecipeList({ storage, liveKey, onOpen, onNew }: { storage: MealStorage;
     load();
   };
 
-  const q = search.trim().toLowerCase();
-  const displayed = q
-    ? recipes.filter((r) => r.title.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q))
-    : recipes;
+  const categories = useMemo(() => presentCategories(recipes, (r) => r.category, RECIPE_CATEGORIES), [recipes]);
+  const groups = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = recipes.filter((r) => {
+      const matchesText =
+        !q || r.title.toLowerCase().includes(q) || (r.description ?? '').toLowerCase().includes(q) || (r.category ?? '').toLowerCase().includes(q);
+      const matchesCat = !activeCat || (r.category?.trim() || UNCATEGORISED) === activeCat;
+      return matchesText && matchesCat;
+    });
+    return groupByCategory(filtered, (r) => r.category, RECIPE_CATEGORIES);
+  }, [recipes, search, activeCat]);
+  const visibleCount = useMemo(() => groups.reduce((n, g) => n + g.items.length, 0), [groups]);
 
   return (
     <div className="max-w-2xl mx-auto w-full px-4 py-6">
@@ -83,61 +97,77 @@ function RecipeList({ storage, liveKey, onOpen, onNew }: { storage: MealStorage;
         </button>
       </div>
 
-      <input
-        type="search"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Szukaj przepisu..."
-        className="w-full mb-4 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-      />
+      {!loading && recipes.length > 0 && (
+        <CategoryFilter
+          search={search}
+          onSearch={setSearch}
+          placeholder="Szukaj przepisu..."
+          categories={categories}
+          active={activeCat}
+          onSelect={setActiveCat}
+        />
+      )}
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />)}
         </div>
-      ) : displayed.length === 0 ? (
+      ) : recipes.length === 0 ? (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           <IconBook className="w-10 h-10 mx-auto mb-3 opacity-60" />
-          <p>{recipes.length === 0 ? 'Nie masz jeszcze przepisów.' : 'Brak wyników.'}</p>
-          {recipes.length === 0 && <p className="text-sm mt-1">Dodaj pierwszy przepis, aby zaplanować posiłki.</p>}
+          <p>Nie masz jeszcze przepisów.</p>
+          <p className="text-sm mt-1">Dodaj pierwszy przepis, aby zaplanować posiłki.</p>
+        </div>
+      ) : visibleCount === 0 ? (
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+          <p>Brak wyników.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {displayed.map((recipe) => (
-            <li
-              key={recipe.id}
-              className="group bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all p-4 flex items-start justify-between gap-3"
-            >
-              <button onClick={() => onOpen(recipe.id)} className="flex-1 min-w-0 text-left">
-                <span className="font-semibold hover:text-primary-600 dark:hover:text-primary-400 block truncate">
-                  {recipe.title}
-                </span>
-                {recipe.description && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{recipe.description}</p>
-                )}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  {recipe.recipeIngredients.length} składników
-                </p>
-              </button>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => onOpen(recipe.id)}
-                  className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
-                  aria-label="Edytuj"
-                >
-                  <IconPencil className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(recipe.id)}
-                  className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
-                  aria-label="Usuń"
-                >
-                  <IconTrash className="w-4 h-4" />
-                </button>
-              </div>
-            </li>
+        <div className="space-y-5">
+          {groups.map((group) => (
+            <section key={group.category}>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2 px-1">
+                {group.category} <span className="text-gray-300 dark:text-gray-600">· {group.items.length}</span>
+              </h2>
+              <ul className="space-y-3">
+                {group.items.map((recipe) => (
+                  <li
+                    key={recipe.id}
+                    className="group bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all p-4 flex items-start justify-between gap-3"
+                  >
+                    <button onClick={() => onOpen(recipe.id)} className="flex-1 min-w-0 text-left">
+                      <span className="font-semibold hover:text-primary-600 dark:hover:text-primary-400 block truncate">
+                        {recipe.title}
+                      </span>
+                      {recipe.description && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{recipe.description}</p>
+                      )}
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        {recipe.recipeIngredients.length} składników
+                      </p>
+                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => onOpen(recipe.id)}
+                        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
+                        aria-label="Edytuj"
+                      >
+                        <IconPencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(recipe.id)}
+                        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+                        aria-label="Usuń"
+                      >
+                        <IconTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
@@ -164,7 +194,14 @@ function RecipeDetail({ storage, id, onBack, onEdit }: { storage: MealStorage; i
       </button>
 
       <div className="flex items-start justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold">{recipe.title}</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold">{recipe.title}</h1>
+          {recipe.category && (
+            <span className="inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400">
+              {recipe.category}
+            </span>
+          )}
+        </div>
         <button onClick={onEdit} className="shrink-0 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100">
           <IconPencil className="w-4 h-4" /> Edytuj
         </button>
@@ -207,6 +244,7 @@ interface IngredientRow {
 function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; id?: string; onDone: (id?: string) => void; onCancel: () => void }) {
   const isEdit = Boolean(id);
   const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
   const [rows, setRows] = useState<IngredientRow[]>([{ product: null, quantity: '', unit: '' }]);
@@ -221,6 +259,7 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
         return;
       }
       setTitle(existing.title);
+      setCategory(existing.category ?? '');
       setDescription(existing.description ?? '');
       setInstructions(existing.instructions);
       if (existing.recipeIngredients.length > 0) {
@@ -248,7 +287,7 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
         quantity: parseFloat(r.quantity) || 0,
         unit: r.unit.trim(),
       }));
-    const input = { title, description, instructions, recipeIngredients };
+    const input = { title, category: category.trim() || undefined, description, instructions, recipeIngredients };
     const saved = isEdit ? await storage.updateRecipe(id!, input) : await storage.createRecipe(input);
     setSaving(false);
     onDone(saved.id);
@@ -267,6 +306,21 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
             onChange={(e) => setTitle(e.target.value)}
             className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
+        </div>
+
+        <div>
+          <label htmlFor="recipe-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategoria</label>
+          <input
+            id="recipe-category"
+            list="recipe-categories"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="np. Śniadanie, Zupa, Deser"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <datalist id="recipe-categories">
+            {RECIPE_CATEGORIES.map((c) => <option key={c} value={c} />)}
+          </datalist>
         </div>
 
         <div>

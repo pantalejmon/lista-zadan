@@ -26,6 +26,21 @@ export class AuthService {
     return this.userRepository.findById(payload.sub);
   }
 
+  // Resolves the logged-in user from a session cookie, or null when there is no
+  // valid session. Used by flows (OAuth authorize) that must fall back to login
+  // rather than reject with 401 when the caller is unauthenticated.
+  async userFromSession(cookieToken: string | undefined): Promise<User | null> {
+    if (!cookieToken) {
+      return null;
+    }
+    try {
+      const payload = this.jwtService.verify<{ sub: string }>(cookieToken);
+      return await this.userRepository.findById(payload.sub);
+    } catch {
+      return null;
+    }
+  }
+
   async findUserById(id: string): Promise<User | null> {
     return this.userRepository.findById(id);
   }

@@ -11,6 +11,7 @@ import { MealModule } from './meal/meal.module';
 import { HomeModule } from './home/home.module';
 import { FinanceModule } from './finance/finance.module';
 import { ApiTokenModule } from './api-token/api-token.module';
+import { OAuthModule } from './oauth/oauth.module';
 import { McpModule } from './mcp/mcp.module';
 import { ChatModule } from './chat/chat.module';
 import { PushModule } from './push/push.module';
@@ -35,6 +36,7 @@ import { AddApiTokenTable1764028800000 } from './migration/1764028800000-AddApiT
 import { AddHomeProvidersRenovations1764115200000 } from './migration/1764115200000-AddHomeProvidersRenovations';
 import { AddFinanceTables1764201600000 } from './migration/1764201600000-AddFinanceTables';
 import { AddSettingsToUser1764288000000 } from './migration/1764288000000-AddSettingsToUser';
+import { AddOAuthTables1764374400000 } from './migration/1764374400000-AddOAuthTables';
 import configuration from './config/configuration';
 
 @Module({
@@ -73,6 +75,7 @@ import configuration from './config/configuration';
           AddHomeProvidersRenovations1764115200000,
           AddFinanceTables1764201600000,
           AddSettingsToUser1764288000000,
+          AddOAuthTables1764374400000,
         ],
       }),
     }),
@@ -87,6 +90,7 @@ import configuration from './config/configuration';
     HomeModule,
     FinanceModule,
     ApiTokenModule,
+    OAuthModule,
     McpModule,
     ChatModule,
     PushModule,

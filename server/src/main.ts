@@ -1,14 +1,26 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
-  app.setGlobalPrefix('api');
+  // Honour X-Forwarded-* from the reverse proxy so req.protocol/host (and the OAuth
+  // issuer derived from them) reflect the public URL, not the internal one.
+  app.set('trust proxy', 1);
+
+  // OAuth discovery documents must sit at the domain root, outside the `api` prefix.
+  app.setGlobalPrefix('api', {
+    exclude: [
+      { path: '.well-known/oauth-authorization-server', method: RequestMethod.GET },
+      { path: '.well-known/oauth-protected-resource', method: RequestMethod.GET },
+      { path: '.well-known/oauth-protected-resource/api/mcp', method: RequestMethod.GET },
+    ],
+  });
 
   app.use(cookieParser());
 

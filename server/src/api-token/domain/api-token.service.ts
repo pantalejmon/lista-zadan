@@ -33,6 +33,22 @@ export class ApiTokenService {
     return { ...model.toResponse(), token: secret };
   }
 
+  // Mints an access token on behalf of the OAuth authorization flow. Scopes are
+  // already validated (they came from the consented authorization request); the
+  // token is not bound to a household (like an interactive session, it can reach
+  // every household the user belongs to, gated per-tool at call time).
+  async issueOAuthToken(
+    userId: string,
+    name: string,
+    scopes: ApiScope[],
+    expiresInDays: number,
+  ): Promise<ApiTokenCreated> {
+    const expiresAt = this.resolveExpiry(expiresInDays);
+    const { model, secret } = ApiToken.issue(userId, name, scopes, null, expiresAt);
+    await this.repo.save(model);
+    return { ...model.toResponse(), token: secret };
+  }
+
   async revokeToken(id: string, userId: string): Promise<void> {
     const token = await this.repo.findById(id);
     if (!token || token.userId !== userId) {

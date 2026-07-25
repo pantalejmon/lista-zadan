@@ -60,7 +60,7 @@ export function ChatView({ isCloud, householdId, householdName, currentUserId, o
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-53px)] min-h-0">
+    <div className="flex flex-col h-[calc(100svh-3rem-env(safe-area-inset-top))] sm:h-[calc(100svh-3.5rem-env(safe-area-inset-top))] min-h-0">
       {/* Header */}
       <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 max-w-2xl mx-auto w-full">
         <span className="text-sm font-semibold truncate">{householdName ?? 'Gospodarstwo'}</span>

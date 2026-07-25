@@ -53,7 +53,7 @@ export function AppSidebar(props: AppSidebarProps) {
   return (
     <>
       {/* Tablet i większe: stały pasek (na tablecie węższy, żeby zostało miejsce na treść) */}
-      <aside className="hidden md:flex md:flex-col w-56 lg:w-64 shrink-0 border-r border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-gray-950/60 h-dvh sticky top-0">
+      <aside className="hidden md:flex md:flex-col w-56 lg:w-64 shrink-0 border-r border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-gray-950/60 h-[100svh] sticky top-0">
         <SidebarContent {...props} />
       </aside>
 

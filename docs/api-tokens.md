@@ -50,10 +50,18 @@ w miejscach, gdzie żądanie wskazuje konkretne gospodarstwo (użyje tego serwer
 | `DELETE` | `/api/tokens/:id`  | sesja | Odwołaj token |
 | `GET`  | `/api/tokens/whoami` | sesja **lub** bearer | Diagnostyka connectora — zwraca tożsamość, `householdId`, `scopes` |
 
+## Tokeny wydawane przez OAuth
+
+Oprócz ręcznie tworzonych tokenów (`POST /api/tokens`) te same tokeny `lz_…` wydaje
+**flow OAuth 2.1** dla konektorów MCP (`ApiTokenService.issueOAuthToken`, patrz `docs/mcp-oauth.md`).
+Taki token: nie jest przypięty do gospodarstwa (`householdId = null`), niesie scope'y z ekranu
+zgody, wygasa po 90 dniach i ma etykietę `MCP: <nazwa-klienta>`. Dla guarda i narzędzi MCP jest
+nieodróżnialny od tokenu ręcznego — odwołuje się go tak samo (`DELETE /api/tokens/:id`).
+
 ## Kolejne kroki (epic #26)
 
-- **#30** — serwer MCP (Streamable HTTP) reużywający serwisów domenowych, chroniony tym guardem + scope'ami.
+- **#30** — serwer MCP (Streamable HTTP) reużywający serwisów domenowych, chroniony tym guardem + scope'ami. ✅
+- **#31** — natywny MCP OAuth 2.1 zamiast wklejania tokenu. ✅ (`docs/mcp-oauth.md`)
 - **#29** — panel administracyjny (UI) do zarządzania tokenami.
 - **#32–#35** — narzędzia MCP per moduł (todo, posiłki, spiżarnia, zakupy/households).
-- **#28 dalej** — rate-limit per token i pełny log audytu (na razie mamy `lastUsedAt`).
-- **#31** — decyzja: statyczne tokeny (MVP, jest) vs natywny MCP OAuth.
+- **#28 dalej** — rate-limit per token i pełny log audytu (na razie mamy `lastUsedAt`); refresh tokeny dla OAuth.

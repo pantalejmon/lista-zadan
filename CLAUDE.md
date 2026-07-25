@@ -34,9 +34,14 @@ doc in the same commit** — the docs are the source of truth for the intent beh
 - `docs/api-tokens.md` — machine tokens for agent/MCP access: `api_token` model (SHA-256 hashed secret,
   scopes, household binding, expiry), the `<module>:<read|write>` scope grammar with `write⇒read`, and the
   `MachineOrJwtAuthGuard` that accepts a session cookie OR a `Bearer lz_…` token and enforces `@RequireScopes`.
-- `docs/mcp-setup.md` — MCP server: JSON-RPC over Streamable HTTP at `POST /api/mcp`, bearer-token auth,
-  the tool registry (`server/src/mcp/domain/tools/`), per-tool scope gating, and how to connect an agent
-  (Cowork). Tools reuse the domain services, so UI permissions apply unchanged.
+- `docs/mcp-setup.md` — MCP server: JSON-RPC over Streamable HTTP at `POST /api/mcp`, OAuth **or**
+  bearer-token auth, the tool registry (`server/src/mcp/domain/tools/`), per-tool scope gating, and how
+  to connect an agent (Cowork). Tools reuse the domain services, so UI permissions apply unchanged.
+- `docs/mcp-oauth.md` — MCP OAuth 2.1 authorization server (`server/src/oauth/`): the app is both
+  Resource Server (`/api/mcp`) and Authorization Server. Dynamic client registration (RFC 7591), PKCE
+  `S256` authorize/consent (reusing Google login), and a token endpoint that mints an ordinary `lz_…`
+  machine token — so the MCP guard and scope gating are unchanged. Discovery docs live at
+  `/.well-known/*` (excluded from the global `api` prefix); the MCP 401 carries `WWW-Authenticate`.
 - `docs/google-oauth-setup.md`, `docs/push-setup.md` — deployment/config guides.
 
 ## Build & Run Commands

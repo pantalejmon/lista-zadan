@@ -34,6 +34,15 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    // An OAuth /authorize request that bounced an unauthenticated user through login
+    // leaves a return path — send them back to finish consent instead of to the app.
+    const oauthReturn = req.cookies?.oauth_return as string | undefined;
+    if (oauthReturn && oauthReturn.startsWith('/api/oauth/authorize')) {
+      res.clearCookie('oauth_return');
+      res.redirect(oauthReturn);
+      return;
+    }
+
     const frontendUrl = this.config.get<string>('cors.origin') || '/';
     res.redirect(frontendUrl);
   }

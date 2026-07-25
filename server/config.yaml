@@ -1,6 +1,13 @@
 server:
   port: 3000
 
+# Public, externally-reachable base URL (scheme + host, no trailing slash), e.g.
+# 'https://lista-zadan.example.com'. Used as the OAuth issuer and to build the MCP
+# discovery documents. Leave empty to derive it from the request (honouring the
+# reverse proxy's X-Forwarded-Proto/Host) — set it explicitly in production.
+app:
+  publicUrl: ''
+
 cors:
   origin: ''
 

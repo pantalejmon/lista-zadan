@@ -7,11 +7,13 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { Request, Response } from 'express';
 import { AuthService } from '../../auth/domain/auth.service';
 import { ApiTokenService } from '../domain/api-token.service';
 import { ApiToken } from '../domain/api-token.model';
 import { scopeSatisfied, type ApiScope } from '../domain/api-scope';
+import { resolvePublicUrl } from '../../common/public-url';
 import { REQUIRE_SCOPES_KEY } from './require-scopes.decorator';
 
 // Request augmented with the machine token, when the caller authenticated with a
@@ -28,16 +30,31 @@ export class MachineOrJwtAuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     private readonly authService: AuthService,
     private readonly apiTokenService: ApiTokenService,
+    private readonly config: ConfigService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<MachineRequest>();
     const header = req.headers.authorization;
 
-    if (header?.startsWith('Bearer ')) {
-      return this.authenticateBearer(req, header.slice('Bearer '.length).trim(), context);
+    try {
+      if (header?.startsWith('Bearer ')) {
+        return await this.authenticateBearer(req, header.slice('Bearer '.length).trim(), context);
+      }
+      return await this.authenticateCookie(req);
+    } catch (e) {
+      // RFC 9728: a protected resource advertises where to authenticate. This is what
+      // turns a bare 401 into a discoverable OAuth flow for MCP connectors.
+      if (e instanceof UnauthorizedException) {
+        const res = context.switchToHttp().getResponse<Response>();
+        const base = resolvePublicUrl(req, this.config.get<string>('app.publicUrl'));
+        res.setHeader(
+          'WWW-Authenticate',
+          `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource"`,
+        );
+      }
+      throw e;
     }
-    return this.authenticateCookie(req);
   }
 
   private async authenticateBearer(req: MachineRequest, raw: string, context: ExecutionContext): Promise<boolean> {

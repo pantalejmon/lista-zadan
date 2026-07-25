@@ -4,11 +4,62 @@ Aplikacja wystawia **serwer MCP** (Model Context Protocol) przez zwykły endpoin
 dzięki czemu agent AI (np. Claude Cowork) może sterować modułami — „zaplanuj tydzień
 posiłków", „dopisz zakupy na listę", „co brakuje w spiżarni" — przez narzędzia, bez klikania w UI.
 
-Uwierzytelnianie odbywa się **tokenem maszynowym** (patrz `docs/api-tokens.md`).
+Endpoint MCP:
 
-## 1. Wygeneruj token
+```
+POST https://TWOJA-DOMENA/api/mcp
+Content-Type: application/json
+```
 
-W aplikacji (zalogowany) wywołaj API tokenów — panel UI powstanie w #29, na razie przez REST:
+Transport: Streamable HTTP (odpowiedzi JSON, bez strumieniowania SSE). Obsługiwane metody
+JSON-RPC 2.0: `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`.
+
+Uwierzytelnianie: **OAuth 2.1** (natywne w konektorze Claude — zalecane) **albo** statyczny
+**token maszynowy** `Authorization: Bearer lz_…` (skrypty, `curl`, testy). Ten sam guard
+(`MachineOrJwtAuthGuard`) akceptuje oba — token wydany przez OAuth to zwykły token `lz_…`,
+więc gating scope'ów i przypięcie do gospodarstwa działają identycznie.
+
+## 1. Podłączenie przez OAuth (Claude Cowork / custom connector) — zalecane
+
+Konektory Claude obsługują tylko **brak autoryzacji** albo **OAuth 2.1** — nie da się
+wkleić statycznego nagłówka `Bearer`. Dlatego serwer jest jednocześnie **serwerem zasobów**
+(endpoint `/api/mcp`) i **serwerem autoryzacji** OAuth 2.1: rejestruje klienta dynamicznie
+(RFC 7591), autoryzuje użytkownika przez istniejące logowanie Google, a na końcu wydaje
+token dostępowy `lz_…` w przeglądarce (zamiast ręcznego wklejania).
+
+Kroki w Claude:
+
+1. **Ustawienia → Connectors → „+" → Add custom connector**.
+2. W polu adresu wklej `https://TWOJA-DOMENA/api/mcp`.
+3. Zatwierdź. Claude sam wykryje autoryzację (endpoint zwraca `401` z nagłówkiem
+   `WWW-Authenticate` wskazującym metadane), zarejestruje się i otworzy okno logowania.
+4. Zaloguj się (Google) i na ekranie zgody kliknij **Zezwól** — Claude dostanie token i
+   połączy narzędzia.
+
+Co dzieje się „pod maską" (endpointy discovery — przydatne przy diagnostyce):
+
+| Dokument / endpoint | Ścieżka | Rola |
+|---------------------|---------|------|
+| Protected Resource Metadata (RFC 9728) | `/.well-known/oauth-protected-resource` (oraz `…/api/mcp`) | wskazuje serwer autoryzacji dla zasobu `/api/mcp` |
+| Authorization Server Metadata (RFC 8414) | `/.well-known/oauth-authorization-server` | adresy `authorize` / `token` / `register`, PKCE `S256` |
+| Dynamic Client Registration (RFC 7591) | `POST /api/oauth/register` | klient publiczny (PKCE, bez sekretu) |
+| Authorize | `GET /api/oauth/authorize` | logowanie + ekran zgody, zwraca kod |
+| Token | `POST /api/oauth/token` | wymiana kodu + PKCE na token `lz_…` |
+
+Szczegóły:
+- Wymagane **PKCE `S256`** oraz `redirect_uri` z allowlisty klienta (`https` lub loopback).
+- Zakres (`scope`) z żądania decyduje o nadanych uprawnieniach; bez `scope` nadawane są
+  wszystkie scope'y MCP. Token OAuth **nie** jest przypięty do gospodarstwa (jak sesja
+  człowieka — sięga po gospodarstwa użytkownika, egzekwowane per narzędzie).
+- Token dostępowy wygasa po **90 dniach**; brak refresh tokenów — po wygaśnięciu Claude
+  ponawia autoryzację. Odwołasz go jak każdy inny: `DELETE /api/tokens/:id` (etykieta `MCP: <klient>`).
+- **`app.publicUrl`** w konfiguracji musi wskazywać publiczny adres (schemat + host), bo z niego
+  budowany jest `issuer` i dokumenty discovery. Puste = wyliczane z żądania (z `X-Forwarded-*`).
+
+## 2. Podłączenie statycznym tokenem (skrypty, `curl`)
+
+Do skryptów i testów wygeneruj token maszynowy i podawaj go w nagłówku (panel UI powstanie w #29,
+na razie przez REST):
 
 ```bash
 curl -X POST https://TWOJA-DOMENA/api/tokens \
@@ -25,17 +76,6 @@ curl -X POST https://TWOJA-DOMENA/api/tokens \
 Odpowiedź zawiera pole `token` (`lz_…`) — **pokazywane tylko raz**, skopiuj je. Wskazówki:
 - `householdId` przypina token do jednego gospodarstwa (narzędzia posiłków nie wymagają wtedy podawania gospodarstwa i nie dotkną innego).
 - dobierz najwęższy zestaw scope'ów jakiego agent potrzebuje.
-
-## 2. Endpoint MCP
-
-```
-POST https://TWOJA-DOMENA/api/mcp
-Authorization: Bearer lz_...
-Content-Type: application/json
-```
-
-Transport: Streamable HTTP (odpowiedzi JSON, bez strumieniowania SSE). Obsługiwane metody
-JSON-RPC 2.0: `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`.
 
 Szybki test połączenia:
 
@@ -79,8 +119,10 @@ wymagające kilku uprawnień (np. eksport: `meals:read` + `todo:write`) egzekwuj
 
 ## 5. Bezpieczeństwo
 
-- Token = hasło. Trzymaj w sekretach connectora, nie w repo.
-- Odwołaj natychmiast, gdy wyciekł: `DELETE /api/tokens/:id` (sesja).
-- Token widzi tylko wskazane gospodarstwo i tylko nadane scope'y; `write` implikuje `read`.
+- OAuth: dostęp nadaje **sam użytkownik** na ekranie zgody (Google + PKCE), token nigdy nie
+  jest wklejany ręcznie ani nie krąży poza przeglądarką. To domyślna, właściwa droga (#31).
+- Statyczny token = hasło. Trzymaj w sekretach connectora, nie w repo.
+- Odwołaj natychmiast, gdy wyciekł: `DELETE /api/tokens/:id` (sesja) — dotyczy też tokenów OAuth.
+- Token widzi tylko wskazane gospodarstwo (statyczny) i tylko nadane scope'y; `write` implikuje `read`.
 - Planowane (epic #26): rate-limit per token i pełny log audytu wywołań (#28), panel UI (#29),
-  natywny MCP OAuth zamiast wklejania tokenu (#31), narzędzia spiżarni/serwisu domu (#34, #46).
+  refresh tokeny dla OAuth, narzędzia spiżarni/serwisu domu (#34, #46).

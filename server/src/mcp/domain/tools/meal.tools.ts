@@ -5,6 +5,7 @@ import { MealParticipantDto } from '../../../meal/web/dto/meal-participant.dto';
 import { AdjustEntryDto } from '../../../meal/web/dto/adjust-entry.dto';
 import { IngredientOverrideDto } from '../../../meal/web/dto/ingredient-override.dto';
 import { CustomMealDto } from '../../../meal/web/dto/custom-meal.dto';
+import { SetNutritionGoalDto } from '../../../meal/web/dto/set-nutrition-goal.dto';
 import { CreateRecipeDto } from '../../../meal/web/dto/create-recipe.dto';
 import { RecipeIngredientDto } from '../../../meal/web/dto/recipe-ingredient.dto';
 import { CreateEntryDto } from '../../../meal/web/dto/create-entry.dto';
@@ -75,6 +76,73 @@ export function buildMealTools(mealService: MealService): McpTool[] {
       handler: async (args, ctx) => {
         const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
         return mealService.computeNeeds(householdId, ctx.userId, stringArg(args, 'week') ?? currentMonday(), parseDays(args));
+      },
+    },
+    {
+      name: 'get_nutrition_balance',
+      description:
+        'Zwraca bilans odżywczy domowników na tydzień: dziennie i łącznie, z rozbiciem na posiłki oraz celem ' +
+        'każdego domownika. Opcjonalnie week (poniedziałek YYYY-MM-DD; domyślnie bieżący) i onlyCooked ' +
+        '(domyślnie false = liczone są posiłki zaplanowane, nie tylko odhaczone). Posiłki bez przypisanych ' +
+        'domowników nie wchodzą do bilansu.',
+      requiredScopes: ['meals:read'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          ...householdProp,
+          week: { type: 'string', description: 'Poniedziałek tygodnia YYYY-MM-DD' },
+          onlyCooked: { type: 'boolean', description: 'Tylko posiłki odhaczone jako ugotowane' },
+        },
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
+        return mealService.getNutritionBalance(
+          householdId,
+          ctx.userId,
+          stringArg(args, 'week') ?? currentMonday(),
+          boolArg(args, 'onlyCooked') ?? false,
+        );
+      },
+    },
+    {
+      name: 'get_nutrition_goals',
+      description: 'Zwraca dzienne cele odżywcze domowników (kcal, białko, tłuszcz, węglowodany).',
+      requiredScopes: ['meals:read'],
+      inputSchema: { type: 'object', properties: { ...householdProp }, additionalProperties: false },
+      handler: async (args, ctx) => {
+        const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
+        return mealService.getNutritionGoals(householdId, ctx.userId);
+      },
+    },
+    {
+      name: 'set_nutrition_goal',
+      description:
+        'Ustawia dzienny cel odżywczy domownika. Wymaga userId (z list_household_members), kcal, protein, ' +
+        'fat i carbs. Nadpisuje poprzedni cel tej osoby.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          ...householdProp,
+          userId: { type: 'string', description: 'ID domownika' },
+          kcal: { type: 'number', description: 'Cel dzienny: energia (kcal)' },
+          protein: { type: 'number', description: 'Cel dzienny: białko (g)' },
+          fat: { type: 'number', description: 'Cel dzienny: tłuszcz (g)' },
+          carbs: { type: 'number', description: 'Cel dzienny: węglowodany (g)' },
+        },
+        required: ['userId', 'kcal', 'protein', 'fat', 'carbs'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
+        const dto = new SetNutritionGoalDto();
+        dto.userId = requireStringArg(args, 'userId');
+        dto.kcal = requireNumberArg(args, 'kcal');
+        dto.protein = requireNumberArg(args, 'protein');
+        dto.fat = requireNumberArg(args, 'fat');
+        dto.carbs = requireNumberArg(args, 'carbs');
+        return mealService.setNutritionGoal(householdId, ctx.userId, dto);
       },
     },
     {

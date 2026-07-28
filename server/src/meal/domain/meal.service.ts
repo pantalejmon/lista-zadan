@@ -11,9 +11,11 @@ import { ProductRepositoryPort } from './product.repository.port';
 import { Product, type ProductResponse } from './product.model';
 import { PantryItemRepositoryPort } from './pantry-item.repository.port';
 import { PantryItem, type PantryItemResponse } from './pantry-item.model';
-import { computeRecipeNutrition, type RecipeNutrition } from './nutrition';
+import { computeRecipeNutrition, scaleNutrition, type Nutrition, type RecipeNutrition } from './nutrition';
+import { NutritionGoal, type NutritionGoalResponse } from './nutrition-goal.model';
+import { NutritionGoalRepositoryPort } from './nutrition-goal.repository.port';
 import { effectiveIngredients } from './effective-ingredients';
-import type { RecipeIngredient } from './recipe-ingredient';
+import type { MealType, RecipeIngredient } from './recipe-ingredient';
 import { MealParticipant } from './meal-participant';
 import { MealGateway } from '../web/meal.gateway';
 import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
@@ -21,6 +23,7 @@ import { CreateEntryDto } from '../web/dto/create-entry.dto';
 import { CreateProductDto } from '../web/dto/create-product.dto';
 import { AdjustEntryDto } from '../web/dto/adjust-entry.dto';
 import { RecipeIngredientDto } from '../web/dto/recipe-ingredient.dto';
+import { SetNutritionGoalDto } from '../web/dto/set-nutrition-goal.dto';
 
 const WRITE_ROLES: ListRole[] = ['owner', 'editor'];
 const READ_ROLES: ListRole[] = ['owner', 'editor', 'viewer'];
@@ -30,6 +33,40 @@ export interface PlannerEntryResponse extends MealEntryResponse {
   // Makro tego konkretnego posiłku (po korektach w slocie). `recipe.nutrition`
   // opisuje sam przepis i nie zna korekt.
   nutrition: RecipeNutrition | null;
+}
+
+export interface MealShareResponse {
+  entryId: string;
+  mealType: MealType;
+  title: string;
+  portions: number;
+  nutrition: Nutrition;
+  // `false`, gdy część składników tego posiłku nie dała się policzyć.
+  complete: boolean;
+}
+
+export interface DayBalanceResponse {
+  dayOfWeek: number;
+  date: string;
+  nutrition: Nutrition;
+  meals: MealShareResponse[];
+  // Ile posiłków tego dnia policzono tylko częściowo — UI musi to pokazać,
+  // inaczej suma wygląda na pewnik.
+  incompleteMeals: number;
+}
+
+export interface MemberBalanceResponse {
+  userId: string;
+  displayName: string;
+  goal: NutritionGoalResponse | null;
+  days: DayBalanceResponse[];
+  weekTotal: Nutrition;
+}
+
+export interface NutritionBalanceResponse {
+  weekStart: string;
+  onlyCooked: boolean;
+  members: MemberBalanceResponse[];
 }
 
 export interface NeedResponse {
@@ -51,6 +88,7 @@ export class MealService {
     private readonly shoppingRepo: MealShoppingItemRepositoryPort,
     private readonly productRepo: ProductRepositoryPort,
     private readonly pantryRepo: PantryItemRepositoryPort,
+    private readonly goalRepo: NutritionGoalRepositoryPort,
     private readonly sharingService: SharingService,
     private readonly gateway: MealGateway,
   ) {}
@@ -331,6 +369,112 @@ export class MealService {
     await this.entryRepo.update(updated);
     this.gateway.notifyChanged(entry.householdId);
     return updated.toResponse();
+  }
+
+  // ---- bilans odżywczy ----
+
+  async getNutritionGoals(householdId: string, userId: string): Promise<NutritionGoalResponse[]> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
+    const goals = await this.goalRepo.findByHousehold(householdId);
+    return goals.map((g) => g.toResponse());
+  }
+
+  async setNutritionGoal(
+    householdId: string,
+    userId: string,
+    dto: SetNutritionGoalDto,
+  ): Promise<NutritionGoalResponse> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
+    const members = await this.sharingService.getHouseholdMembers(householdId, userId);
+    if (!members.some((m) => m.userId === dto.userId)) {
+      throw new BadRequestException(`User ${dto.userId} is not a member of this household`);
+    }
+    const target = { kcal: dto.kcal, protein: dto.protein, fat: dto.fat, carbs: dto.carbs };
+    const existing = await this.goalRepo.findByHouseholdAndUser(householdId, dto.userId);
+    const goal = existing ? existing.withTarget(target) : NutritionGoal.create(householdId, dto.userId, target);
+    await this.goalRepo.save(goal);
+    this.gateway.notifyChanged(householdId);
+    return goal.toResponse();
+  }
+
+  // Ile kto zjadł w danym tygodniu. Makro posiłku dzielone jest między domowników
+  // proporcjonalnie do ich porcji:
+  //
+  //   udział domownika = makro na porcję (po korektach ze slotu) × jego porcje
+  //
+  // `onlyCooked` zawęża do posiłków odhaczonych jako ugotowane. Domyślnie liczymy
+  // **zaplanowane**: planer jest planem, więc bilans na przyszły tydzień pokazywałby
+  // same zera.
+  async getNutritionBalance(
+    householdId: string,
+    userId: string,
+    weekStart: string,
+    onlyCooked: boolean,
+  ): Promise<NutritionBalanceResponse> {
+    await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
+    const [entries, products, goals, members] = await Promise.all([
+      this.entryRepo.findByWeek(householdId, weekStart),
+      this.productRepo.findByHousehold(householdId),
+      this.goalRepo.findByHousehold(householdId),
+      this.sharingService.getHouseholdMembers(householdId, userId),
+    ]);
+    const goalByUser = new Map(goals.map((g) => [g.userId, g]));
+    const shares = new Map<string, Map<number, MealShareResponse[]>>();
+
+    for (const entry of entries) {
+      if (entry.participants.length === 0 || (onlyCooked && !entry.cooked)) {
+        continue;
+      }
+      const { recipe, ingredients, servings } = await this.resolveEntry(entry);
+      if (ingredients.length === 0) {
+        continue;
+      }
+      const nutrition = computeRecipeNutrition(ingredients, products, servings);
+      if (nutrition.coverage === 0) {
+        continue;
+      }
+      const title = recipe?.title ?? entry.custom?.title ?? 'Posiłek';
+      for (const participant of entry.participants) {
+        const byDay = shares.get(participant.userId) ?? new Map<number, MealShareResponse[]>();
+        const dayMeals = byDay.get(entry.dayOfWeek) ?? [];
+        dayMeals.push({
+          entryId: entry.id,
+          mealType: entry.mealType,
+          title,
+          portions: participant.portions,
+          nutrition: scaleNutrition(nutrition.perServing, participant.portions),
+          complete: nutrition.coverage === 1,
+        });
+        byDay.set(entry.dayOfWeek, dayMeals);
+        shares.set(participant.userId, byDay);
+      }
+    }
+
+    return {
+      weekStart,
+      onlyCooked,
+      members: members.map((member) => {
+        const byDay = shares.get(member.userId) ?? new Map<number, MealShareResponse[]>();
+        const days: DayBalanceResponse[] = [];
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek += 1) {
+          const meals = byDay.get(dayOfWeek) ?? [];
+          days.push({
+            dayOfWeek,
+            date: addDays(weekStart, dayOfWeek),
+            nutrition: sumNutrition(meals.map((m) => m.nutrition)),
+            meals,
+            incompleteMeals: meals.filter((m) => !m.complete).length,
+          });
+        }
+        return {
+          userId: member.userId,
+          displayName: member.displayName || member.email,
+          goal: goalByUser.get(member.userId)?.toResponse() ?? null,
+          days,
+          weekTotal: sumNutrition(days.map((d) => d.nutrition)),
+        };
+      }),
+    };
   }
 
   // ---- shopping ----
@@ -620,4 +764,38 @@ function normaliseCustomIngredients(ingredients: RecipeIngredientDto[] | undefin
       quantity: typeof i.quantity === 'number' && Number.isFinite(i.quantity) ? i.quantity : 0,
       unit: i.unit?.trim() ?? '',
     }));
+}
+
+function sumNutrition(items: Nutrition[]): Nutrition {
+  const total = items.reduce(
+    (acc, n) => ({
+      kcal: acc.kcal + n.kcal,
+      protein: acc.protein + n.protein,
+      fat: acc.fat + n.fat,
+      carbs: acc.carbs + n.carbs,
+      // Błonnik i sól sumują się tylko z tych posiłków, które je znają — zamiast
+      // udawać zero tam, gdzie produkt po prostu nie podaje wartości.
+      fiber: n.fiber === undefined ? acc.fiber : (acc.fiber ?? 0) + n.fiber,
+      salt: n.salt === undefined ? acc.salt : (acc.salt ?? 0) + n.salt,
+    }),
+    { kcal: 0, protein: 0, fat: 0, carbs: 0 } as Nutrition,
+  );
+  return {
+    kcal: Math.round(total.kcal),
+    protein: round1(total.protein),
+    fat: round1(total.fat),
+    carbs: round1(total.carbs),
+    fiber: total.fiber === undefined ? undefined : round1(total.fiber),
+    salt: total.salt === undefined ? undefined : round1(total.salt),
+  };
+}
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

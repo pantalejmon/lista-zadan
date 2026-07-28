@@ -100,6 +100,7 @@ odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który imp
 
 **Posiłki** (scope `meals:*`, gospodarstwo z tokenu lub argumentu `householdId`):
 - odczyt: `list_recipes`, `get_recipe`, `get_week_plan`, `get_shopping_list`, `what_is_missing`, `list_products`, `get_pantry`,
+- bilans odżywczy: `get_nutrition_balance` (ile kto zjadł w tygodniu), `get_nutrition_goals`, `set_nutrition_goal`,
 - przepisy: `create_recipe`, `update_recipe` (oba przyjmują `servings`), `delete_recipe`,
   `get_recipe_nutrition` (makro przepisu: `total`, `perServing`, `coverage`, `missing`),
 - planer: `plan_meal` (przypisz przepis do dnia/pory, opcjonalnie `participants`),

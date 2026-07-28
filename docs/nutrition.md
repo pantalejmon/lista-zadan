@@ -114,7 +114,38 @@ Tokeny `--macro-*` w `index.css`. Zasady, których trzymamy się przy zmianach:
 - Tożsamość nigdy nie zależy od samego koloru: każdy segment ma kropkę + nazwę
   + wartość w legendzie (która działa też jako wersja tabelaryczna).
 
-## Dalsze etapy
+## Bilans domownika (`getNutritionBalance`)
 
-Bilans per domownik (kto zjadł ile porcji) i cele odżywcze dochodzą w kolejnych krokach
-epiku — ten dokument rośnie razem z nimi.
+Odpowiada na „ile kto dziś zjadł". Liczony **per tydzień** (jak planer), z rozbiciem na dni
+i posiłki.
+
+Udział domownika w posiłku:
+
+```
+makro domownika = perServing(efektywne składniki wpisu) × jego porcje
+```
+
+gdzie `perServing` uwzględnia korekty ze slotu (`docs/meals.md` → „Korekty w slocie"),
+a `porcje` pochodzą z `MealEntry.participants`. Posiłek doraźny liczy się tak samo, przy
+`servings = 1`.
+
+Do bilansu **nie wchodzą**:
+
+- posiłki bez przypisanych domowników (nie wiadomo, komu je policzyć),
+- posiłki, których nie dało się policzyć w ogóle (`coverage = 0`).
+
+**Zaplanowane czy zjedzone?** Domyślnie liczymy **zaplanowane** — planer jest planem, więc
+bilans na przyszły tydzień pokazywałby same zera. Przełącznik `onlyCooked` zawęża do
+posiłków odhaczonych jako ugotowane.
+
+**Pokrycie w bilansie.** Zamiast uśredniać `coverage` (co ukrywałoby, którego posiłku
+dotyczy), każdy dzień niesie `incompleteMeals` — liczbę posiłków policzonych częściowo.
+UI mówi to wprost pod sumą.
+
+### Cele odżywcze
+
+`NutritionGoal` (tabela `meal_nutrition_goal`) trzyma dzienny cel **per gospodarstwo**,
+nie w ustawieniach użytkownika: cel dziecku ustawia rodzic, a ta sama osoba w dwóch
+gospodarstwach może mieć różne ustalenia. Ustawić może każdy z prawem zapisu; cel dotyczy
+członka tego gospodarstwa (walidowane). Domownik bez celu widzi samą sumę — bez paska
+realizacji i bez udawania, że cel wynosi zero.

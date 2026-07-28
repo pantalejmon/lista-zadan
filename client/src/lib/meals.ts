@@ -179,6 +179,47 @@ export interface RecipeInput {
   servings?: number;
 }
 
+// --- Bilans odżywczy ---
+
+export interface NutritionGoal {
+  userId: string;
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+}
+
+export interface MealShare {
+  entryId: string;
+  mealType: MealType;
+  title: string;
+  portions: number;
+  nutrition: Nutrition;
+  complete: boolean;
+}
+
+export interface DayBalance {
+  dayOfWeek: number;
+  date: string;
+  nutrition: Nutrition;
+  meals: MealShare[];
+  incompleteMeals: number;
+}
+
+export interface MemberBalance {
+  userId: string;
+  displayName: string;
+  goal: NutritionGoal | null;
+  days: DayBalance[];
+  weekTotal: Nutrition;
+}
+
+export interface NutritionBalance {
+  weekStart: string;
+  onlyCooked: boolean;
+  members: MemberBalance[];
+}
+
 // --- Week helpers ---
 
 export function getMonday(date: Date): string {
@@ -288,4 +329,6 @@ export interface MealStorage {
   adjustPantryStock(productId: string, delta: number): Promise<void>;
   removePantryItem(id: string): Promise<void>;
   computeNeeds(weekStart: string, days?: number[]): Promise<NeedItem[]>;
+  getNutritionBalance(weekStart: string, onlyCooked: boolean): Promise<NutritionBalance>;
+  setNutritionGoal(goal: NutritionGoal): Promise<void>;
 }

@@ -12,6 +12,8 @@ import type {
   MealParticipant,
   IngredientOverride,
   CustomMeal,
+  NutritionBalance,
+  NutritionGoal,
 } from './meals';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
@@ -158,6 +160,18 @@ export function createCloudMealStorage(householdId: string): MealStorage {
     },
 
     removePantryItem: (id) => request<void>(`/meals/pantry/${id}`, { method: 'DELETE' }),
+
+    getNutritionBalance: (weekStart, onlyCooked) =>
+      request<NutritionBalance>(
+        `/meals/nutrition/balance?householdId=${hh}&week=${weekStart}&onlyCooked=${onlyCooked}`,
+      ),
+
+    setNutritionGoal: async (goal: NutritionGoal) => {
+      await request<unknown>(`/meals/nutrition/goals?householdId=${hh}`, {
+        method: 'PUT',
+        body: JSON.stringify(goal),
+      });
+    },
 
     computeNeeds: (weekStart, days) => {
       const daysParam = days && days.length > 0 ? `&days=${days.join(',')}` : '';

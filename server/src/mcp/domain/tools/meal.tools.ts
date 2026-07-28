@@ -187,7 +187,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     // ---- recipes CRUD ----
     {
       name: 'get_recipe',
-      description: 'Zwraca jeden przepis ze składnikami. Wymaga recipeId.',
+      description:
+        'Zwraca jeden przepis ze składnikami, liczbą porcji i policzonym makro (pole nutrition). Wymaga recipeId.',
       requiredScopes: ['meals:read'],
       inputSchema: {
         type: 'object',
@@ -200,10 +201,28 @@ export function buildMealTools(mealService: MealService): McpTool[] {
       },
     },
     {
+      name: 'get_recipe_nutrition',
+      description:
+        'Zwraca same wartości odżywcze przepisu: total, perServing, coverage (0–1) oraz missing — listę ' +
+        'składników, których nie policzono (brak produktu, brak makro albo nieprzeliczalna jednostka). ' +
+        'Wymaga recipeId.',
+      requiredScopes: ['meals:read'],
+      inputSchema: {
+        type: 'object',
+        properties: { recipeId: { type: 'string', description: 'ID przepisu' } },
+        required: ['recipeId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const recipe = await mealService.getRecipe(requireStringArg(args, 'recipeId'), ctx.userId);
+        return { recipeId: recipe.id, title: recipe.title, servings: recipe.servings, ...recipe.nutrition };
+      },
+    },
+    {
       name: 'create_recipe',
       description:
-        'Tworzy przepis. Wymaga title i instructions. Opcjonalnie description oraz ingredients ' +
-        '(lista {name, quantity?, unit?, ingredientId?}).',
+        'Tworzy przepis. Wymaga title i instructions. Opcjonalnie description, servings (liczba porcji, ' +
+        'domyślnie 1) oraz ingredients (lista {name, quantity?, unit?, ingredientId?}).',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
@@ -213,6 +232,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
           category: { type: 'string', description: 'Kategoria (np. Śniadanie, Zupa, Deser)' },
           instructions: { type: 'string', description: 'Sposób przygotowania' },
           description: { type: 'string', description: 'Krótki opis (opcjonalnie)' },
+          servings: { type: 'integer', minimum: 1, description: 'Na ile porcji jest przepis (domyślnie 1)' },
           ingredients: { type: 'array', description: 'Składniki', items: ingredientSchema },
         },
         required: ['title', 'instructions'],
@@ -226,7 +246,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     {
       name: 'update_recipe',
       description:
-        'Aktualizuje przepis (pełny zestaw pól). Wymaga recipeId, title i instructions. Opcjonalnie description, ingredients.',
+        'Aktualizuje przepis (pełny zestaw pól). Wymaga recipeId, title i instructions. Opcjonalnie ' +
+        'description, servings, ingredients.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
@@ -236,6 +257,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
           category: { type: 'string', description: 'Kategoria (np. Śniadanie, Zupa, Deser)' },
           instructions: { type: 'string', description: 'Sposób przygotowania' },
           description: { type: 'string', description: 'Opis (opcjonalnie)' },
+          servings: { type: 'integer', minimum: 1, description: 'Na ile porcji jest przepis' },
           ingredients: { type: 'array', description: 'Składniki', items: ingredientSchema },
         },
         required: ['recipeId', 'title', 'instructions'],
@@ -529,6 +551,10 @@ function buildRecipeDto(args: Record<string, unknown>): CreateRecipeDto {
   const description = stringArg(args, 'description');
   if (description) {
     dto.description = description;
+  }
+  const servings = numberArg(args, 'servings');
+  if (servings !== undefined) {
+    dto.servings = servings;
   }
   if (Array.isArray(args.ingredients)) {
     dto.recipeIngredients = args.ingredients

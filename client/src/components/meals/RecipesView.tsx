@@ -10,6 +10,7 @@ import {
   type Product,
 } from '../../lib/meals';
 import { CategoryFilter } from './CategoryFilter';
+import { NutritionSummary } from './NutritionSummary';
 import { IngredientAutocomplete } from './IngredientAutocomplete';
 import { IconPlus, IconTrash, IconPencil, IconBack, IconClose, IconBook } from './icons';
 
@@ -144,6 +145,10 @@ function RecipeList({ storage, liveKey, onOpen, onNew }: { storage: MealStorage;
                       )}
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                         {recipe.recipeIngredients.length} składników
+                        {recipe.servings > 1 ? ` · ${recipe.servings} porcje` : ''}
+                        {recipe.nutrition && recipe.nutrition.coverage > 0
+                          ? ` · ${recipe.nutrition.perServing.kcal} kcal/porcja`
+                          : ''}
                       </p>
                     </button>
                     <div className="flex items-center gap-1 shrink-0">
@@ -209,6 +214,12 @@ function RecipeDetail({ storage, id, onBack, onEdit }: { storage: MealStorage; i
 
       {recipe.description && <p className="text-gray-600 dark:text-gray-300 mb-6">{recipe.description}</p>}
 
+      {recipe.nutrition && (
+        <section className="mb-6">
+          <NutritionSummary nutrition={recipe.nutrition} servings={recipe.servings} />
+        </section>
+      )}
+
       {recipe.recipeIngredients.length > 0 && (
         <section className="mb-6">
           <h2 className="text-lg font-semibold mb-2">Składniki</h2>
@@ -247,6 +258,7 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
+  const [servings, setServings] = useState('1');
   const [rows, setRows] = useState<IngredientRow[]>([{ product: null, quantity: '', unit: '' }]);
   const [saving, setSaving] = useState(false);
 
@@ -262,6 +274,7 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
       setCategory(existing.category ?? '');
       setDescription(existing.description ?? '');
       setInstructions(existing.instructions);
+      setServings(String(existing.servings ?? 1));
       if (existing.recipeIngredients.length > 0) {
         setRows(existing.recipeIngredients.map((ri) => ({
           product: { id: ri.ingredientId, name: ri.name, baseUnit: 'szt', trackInPantry: true } as Product,
@@ -287,7 +300,14 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
         quantity: parseFloat(r.quantity) || 0,
         unit: r.unit.trim(),
       }));
-    const input = { title, category: category.trim() || undefined, description, instructions, recipeIngredients };
+    const input = {
+      title,
+      category: category.trim() || undefined,
+      description,
+      instructions,
+      recipeIngredients,
+      servings: Math.max(1, Math.round(parseFloat(servings) || 1)),
+    };
     const saved = isEdit ? await storage.updateRecipe(id!, input) : await storage.createRecipe(input);
     setSaving(false);
     onDone(saved.id);
@@ -321,6 +341,25 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
           <datalist id="recipe-categories">
             {RECIPE_CATEGORIES.map((c) => <option key={c} value={c} />)}
           </datalist>
+        </div>
+
+        <div>
+          <label htmlFor="recipe-servings" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Liczba porcji
+          </label>
+          <input
+            id="recipe-servings"
+            type="number"
+            inputMode="numeric"
+            min="1"
+            step="1"
+            value={servings}
+            onChange={(e) => setServings(e.target.value)}
+            className="w-28 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Dzielnik dla wartości odżywczych „na porcję".
+          </p>
         </div>
 
         <div>

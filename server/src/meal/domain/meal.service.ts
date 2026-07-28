@@ -11,6 +11,7 @@ import { ProductRepositoryPort } from './product.repository.port';
 import { Product, type ProductResponse } from './product.model';
 import { PantryItemRepositoryPort } from './pantry-item.repository.port';
 import { PantryItem, type PantryItemResponse } from './pantry-item.model';
+import { computeRecipeNutrition } from './nutrition';
 import { MealGateway } from '../web/meal.gateway';
 import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
 import { CreateEntryDto } from '../web/dto/create-entry.dto';
@@ -50,16 +51,20 @@ export class MealService {
 
   async getRecipes(householdId: string, userId: string): Promise<RecipeResponse[]> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
-    const recipes = await this.recipeRepo.findByHousehold(householdId);
+    const [recipes, products] = await Promise.all([
+      this.recipeRepo.findByHousehold(householdId),
+      this.productRepo.findByHousehold(householdId),
+    ]);
     return recipes
       .sort((a, b) => b.createdAt - a.createdAt)
-      .map((r) => r.toResponse());
+      .map((r) => this.toRecipeResponse(r, products));
   }
 
   async getRecipe(id: string, userId: string): Promise<RecipeResponse> {
     const recipe = await this.findRecipeOrThrow(id);
     await this.sharingService.assertHouseholdPermission(recipe.householdId, userId, READ_ROLES);
-    return recipe.toResponse();
+    const products = await this.productRepo.findByHousehold(recipe.householdId);
+    return this.toRecipeResponse(recipe, products);
   }
 
   async createRecipe(dto: CreateRecipeDto, householdId: string, userId: string): Promise<RecipeResponse> {
@@ -67,7 +72,8 @@ export class MealService {
     const recipe = Recipe.createFromDto(dto, householdId);
     await this.recipeRepo.save(recipe);
     this.gateway.notifyChanged(householdId);
-    return recipe.toResponse();
+    const products = await this.productRepo.findByHousehold(householdId);
+    return this.toRecipeResponse(recipe, products);
   }
 
   async updateRecipe(id: string, dto: CreateRecipeDto, userId: string): Promise<RecipeResponse> {
@@ -76,7 +82,8 @@ export class MealService {
     const updated = recipe.update(dto);
     await this.recipeRepo.update(updated);
     this.gateway.notifyChanged(recipe.householdId);
-    return updated.toResponse();
+    const products = await this.productRepo.findByHousehold(recipe.householdId);
+    return this.toRecipeResponse(updated, products);
   }
 
   async deleteRecipe(id: string, userId: string): Promise<void> {
@@ -144,10 +151,14 @@ export class MealService {
   async getWeek(householdId: string, userId: string, weekStart: string): Promise<PlannerEntryResponse[]> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, READ_ROLES);
     const entries = await this.entryRepo.findByWeek(householdId, weekStart);
+    const products = await this.productRepo.findByHousehold(householdId);
     const result: PlannerEntryResponse[] = [];
     for (const entry of entries) {
       const recipe = await this.recipeRepo.findById(entry.recipeId);
-      result.push({ ...entry.toResponse(), recipe: recipe ? recipe.toResponse() : null });
+      result.push({
+        ...entry.toResponse(),
+        recipe: recipe ? this.toRecipeResponse(recipe, products) : null,
+      });
     }
     return result;
   }
@@ -426,6 +437,15 @@ export class MealService {
   }
 
   // ---- internals ----
+
+  // Makro liczy się z produktów gospodarstwa, których model przepisu nie zna —
+  // stąd doklejenie tutaj, a nie w `Recipe.toResponse()`.
+  private toRecipeResponse(recipe: Recipe, products: Product[]): RecipeResponse {
+    return {
+      ...recipe.toResponse(),
+      nutrition: computeRecipeNutrition(recipe.recipeIngredients, products, recipe.servings),
+    };
+  }
 
   private async findRecipeOrThrow(id: string): Promise<Recipe> {
     const recipe = await this.recipeRepo.findById(id);

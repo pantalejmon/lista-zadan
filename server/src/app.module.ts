@@ -39,6 +39,7 @@ import { AddSettingsToUser1764288000000 } from './migration/1764288000000-AddSet
 import { AddOAuthTables1764374400000 } from './migration/1764374400000-AddOAuthTables';
 import { AddRecipeCategory1764460800000 } from './migration/1764460800000-AddRecipeCategory';
 import { AddProductNutrition1764547200000 } from './migration/1764547200000-AddProductNutrition';
+import { AddRecipeServings1764633600000 } from './migration/1764633600000-AddRecipeServings';
 import configuration from './config/configuration';
 
 @Module({
@@ -80,6 +81,7 @@ import configuration from './config/configuration';
           AddOAuthTables1764374400000,
           AddRecipeCategory1764460800000,
           AddProductNutrition1764547200000,
+          AddRecipeServings1764633600000,
         ],
       }),
     }),

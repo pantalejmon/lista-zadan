@@ -78,6 +78,17 @@ export interface RecipeIngredient {
   unit: string;
 }
 
+// Makro przepisu policzone przez serwer ze składników dopasowanych do produktów.
+// `coverage` (0–1) mówi, jaka część składników z podaną ilością dała się policzyć,
+// a `missing` wymienia resztę — bez tego „450 kcal" z połowy przepisu wygląda
+// jak pewnik.
+export interface RecipeNutrition {
+  total: Nutrition;
+  perServing: Nutrition;
+  coverage: number;
+  missing: string[];
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -85,8 +96,10 @@ export interface Recipe {
   description?: string;
   instructions: string;
   recipeIngredients: RecipeIngredient[];
+  servings: number;
   createdAt: number;
   updatedAt: number;
+  nutrition?: RecipeNutrition;
 }
 
 // Suggested categories (freeform — used for datalist hints, filter chips and
@@ -134,6 +147,7 @@ export interface RecipeInput {
   description?: string;
   instructions: string;
   recipeIngredients: RecipeIngredient[];
+  servings?: number;
 }
 
 // --- Week helpers ---

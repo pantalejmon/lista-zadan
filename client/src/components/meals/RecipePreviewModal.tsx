@@ -1,5 +1,6 @@
 import type { Recipe } from '../../lib/meals';
 import { IconClose } from './icons';
+import { NutritionSummary } from './NutritionSummary';
 
 // Read-only recipe preview shown from the planner (tapping a planned meal) so the
 // user can check ingredients/instructions without leaving the plan. The planner
@@ -33,6 +34,12 @@ export function RecipePreviewModal({ recipe, onClose }: { recipe: Recipe; onClos
           )}
           {recipe.description && (
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{recipe.description}</p>
+          )}
+
+          {recipe.nutrition && (
+            <div className="mb-4">
+              <NutritionSummary nutrition={recipe.nutrition} servings={recipe.servings} compact />
+            </div>
           )}
 
           {recipe.recipeIngredients.length > 0 && (

@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { RecipeIngredient } from './recipe-ingredient';
 import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
+import { RecipeNutrition } from './nutrition';
 import { RecipeIngredientDto } from '../web/dto/recipe-ingredient.dto';
 
 export interface RecipeResponse {
@@ -10,8 +11,11 @@ export interface RecipeResponse {
   description?: string;
   instructions: string;
   recipeIngredients: RecipeIngredient[];
+  servings: number;
   createdAt: number;
   updatedAt: number;
+  // Dokładane przez serwis (model nie zna produktów, a bez nich nie ma czego liczyć).
+  nutrition?: RecipeNutrition;
 }
 
 export class Recipe {
@@ -23,6 +27,7 @@ export class Recipe {
     readonly description: string | null,
     readonly instructions: string,
     readonly recipeIngredients: RecipeIngredient[],
+    readonly servings: number,
     readonly createdAt: number,
     readonly updatedAt: number,
   ) {}
@@ -37,6 +42,7 @@ export class Recipe {
       dto.description?.trim() ? dto.description.trim() : null,
       dto.instructions.trim(),
       normaliseIngredients(dto.recipeIngredients),
+      normaliseServings(dto.servings),
       now,
       now,
     );
@@ -51,6 +57,7 @@ export class Recipe {
       dto.description?.trim() ? dto.description.trim() : null,
       dto.instructions.trim(),
       normaliseIngredients(dto.recipeIngredients),
+      normaliseServings(dto.servings),
       this.createdAt,
       Date.now(),
     );
@@ -64,10 +71,16 @@ export class Recipe {
       description: this.description ?? undefined,
       instructions: this.instructions,
       recipeIngredients: this.recipeIngredients,
+      servings: this.servings,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
   }
+}
+
+// Przepis zawsze ma co najmniej jedną porcję — inaczej „na porcję" dzieliłoby przez zero.
+function normaliseServings(servings: number | undefined): number {
+  return typeof servings === 'number' && servings >= 1 ? Math.round(servings) : 1;
 }
 
 function normaliseIngredients(ingredients: RecipeIngredientDto[] | undefined): RecipeIngredient[] {

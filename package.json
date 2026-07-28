@@ -2,6 +2,24 @@
   "name": "lista-zadan",
   "private": true,
   "workspaces": ["client", "server"],
+  "comment:overrides": [
+    "brace-expansion 1.x nigdy nie dostał łatki na CVE-2026-14257 (DoS przez",
+    "nieograniczoną długość rozwinięcia) — poprawki wyszły w 2.1.3 i 5.0.8.",
+    "Wersję 1.x ciągnie minimatch@3, którego wymagają fork-ts-checker-webpack-plugin",
+    "(przez @nestjs/cli) i test-exclude — oba są już na najnowszych wersjach, więc",
+    "nie ma czego podbić. 2.1.3 to podmiana 1:1: ten sam `module.exports = expandTop`,",
+    "różnica to porzucony `concat-map` i stare Node'y.",
+    "",
+    "UWAGA: `npm audit` nadal to zgłasza, bo zakres GHSA-mh99-v99m-4gvg brzmi",
+    "`<=5.0.7` i łapie też załatane 2.1.3 (backport wydany 28.07.2026, doradztwo",
+    "jeszcze go nie wyłączyło). W drzewie nie ma żadnej niezałatanej kopii —",
+    "sprawdzalne przez obecność `EXPANSION_MAX_LENGTH` w każdej z nich."
+  ],
+  "overrides": {
+    "minimatch@3": {
+      "brace-expansion": "^2.1.3"
+    }
+  },
   "scripts": {
     "dev": "npm run dev -w client",
     "dev:server": "npm run start:dev -w server",

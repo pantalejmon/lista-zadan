@@ -49,7 +49,18 @@ export function TokensSettings({ households, onClose }: TokensSettingsProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = () => getTokens().then(setTokens).catch(() => setError('Nie udało się pobrać tokenów.'));
+  // Znacznik „teraz" ustawiany razem z listą, a nie liczony przy renderze:
+  // `Date.now()` w renderze daje wynik zależny od tego, kiedy React akurat
+  // przerysuje komponent.
+  const [loadedAt, setLoadedAt] = useState(0);
+
+  const load = () =>
+    getTokens()
+      .then((result) => {
+        setTokens(result);
+        setLoadedAt(Date.now());
+      })
+      .catch(() => setError('Nie udało się pobrać tokenów.'));
 
   useEffect(() => {
     load();
@@ -158,7 +169,7 @@ export function TokensSettings({ households, onClose }: TokensSettingsProps) {
           ) : (
             <ul className="space-y-2">
               {tokens.map((t) => {
-                const expired = t.expiresAt !== null && t.expiresAt <= Date.now();
+                const expired = t.expiresAt !== null && t.expiresAt <= loadedAt;
                 const inactive = t.revokedAt !== null || expired;
                 return (
                   <li key={t.id} className={`rounded-xl border px-3 py-2.5 ${inactive ? 'border-gray-100 dark:border-gray-800 opacity-60' : 'border-gray-200 dark:border-gray-700'}`}>

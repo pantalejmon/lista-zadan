@@ -110,12 +110,19 @@ body {
   --macro-protein: #2a78d6;
   --macro-fat: #eb6834;
   --macro-carbs: #1baf7a;
+  /* Rozbicie białka na roślinne/zwierzęce to ta sama wielkość w podziale, nie
+     nowe kategorie — więc dwa kroki tej samej (niebieskiej) rampy, a nie dwie
+     nowe barwy. */
+  --macro-protein-plant: #6da7ec;
+  --macro-protein-animal: #1c5cab;
 }
 
 :root:is(.dark) {
   --macro-protein: #3987e5;
   --macro-fat: #d95926;
   --macro-carbs: #199e70;
+  --macro-protein-plant: #86b6ef;
+  --macro-protein-animal: #256abf;
 }
 
 * {

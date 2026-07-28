@@ -223,6 +223,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
           category: { type: 'string', description: 'Kategoria (opcjonalnie)' },
           trackInPantry: { type: 'boolean', description: 'Czy śledzić w spiżarni (false = „do smaku")' },
           nutrition: nutritionSchema,
+          origin: originSchema,
         },
         required: ['name', 'baseUnit'],
         additionalProperties: false,
@@ -371,6 +372,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
           category: { type: 'string', description: 'Kategoria' },
           trackInPantry: { type: 'boolean', description: 'Śledzić w spiżarni' },
           nutrition: nutritionSchema,
+          origin: originSchema,
         },
         required: ['productId', 'name', 'baseUnit'],
         additionalProperties: false,
@@ -706,6 +708,14 @@ function parseParticipants(args: Record<string, unknown>): MealParticipantDto[] 
     });
 }
 
+// Pochodzenie produktu — z niego bierze się rozbicie białka na roślinne
+// i zwierzęce w przepisach i w bilansie.
+const originSchema = {
+  type: 'string',
+  enum: ['plant', 'animal'],
+  description: 'Pochodzenie: plant (roślinne) / animal (zwierzęce). Pominięte = nie określono.',
+} as const;
+
 // Wartości na 100 g / 100 ml, a dla produktów w `szt` — na 1 sztukę.
 const nutritionSchema = {
   type: 'object',
@@ -737,6 +747,10 @@ function buildProductDto(args: Record<string, unknown>): CreateProductDto {
   const trackInPantry = boolArg(args, 'trackInPantry');
   if (trackInPantry !== undefined) {
     dto.trackInPantry = trackInPantry;
+  }
+  const origin = stringArg(args, 'origin');
+  if (origin === 'plant' || origin === 'animal') {
+    dto.origin = origin;
   }
   const nutrition = args.nutrition;
   if (typeof nutrition === 'object' && nutrition !== null) {

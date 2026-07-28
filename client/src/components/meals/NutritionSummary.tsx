@@ -1,4 +1,5 @@
 import type { Nutrition, RecipeNutrition } from '../../lib/meals';
+import { ProteinSplit } from './ProteinSplit';
 
 // Energia z 1 g makroskładnika (Atwater) — pasek pokazuje **udział energii**,
 // nie udział gramów. Gram tłuszczu niesie ponad dwa razy więcej kcal niż gram
@@ -119,6 +120,7 @@ export function NutritionSummary({
                   </li>
                 )}
               </ul>
+              <ProteinSplit nutrition={perServing} />
             </>
           )}
         </>

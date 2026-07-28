@@ -6,10 +6,12 @@ import {
   presentCategories,
   groupByCategory,
   nutritionBasisLabel,
+  ORIGIN_OPTIONS,
   type MealStorage,
   type Product,
   type ProductInput,
   type BaseUnit,
+  type ProductOrigin,
 } from '../../lib/meals';
 import { CategoryFilter } from './CategoryFilter';
 import { IconPlus, IconTrash, IconPencil, IconClose } from './icons';
@@ -130,6 +132,7 @@ export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; l
                           {p.nutrition
                             ? ` · ${p.nutrition.kcal} kcal ${nutritionBasisLabel(p.baseUnit)}`
                             : ' · bez makro'}
+                          {p.origin === 'plant' ? ' · roślinny' : p.origin === 'animal' ? ' · zwierzęcy' : ''}
                         </p>
                       </div>
                       <button
@@ -200,6 +203,7 @@ function ProductForm({ product, onSave, onCancel }: { product?: Product; onSave:
   const [baseUnit, setBaseUnit] = useState<BaseUnit>(product?.baseUnit ?? 'szt');
   const [packageSize, setPackageSize] = useState(product?.packageSize ? String(product.packageSize) : '');
   const [trackInPantry, setTrackInPantry] = useState(product?.trackInPantry ?? true);
+  const [origin, setOrigin] = useState<ProductOrigin | ''>(product?.origin ?? '');
   const [kcal, setKcal] = useState(product?.nutrition ? String(product.nutrition.kcal) : '');
   const [protein, setProtein] = useState(product?.nutrition ? String(product.nutrition.protein) : '');
   const [fat, setFat] = useState(product?.nutrition ? String(product.nutrition.fat) : '');
@@ -225,6 +229,7 @@ function ProductForm({ product, onSave, onCancel }: { product?: Product; onSave:
       baseUnit,
       packageSize: parseFloat(packageSize) || undefined,
       trackInPantry,
+      origin: origin || undefined,
       nutrition: macrosComplete
         ? {
           kcal: optionalNumber(kcal) ?? 0,
@@ -307,6 +312,28 @@ function ProductForm({ product, onSave, onCancel }: { product?: Product; onSave:
 
         {showNutrition && (
           <div className="mt-3 space-y-2">
+            {/* Pochodzenie decyduje o rozbiciu białka na roślinne/zwierzęce
+                w bilansie, więc siedzi razem z makro, a nie osobno. */}
+            <div>
+              <span className="block text-[11px] text-gray-400 dark:text-gray-500 mb-1">Pochodzenie</span>
+              <div className="flex gap-1.5">
+                {ORIGIN_OPTIONS.map((option) => (
+                  <button
+                    key={option.id || 'none'}
+                    type="button"
+                    onClick={() => setOrigin(option.id)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors ${
+                      origin === option.id
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <NutrientInput label="Energia (kcal)" value={kcal} onChange={setKcal} />
               <NutrientInput label="Białko (g)" value={protein} onChange={setProtein} />

@@ -18,6 +18,11 @@ export interface Nutrition {
   carbs: number;
   fiber?: number;
   salt?: number;
+  // Rozbicie białka po pochodzeniu produktu. Suma tych dwóch bywa **mniejsza**
+  // niż `protein` — reszta pochodzi z produktów bez oznaczenia i to musi być
+  // widoczne, a nie doklejone po cichu do jednego z kubełków.
+  proteinPlant?: number;
+  proteinAnimal?: number;
 }
 
 // Makro przepisu: suma po składnikach i wartość na porcję, razem z uczciwą miarą
@@ -90,6 +95,8 @@ export function computeRecipeNutrition(
   const total = { kcal: 0, protein: 0, fat: 0, carbs: 0 };
   let fiber: number | undefined;
   let salt: number | undefined;
+  let proteinPlant: number | undefined;
+  let proteinAnimal: number | undefined;
   let counted = 0;
   const missing: string[] = [];
 
@@ -117,12 +124,18 @@ export function computeRecipeNutrition(
     if (product.nutrition.salt !== undefined) {
       salt = (salt ?? 0) + product.nutrition.salt * factor;
     }
+    const protein = product.nutrition.protein * factor;
+    if (product.origin === 'plant') {
+      proteinPlant = (proteinPlant ?? 0) + protein;
+    } else if (product.origin === 'animal') {
+      proteinAnimal = (proteinAnimal ?? 0) + protein;
+    }
     counted += 1;
   }
 
   const considered = counted + missing.length;
   const perServing = counted === 0 ? 0 : 1 / Math.max(1, servings);
-  const summed: Nutrition = { ...total, fiber, salt };
+  const summed: Nutrition = { ...total, fiber, salt, proteinPlant, proteinAnimal };
   return {
     total: roundNutrition(summed),
     perServing: roundNutrition(scaleNutrition(summed, perServing)),
@@ -139,6 +152,8 @@ export function scaleNutrition(nutrition: Nutrition, factor: number): Nutrition 
     carbs: nutrition.carbs * factor,
     fiber: nutrition.fiber === undefined ? undefined : nutrition.fiber * factor,
     salt: nutrition.salt === undefined ? undefined : nutrition.salt * factor,
+    proteinPlant: nutrition.proteinPlant === undefined ? undefined : nutrition.proteinPlant * factor,
+    proteinAnimal: nutrition.proteinAnimal === undefined ? undefined : nutrition.proteinAnimal * factor,
   };
 }
 
@@ -152,6 +167,8 @@ function roundNutrition(nutrition: Nutrition): Nutrition {
     carbs: round1(nutrition.carbs),
     fiber: nutrition.fiber === undefined ? undefined : round1(nutrition.fiber),
     salt: nutrition.salt === undefined ? undefined : round1(nutrition.salt),
+    proteinPlant: nutrition.proteinPlant === undefined ? undefined : round1(nutrition.proteinPlant),
+    proteinAnimal: nutrition.proteinAnimal === undefined ? undefined : round1(nutrition.proteinAnimal),
   };
 }
 

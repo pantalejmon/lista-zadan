@@ -3,8 +3,13 @@ import { Product } from './product.model';
 import type { RecipeIngredient } from './recipe-ingredient';
 import type { Nutrition } from './nutrition';
 
-function product(name: string, baseUnit: 'g' | 'ml' | 'szt', nutrition: Nutrition | null): Product {
-  return new Product(`id-${name}`, 'household', name, null, baseUnit, null, true, nutrition);
+function product(
+  name: string,
+  baseUnit: 'g' | 'ml' | 'szt',
+  nutrition: Nutrition | null,
+  origin: 'plant' | 'animal' | null = null,
+): Product {
+  return new Product(`id-${name}`, 'household', name, null, baseUnit, null, true, nutrition, origin);
 }
 
 function ingredient(name: string, quantity: number, unit: string): RecipeIngredient {
@@ -108,6 +113,51 @@ describe('computeRecipeNutrition', () => {
     // Jajko nie ma błonnika — liczy się tylko mąka, zamiast udawać zero.
     expect(result.total.fiber).toBe(2.7);
     expect(result.total.salt).toBeUndefined();
+  });
+
+  describe('rozbicie białka po pochodzeniu', () => {
+    const tofu = product('Tofu', 'g', { kcal: 144, protein: 15.8, fat: 8.7, carbs: 2.8 }, 'plant');
+    const chicken = product('Kurczak', 'g', { kcal: 165, protein: 31, fat: 3.6, carbs: 0 }, 'animal');
+
+    it('sumuje białko roślinne i zwierzęce osobno', () => {
+      const result = computeRecipeNutrition(
+        [ingredient('Tofu', 100, 'g'), ingredient('Kurczak', 200, 'g')],
+        [tofu, chicken],
+        1,
+      );
+
+      expect(result.total.proteinPlant).toBe(15.8);
+      expect(result.total.proteinAnimal).toBe(62);
+      expect(result.total.protein).toBe(77.8);
+    });
+
+    // Kluczowe: produkt bez oznaczenia nie może wpaść do żadnego kubełka, bo
+    // wtedy wykres kłamałby o tym, skąd naprawdę jest białko.
+    it('białka z produktu bez oznaczenia nie przypisuje do żadnej grupy', () => {
+      const result = computeRecipeNutrition(
+        [ingredient('Tofu', 100, 'g'), ingredient('Mąka', 100, 'g')],
+        [tofu, flour],
+        1,
+      );
+
+      expect(result.total.proteinPlant).toBe(15.8);
+      expect(result.total.proteinAnimal).toBeUndefined();
+      // 15,8 (tofu) + 10,3 (mąka bez oznaczenia) — suma większa niż rozbicie.
+      expect(result.total.protein).toBe(26.1);
+    });
+
+    it('bez oznaczonych produktów rozbicia nie ma wcale', () => {
+      const result = computeRecipeNutrition([ingredient('Mąka', 100, 'g')], [flour], 1);
+
+      expect(result.total.proteinPlant).toBeUndefined();
+      expect(result.total.proteinAnimal).toBeUndefined();
+    });
+
+    it('rozbicie skaluje się na porcje razem z resztą makro', () => {
+      const result = computeRecipeNutrition([ingredient('Kurczak', 200, 'g')], [chicken], 2);
+
+      expect(result.perServing.proteinAnimal).toBe(31);
+    });
   });
 
   it('przepis bez policzalnych składników ma zerowe pokrycie, nie fałszywe 100%', () => {

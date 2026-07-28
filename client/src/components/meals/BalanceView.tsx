@@ -11,6 +11,7 @@ import {
   type Nutrition,
 } from '../../lib/meals';
 import { IconChevronLeft, IconChevronRight, IconClose } from './icons';
+import { ProteinSplit } from './ProteinSplit';
 
 const MACROS = [
   { key: 'protein', label: 'Białko', color: 'var(--macro-protein)' },
@@ -191,6 +192,7 @@ function MemberCard({
       )}
 
       <MacroRow nutrition={nutrition} goal={goal} />
+      <ProteinSplit nutrition={nutrition} />
 
       {meals.length > 0 && (
         <ul className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1.5">

@@ -5,6 +5,11 @@ import { Nutrition } from './nutrition';
 
 export type BaseUnit = 'g' | 'ml' | 'szt';
 
+// Pochodzenie produktu — potrzebne, żeby bilans mógł rozbić białko na roślinne
+// i zwierzęce. `null` znaczy „nie określono": jak przy makro nie zgadujemy,
+// a białko z takiego produktu jest w bilansie pokazane jako nieprzypisane.
+export type ProductOrigin = 'plant' | 'animal';
+
 export interface ProductResponse {
   id: string;
   name: string;
@@ -13,6 +18,7 @@ export interface ProductResponse {
   packageSize?: number;
   trackInPantry: boolean;
   nutrition?: Nutrition;
+  origin?: ProductOrigin;
 }
 
 export class Product {
@@ -25,6 +31,7 @@ export class Product {
     readonly packageSize: number | null,
     readonly trackInPantry: boolean,
     readonly nutrition: Nutrition | null,
+    readonly origin: ProductOrigin | null = null,
   ) {}
 
   static createFromDto(dto: CreateProductDto, householdId: string): Product {
@@ -37,6 +44,7 @@ export class Product {
       typeof dto.packageSize === 'number' && dto.packageSize > 0 ? dto.packageSize : null,
       dto.trackInPantry ?? true,
       normaliseNutrition(dto.nutrition),
+      dto.origin ?? null,
     );
   }
 
@@ -50,6 +58,7 @@ export class Product {
       typeof dto.packageSize === 'number' && dto.packageSize > 0 ? dto.packageSize : null,
       dto.trackInPantry ?? true,
       normaliseNutrition(dto.nutrition),
+      dto.origin ?? null,
     );
   }
 
@@ -62,6 +71,7 @@ export class Product {
       packageSize: this.packageSize ?? undefined,
       trackInPantry: this.trackInPantry,
       nutrition: this.nutrition ?? undefined,
+      origin: this.origin ?? undefined,
     };
   }
 }

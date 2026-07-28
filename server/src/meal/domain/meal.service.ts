@@ -777,6 +777,9 @@ function sumNutrition(items: Nutrition[]): Nutrition {
       // udawać zero tam, gdzie produkt po prostu nie podaje wartości.
       fiber: n.fiber === undefined ? acc.fiber : (acc.fiber ?? 0) + n.fiber,
       salt: n.salt === undefined ? acc.salt : (acc.salt ?? 0) + n.salt,
+      proteinPlant: n.proteinPlant === undefined ? acc.proteinPlant : (acc.proteinPlant ?? 0) + n.proteinPlant,
+      proteinAnimal:
+        n.proteinAnimal === undefined ? acc.proteinAnimal : (acc.proteinAnimal ?? 0) + n.proteinAnimal,
     }),
     { kcal: 0, protein: 0, fat: 0, carbs: 0 } as Nutrition,
   );
@@ -787,6 +790,8 @@ function sumNutrition(items: Nutrition[]): Nutrition {
     carbs: round1(total.carbs),
     fiber: total.fiber === undefined ? undefined : round1(total.fiber),
     salt: total.salt === undefined ? undefined : round1(total.salt),
+    proteinPlant: total.proteinPlant === undefined ? undefined : round1(total.proteinPlant),
+    proteinAnimal: total.proteinAnimal === undefined ? undefined : round1(total.proteinAnimal),
   };
 }
 

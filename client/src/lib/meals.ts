@@ -24,7 +24,20 @@ export interface Nutrition {
   carbs: number;
   fiber?: number;
   salt?: number;
+  // Rozbicie białka po pochodzeniu produktu. Suma bywa mniejsza niż `protein` —
+  // reszta pochodzi z produktów bez oznaczenia i UI musi to pokazać.
+  proteinPlant?: number;
+  proteinAnimal?: number;
 }
+
+// Pochodzenie produktu; brak wartości = nie określono (nie zgadujemy).
+export type ProductOrigin = 'plant' | 'animal';
+
+export const ORIGIN_OPTIONS: { id: ProductOrigin | ''; label: string }[] = [
+  { id: '', label: 'Nie określono' },
+  { id: 'plant', label: 'Roślinny' },
+  { id: 'animal', label: 'Zwierzęcy' },
+];
 
 // Podpis jednostki dla formularzy i podglądu makro.
 export function nutritionBasisLabel(baseUnit: BaseUnit): string {
@@ -39,6 +52,7 @@ export interface Product {
   packageSize?: number;
   trackInPantry: boolean;
   nutrition?: Nutrition;
+  origin?: ProductOrigin;
 }
 
 export interface ProductInput {
@@ -48,6 +62,7 @@ export interface ProductInput {
   packageSize?: number;
   trackInPantry: boolean;
   nutrition?: Nutrition;
+  origin?: ProductOrigin;
 }
 
 export interface PantryItem {

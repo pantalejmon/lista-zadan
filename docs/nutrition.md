@@ -114,6 +114,23 @@ Tokeny `--macro-*` w `index.css`. Zasady, których trzymamy się przy zmianach:
 - Tożsamość nigdy nie zależy od samego koloru: każdy segment ma kropkę + nazwę
   + wartość w legendzie (która działa też jako wersja tabelaryczna).
 
+## Białko roślinne i zwierzęce
+
+Produkt niesie `origin`: `'plant'` | `'animal'` | `null` („nie określono"). Makro przepisu
+i bilans sumują dodatkowo `proteinPlant` / `proteinAnimal` — białko ze składników z określonym
+pochodzeniem.
+
+**Suma rozbicia bywa mniejsza niż `protein`.** Reszta pochodzi z produktów bez oznaczenia i UI
+pokazuje ją jako osobny, szary kubełek „bez oznaczenia" (`ProteinSplit`). Dosypanie jej do
+którejkolwiek grupy fałszowałoby obraz — a to jedyna rzecz, po którą się tu sięga.
+
+Nie ma wartości `mixed`: bez proporcji i tak nic by nie policzyła. Produkt złożony albo rozbija
+się na składniki, albo zostaje nieoznaczony.
+
+**Kolory:** rozbicie to ta sama wielkość w podziale, nie nowe kategorie — więc dwa **kroki tej
+samej niebieskiej rampy** co „białko" w pasku makro (`--macro-protein-plant` /
+`--macro-protein-animal`), a nie dwie nowe barwy. Kubełek „bez oznaczenia" jest neutralnie szary.
+
 ## Bilans domownika (`getNutritionBalance`)
 
 Odpowiada na „ile kto dziś zjadł". Liczony **per tydzień** (jak planer), z rozbiciem na dni

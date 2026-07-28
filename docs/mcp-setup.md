@@ -111,8 +111,8 @@ odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który imp
   składników w tym jednym posiłku), `mark_meal_cooked` (odejmij ze spiżarni), `remove_meal_entry`,
 - zakupy: `add_shopping_item`, `check_shopping_item` („kupione" → do spiżarni), `delete_shopping_item`, `generate_shopping_from_plan`,
 - produkty/spiżarnia: `create_product`, `update_product` (oba przyjmują `nutrition` — wartości odżywcze
-  na 100 g/ml, a dla `baseUnit = szt` na 1 sztukę), `delete_product`, `set_pantry_stock`, `adjust_pantry_stock`,
-  `remove_pantry_item`.
+  na 100 g/ml, a dla `baseUnit = szt` na 1 sztukę — oraz `origin`: `plant`/`animal`, z którego bierze się
+  rozbicie białka), `delete_product`, `set_pantry_stock`, `adjust_pantry_stock`, `remove_pantry_item`.
 
 **Gospodarstwa i członkowie** (scope `households:*`):
 - `list_households`, `setup_household` (pierwsze gospodarstwo + domyślna lista), `create_household`,

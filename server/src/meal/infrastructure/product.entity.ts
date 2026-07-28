@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
-import { Product, BaseUnit } from '../domain/product.model';
+import { Product, BaseUnit, ProductOrigin } from '../domain/product.model';
 import { Nutrition } from '../domain/nutrition';
 
 @Entity('meal_product')
@@ -46,6 +46,10 @@ export class ProductEntity {
   @Column('float', { nullable: true })
   salt!: number | null;
 
+  // 'plant' | 'animal' | null (nie określono) — patrz domain/product.model.ts.
+  @Column('varchar', { nullable: true })
+  origin!: ProductOrigin | null;
+
   toDomain(): Product {
     return new Product(
       this.id,
@@ -56,6 +60,7 @@ export class ProductEntity {
       this.packageSize === null ? null : Number(this.packageSize),
       this.trackInPantry,
       this.toNutrition(),
+      this.origin,
     );
   }
 
@@ -74,6 +79,7 @@ export class ProductEntity {
     entity.carbs = product.nutrition?.carbs ?? null;
     entity.fiber = product.nutrition?.fiber ?? null;
     entity.salt = product.nutrition?.salt ?? null;
+    entity.origin = product.origin;
     return entity;
   }
 

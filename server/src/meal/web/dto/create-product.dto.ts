@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional, IsIn, IsNumber, IsBoolean, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { BaseUnit } from '../../domain/product.model';
+import type { BaseUnit, ProductOrigin } from '../../domain/product.model';
 import { NutritionDto } from './nutrition.dto';
 
 export class CreateProductDto {
@@ -28,4 +28,9 @@ export class CreateProductDto {
   @ValidateNested()
   @Type(() => NutritionDto)
   nutrition?: NutritionDto;
+
+  // Pochodzenie: roślinne / zwierzęce. Pominięte = nie określono.
+  @IsOptional()
+  @IsIn(['plant', 'animal'])
+  origin?: ProductOrigin;
 }

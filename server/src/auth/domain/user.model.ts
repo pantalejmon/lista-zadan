@@ -14,6 +14,7 @@ export interface UserSettings {
   theme: string;
   accent: string;
   fontSize: string;
+  hiddenModules?: string[];
 }
 
 export class User {

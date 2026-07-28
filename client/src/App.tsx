@@ -16,7 +16,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
 import { AppSidebar } from './components/AppSidebar';
-import { NAV_ITEMS, type AppSection } from './lib/navigation';
+import { NAV_ITEMS, visibleNavItems, type AppSection } from './lib/navigation';
 import { STICKY_UNDER_HEADER } from './lib/layout';
 import { Onboarding } from './components/Onboarding';
 import { setupHousehold, updateUserSettings } from './lib/api';
@@ -84,6 +84,7 @@ export default function App() {
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
   const { mealHousehold, setMealHouseholdId } = useMealHousehold(households);
   const mealStorage = useMealStorage(mealHousehold?.id);
+  const navItems = useMemo(() => visibleNavItems(settings, isCloud), [settings, isCloud]);
 
   // Tasks are scoped to the globally-selected household (left sidebar): only its
   // lists are shown, and switching household re-points the active list.
@@ -123,14 +124,16 @@ export default function App() {
     }
   }, [isCloud, mealHousehold, lists, activeList, activeListId, setActiveListId]);
 
-  // Posiłki i Czat wymagają konta (gospodarstwa). W trybie lokalnym trzymamy usera na Zadaniach.
-  // Czekamy aż auth się rozwiąże — inaczej podczas bootowania (user jeszcze null → mode 'local')
-  // ten efekt zresetowałby przywróconą sekcję na 'tasks' i nigdy jej nie przywrócił.
+  // Sekcja musi zostać w zestawie widocznym: Posiłki/Czat wymagają konta, a moduł
+  // ukryty w ustawieniach nie może zostawić usera na pustym ekranie (zapisana
+  // sekcja, deep-link z powiadomienia). Oba przypadki rozstrzyga `navItems`.
+  // Czekamy aż auth się rozwiąże — inaczej podczas bootowania (user jeszcze null
+  // → mode 'local') efekt zresetowałby przywróconą sekcję i nigdy jej nie przywrócił.
   useEffect(() => {
-    if (!authLoading && !isCloud && section !== 'tasks') {
+    if (!authLoading && !navItems.some((item) => item.id === section)) {
       setSection('tasks');
     }
-  }, [authLoading, isCloud, section]);
+  }, [authLoading, navItems, section]);
 
   // Zapamiętaj ostatnie miejsce, żeby po ponownym otwarciu apki nie cofało.
   useEffect(() => {
@@ -192,7 +195,7 @@ export default function App() {
       if (target.householdId) {
         setMealHouseholdId(target.householdId);
       }
-      if (target.section && NAV_ITEMS.some((item) => item.id === target.section)) {
+      if (target.section && navItems.some((item) => item.id === target.section)) {
         setSection(target.section as AppSection);
       }
     };
@@ -216,7 +219,7 @@ export default function App() {
     };
     navigator.serviceWorker?.addEventListener('message', onMessage);
     return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
-  }, [authLoading, isCloud, households, setMealHouseholdId]);
+  }, [authLoading, isCloud, households, navItems, setMealHouseholdId]);
 
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -407,6 +410,7 @@ export default function App() {
         syncStatus={syncStatus}
         pendingCount={pendingCount}
         isCloud={isCloud}
+        navItems={navItems}
         onOpenTokens={() => setTokensOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         households={households}
@@ -680,6 +684,7 @@ export default function App() {
           settings={settings}
           onChange={updateSettings}
           onClose={() => setSettingsOpen(false)}
+          isCloud={isCloud}
         />
       )}
 

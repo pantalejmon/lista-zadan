@@ -4,15 +4,25 @@ import {
   ACCENT_OPTIONS,
   FONT_SIZE_OPTIONS,
   FONT_SIZE_PX,
+  HIDEABLE_MODULES,
 } from '../lib/settings';
 
 interface SettingsModalProps {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
+  // Moduły to sekcje wymagające konta — bez niego nie ma czego ukrywać.
+  isCloud: boolean;
 }
 
-export function SettingsModal({ settings, onChange, onClose }: SettingsModalProps) {
+export function SettingsModal({ settings, onChange, onClose, isCloud }: SettingsModalProps) {
+  const toggleModule = (id: (typeof HIDEABLE_MODULES)[number]['id']) => {
+    const hidden = settings.hiddenModules.includes(id)
+      ? settings.hiddenModules.filter((m) => m !== id)
+      : [...settings.hiddenModules, id];
+    onChange({ hiddenModules: hidden });
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in overflow-y-auto"
@@ -23,7 +33,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Wygląd</h2>
+          <h2 className="text-lg font-bold">Ustawienia</h2>
           <button
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -98,6 +108,38 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
             })}
           </div>
         </section>
+
+        {/* Visible modules */}
+        {isCloud && (
+          <section>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Widoczne moduły</p>
+            <div className="space-y-1.5">
+              {HIDEABLE_MODULES.map((module) => {
+                const visible = !settings.hiddenModules.includes(module.id);
+                return (
+                  <label
+                    key={module.id}
+                    className="flex items-center gap-3 p-2.5 rounded-2xl border border-gray-200 dark:border-gray-700 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={visible}
+                      onChange={() => toggleModule(module.id)}
+                      className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium truncate">{module.label}</span>
+                      <span className="block text-[11px] text-gray-400 dark:text-gray-500 truncate">{module.description}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">
+              Zadania są zawsze widoczne. Ukryty moduł znika z menu — dane zostają nietknięte.
+            </p>
+          </section>
+        )}
 
         {/* Font size */}
         <section>

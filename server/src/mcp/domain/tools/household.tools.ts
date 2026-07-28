@@ -95,6 +95,22 @@ export function buildHouseholdTools(
       },
     },
     {
+      name: 'setup_household',
+      description:
+        'Zakłada gospodarstwo przy pierwszym uruchomieniu: tworzy je razem z domyślną listą zadań. ' +
+        'Dla kolejnych gospodarstw używaj create_household. Wymaga name.',
+      requiredScopes: ['households:write'],
+      inputSchema: {
+        type: 'object',
+        properties: { name: { type: 'string', description: 'Nazwa gospodarstwa' } },
+        required: ['name'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        return sharingService.setupHousehold(requireStringArg(args, 'name'), ctx.userId);
+      },
+    },
+    {
       name: 'rename_household',
       description: 'Zmienia nazwę gospodarstwa (tylko właściciel). Wymaga householdId i name.',
       requiredScopes: ['households:write'],

@@ -93,8 +93,10 @@ Zestaw pokrywa **całą aplikację** — każdy moduł da się sterować przez M
 odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który implikuje `:read`).
 
 **Todo / listy** (scope `todo:*`):
-- odczyt: `list_todo_lists`, `list_todos`, `list_unassigned_todos`,
-- zadania: `add_todo`, `update_todo` (edytuj treść/datę/godzinę/stan), `complete_todo`, `delete_todo`,
+- odczyt: `list_todo_lists`, `list_todos` (z `kind` i pozycjami list zakupów), `list_unassigned_todos`,
+  `dates_with_todos`,
+- zadania: `add_todo` (również `kind: 'shopping'` + `items` — gotowa lista zakupów na wskazany dzień
+  jednym wywołaniem), `update_todo` (treść/data/godzina/stan/`items`/`month`), `complete_todo`, `delete_todo`,
 - cykliczne: `add_recurring_todos`, `delete_recurrence_group`,
 - listy: `create_todo_list`, `rename_todo_list`, `delete_todo_list`, `move_todo_list`.
 
@@ -113,7 +115,8 @@ odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który imp
   `remove_pantry_item`.
 
 **Gospodarstwa i członkowie** (scope `households:*`):
-- `list_households`, `create_household`, `rename_household`, `list_contacts`,
+- `list_households`, `setup_household` (pierwsze gospodarstwo + domyślna lista), `create_household`,
+  `rename_household`, `list_contacts`,
 - członkowie: `list_household_members`, `invite_to_household`, `change_member_role`, `remove_household_member`, `leave_household`,
 - zaproszenia: `list_pending_invitations`, `accept_invitation`, `decline_invitation`,
 - `export_shopping_to_list` — eksport listy zakupów posiłków do listy zadań (dodatkowo `meals:read`+`todo:write`).
@@ -130,6 +133,19 @@ odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który imp
   (kwota dodatnia = przychód, ujemna = wydatek),
 - cykliczne: `list_recurring_transactions`, `add_recurring_transaction`, `update_recurring_transaction`, `delete_recurring_transaction`,
 - statystyki: `get_finance_stats`, `list_finance_categories`.
+
+**Ustawienia aplikacji** (scope `settings:*`, dane konta — nie gospodarstwa):
+- `get_settings`, `update_settings` (motyw, akcent, rozmiar tekstu, widoczne moduły).
+
+### Czego świadomie NIE wystawiamy
+
+Żeby kolejny audyt parytetu nie zgłaszał tego jako braków:
+
+- **Czat** (`/chat/:householdId/messages`) — decyzja produktowa: rozmowy domowników zostają między ludźmi.
+- **Odhaczanie pozycji listy zakupów** — to czynność „w sklepie", wygodniejsza w aplikacji. Agent listę
+  *zakłada i definiuje*, nie obsługuje jej w trakcie zakupów.
+- `POST /todos/sync` — mechanika trybu offline, nie capability użytkownika.
+- `/push/*` — subskrypcja konkretnego urządzenia.
 
 Wszystkie narzędzia przechodzą przez te same serwisy domenowe co UI, więc obowiązują
 identyczne uprawnienia (członkostwo w gospodarstwie, role owner/editor/viewer). Narzędzia

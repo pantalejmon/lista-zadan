@@ -21,7 +21,7 @@ Sekret ma postać `lz_<64 hex>` i jest pokazywany **jednorazowo** przy tworzeniu
 
 ## Scope'y
 
-Format `<moduł>:<dostęp>`, moduły: `todo`, `meals`, `home`, `households`, `finance`; dostęp: `read` / `write`.
+Format `<moduł>:<dostęp>`, moduły: `todo`, `meals`, `home`, `households`, `finance`, `settings`; dostęp: `read` / `write`.
 Reguła: **`write` implikuje `read`** (token z `todo:write` spełnia wymóg `todo:read`, ale nie odwrotnie).
 Pełna lista: `GET /api/tokens/scopes`.
 

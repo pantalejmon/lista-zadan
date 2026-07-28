@@ -5,6 +5,7 @@ import {
   UNCATEGORISED,
   presentCategories,
   groupByCategory,
+  nutritionBasisLabel,
   type MealStorage,
   type Product,
   type ProductInput,
@@ -126,6 +127,9 @@ export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; l
                           jedn. {p.baseUnit}
                           {p.packageSize ? ` · opak. ${p.packageSize} ${p.baseUnit}` : ''}
                           {!p.trackInPantry ? ' · nie śledzone' : ''}
+                          {p.nutrition
+                            ? ` · ${p.nutrition.kcal} kcal ${nutritionBasisLabel(p.baseUnit)}`
+                            : ' · bez makro'}
                         </p>
                       </div>
                       <button
@@ -154,15 +158,65 @@ export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; l
   );
 }
 
+function NutrientInput({
+  label,
+  value,
+  onChange,
+  optional = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  optional?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] text-gray-400 dark:text-gray-500 mb-1">
+        {label}
+        {optional ? ' · opcj.' : ''}
+      </span>
+      <input
+        type="number"
+        inputMode="decimal"
+        min="0"
+        step="any"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      />
+    </label>
+  );
+}
+
+// Puste pole = „nie wiem", a nie zero — stąd undefined zamiast NaN/0.
+function optionalNumber(value: string): number | undefined {
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function ProductForm({ product, onSave, onCancel }: { product?: Product; onSave: (input: ProductInput) => void; onCancel: () => void }) {
   const [name, setName] = useState(product?.name ?? '');
   const [category, setCategory] = useState(product?.category ?? '');
   const [baseUnit, setBaseUnit] = useState<BaseUnit>(product?.baseUnit ?? 'szt');
   const [packageSize, setPackageSize] = useState(product?.packageSize ? String(product.packageSize) : '');
   const [trackInPantry, setTrackInPantry] = useState(product?.trackInPantry ?? true);
+  const [kcal, setKcal] = useState(product?.nutrition ? String(product.nutrition.kcal) : '');
+  const [protein, setProtein] = useState(product?.nutrition ? String(product.nutrition.protein) : '');
+  const [fat, setFat] = useState(product?.nutrition ? String(product.nutrition.fat) : '');
+  const [carbs, setCarbs] = useState(product?.nutrition ? String(product.nutrition.carbs) : '');
+  const [fiber, setFiber] = useState(product?.nutrition?.fiber !== undefined ? String(product.nutrition.fiber) : '');
+  const [salt, setSalt] = useState(product?.nutrition?.salt !== undefined ? String(product.nutrition.salt) : '');
+  const [showNutrition, setShowNutrition] = useState(Boolean(product?.nutrition));
+
+  // Makro zapisujemy kompletem (kcal + 3 makroskładniki) — z połowy etykiety
+  // wyszłoby zaniżone makro przepisu, więc lepiej nie zapisać nic.
+  const macros = [kcal, protein, fat, carbs];
+  const macrosComplete = macros.every((v) => optionalNumber(v) !== undefined);
+  const macrosTouched = macros.some((v) => v.trim() !== '');
+  const macrosIncomplete = macrosTouched && !macrosComplete;
 
   const submit = () => {
-    if (!name.trim()) {
+    if (!name.trim() || macrosIncomplete) {
       return;
     }
     onSave({
@@ -171,6 +225,16 @@ function ProductForm({ product, onSave, onCancel }: { product?: Product; onSave:
       baseUnit,
       packageSize: parseFloat(packageSize) || undefined,
       trackInPantry,
+      nutrition: macrosComplete
+        ? {
+          kcal: optionalNumber(kcal) ?? 0,
+          protein: optionalNumber(protein) ?? 0,
+          fat: optionalNumber(fat) ?? 0,
+          carbs: optionalNumber(carbs) ?? 0,
+          fiber: optionalNumber(fiber),
+          salt: optionalNumber(salt),
+        }
+        : undefined,
     });
   };
 
@@ -220,10 +284,50 @@ function ProductForm({ product, onSave, onCancel }: { product?: Product; onSave:
         />
         Śledź w spiżarni
       </label>
+
+      {/* Wartości odżywcze — zwinięte, dopóki produkt ich nie ma */}
+      <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+        <button
+          type="button"
+          onClick={() => setShowNutrition((v) => !v)}
+          className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+        >
+          <svg
+            className={`w-4 h-4 transition-transform ${showNutrition ? 'rotate-90' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          Wartości odżywcze
+          <span className="text-xs font-normal text-gray-400">({nutritionBasisLabel(baseUnit)})</span>
+        </button>
+
+        {showNutrition && (
+          <div className="mt-3 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <NutrientInput label="Energia (kcal)" value={kcal} onChange={setKcal} />
+              <NutrientInput label="Białko (g)" value={protein} onChange={setProtein} />
+              <NutrientInput label="Tłuszcz (g)" value={fat} onChange={setFat} />
+              <NutrientInput label="Węglowodany (g)" value={carbs} onChange={setCarbs} />
+              <NutrientInput label="Błonnik (g)" value={fiber} onChange={setFiber} optional />
+              <NutrientInput label="Sól (g)" value={salt} onChange={setSalt} optional />
+            </div>
+            {macrosIncomplete && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Uzupełnij komplet: energia, białko, tłuszcz i węglowodany. Z połowy etykiety wyszłoby zaniżone makro przepisu.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-2 pt-1">
         <button
           onClick={submit}
-          disabled={!name.trim()}
+          disabled={!name.trim() || macrosIncomplete}
           className="flex-1 bg-primary-500 text-white py-2 rounded-xl text-sm font-medium hover:bg-primary-600 disabled:opacity-50 transition-colors"
         >
           Zapisz

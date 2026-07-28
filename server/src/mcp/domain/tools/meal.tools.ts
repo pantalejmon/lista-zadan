@@ -1,5 +1,6 @@
 import { MealService } from '../../../meal/domain/meal.service';
 import { CreateProductDto } from '../../../meal/web/dto/create-product.dto';
+import { NutritionDto } from '../../../meal/web/dto/nutrition.dto';
 import { CreateRecipeDto } from '../../../meal/web/dto/create-recipe.dto';
 import { RecipeIngredientDto } from '../../../meal/web/dto/recipe-ingredient.dto';
 import { CreateEntryDto } from '../../../meal/web/dto/create-entry.dto';
@@ -137,7 +138,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     {
       name: 'create_product',
       description:
-        'Dodaje produkt do słownika. Wymaga name i baseUnit (g/ml/szt). Opcjonalnie packageSize, category, trackInPantry.',
+        'Dodaje produkt do słownika. Wymaga name i baseUnit (g/ml/szt). Opcjonalnie packageSize, category, ' +
+        'trackInPantry oraz nutrition (wartości odżywcze).',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
@@ -148,27 +150,14 @@ export function buildMealTools(mealService: MealService): McpTool[] {
           packageSize: { type: 'number', description: 'Rozmiar standardowego opakowania' },
           category: { type: 'string', description: 'Kategoria (opcjonalnie)' },
           trackInPantry: { type: 'boolean', description: 'Czy śledzić w spiżarni (false = „do smaku")' },
+          nutrition: nutritionSchema,
         },
         required: ['name', 'baseUnit'],
         additionalProperties: false,
       },
       handler: async (args, ctx) => {
         const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
-        const dto = new CreateProductDto();
-        dto.name = requireStringArg(args, 'name');
-        dto.baseUnit = requireStringArg(args, 'baseUnit') as BaseUnit;
-        const packageSize = numberArg(args, 'packageSize');
-        if (packageSize !== undefined) {
-          dto.packageSize = packageSize;
-        }
-        const category = stringArg(args, 'category');
-        if (category) {
-          dto.category = category;
-        }
-        if (typeof args.trackInPantry === 'boolean') {
-          dto.trackInPantry = args.trackInPantry;
-        }
-        return mealService.createProduct(householdId, ctx.userId, dto);
+        return mealService.createProduct(householdId, ctx.userId, buildProductDto(args));
       },
     },
     {
@@ -275,8 +264,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     {
       name: 'update_product',
       description:
-        'Aktualizuje produkt (pełny zestaw pól). Wymaga productId, name i baseUnit (g/ml/szt). ' +
-        'Opcjonalnie packageSize, category, trackInPantry.',
+        'Aktualizuje produkt (pełny zestaw pól — pominięte pola są czyszczone). Wymaga productId, name ' +
+        'i baseUnit (g/ml/szt). Opcjonalnie packageSize, category, trackInPantry oraz nutrition.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
@@ -287,27 +276,13 @@ export function buildMealTools(mealService: MealService): McpTool[] {
           packageSize: { type: 'number', description: 'Rozmiar opakowania' },
           category: { type: 'string', description: 'Kategoria' },
           trackInPantry: { type: 'boolean', description: 'Śledzić w spiżarni' },
+          nutrition: nutritionSchema,
         },
         required: ['productId', 'name', 'baseUnit'],
         additionalProperties: false,
       },
       handler: async (args, ctx) => {
-        const dto = new CreateProductDto();
-        dto.name = requireStringArg(args, 'name');
-        dto.baseUnit = requireStringArg(args, 'baseUnit') as BaseUnit;
-        const packageSize = numberArg(args, 'packageSize');
-        if (packageSize !== undefined) {
-          dto.packageSize = packageSize;
-        }
-        const category = stringArg(args, 'category');
-        if (category) {
-          dto.category = category;
-        }
-        const trackInPantry = boolArg(args, 'trackInPantry');
-        if (trackInPantry !== undefined) {
-          dto.trackInPantry = trackInPantry;
-        }
-        return mealService.updateProduct(requireStringArg(args, 'productId'), ctx.userId, dto);
+        return mealService.updateProduct(requireStringArg(args, 'productId'), ctx.userId, buildProductDto(args));
       },
     },
     {
@@ -489,6 +464,59 @@ const ingredientSchema = {
   required: ['name'],
   additionalProperties: false,
 } as const;
+
+// Wartości na 100 g / 100 ml, a dla produktów w `szt` — na 1 sztukę.
+const nutritionSchema = {
+  type: 'object',
+  description: 'Wartości odżywcze na 100 g / 100 ml (dla baseUnit „szt" — na 1 sztukę)',
+  properties: {
+    kcal: { type: 'number', description: 'Energia (kcal)' },
+    protein: { type: 'number', description: 'Białko (g)' },
+    fat: { type: 'number', description: 'Tłuszcz (g)' },
+    carbs: { type: 'number', description: 'Węglowodany (g)' },
+    fiber: { type: 'number', description: 'Błonnik (g, opcjonalnie)' },
+    salt: { type: 'number', description: 'Sól (g, opcjonalnie)' },
+  },
+  required: ['kcal', 'protein', 'fat', 'carbs'],
+  additionalProperties: false,
+} as const;
+
+function buildProductDto(args: Record<string, unknown>): CreateProductDto {
+  const dto = new CreateProductDto();
+  dto.name = requireStringArg(args, 'name');
+  dto.baseUnit = requireStringArg(args, 'baseUnit') as BaseUnit;
+  const packageSize = numberArg(args, 'packageSize');
+  if (packageSize !== undefined) {
+    dto.packageSize = packageSize;
+  }
+  const category = stringArg(args, 'category');
+  if (category) {
+    dto.category = category;
+  }
+  const trackInPantry = boolArg(args, 'trackInPantry');
+  if (trackInPantry !== undefined) {
+    dto.trackInPantry = trackInPantry;
+  }
+  const nutrition = args.nutrition;
+  if (typeof nutrition === 'object' && nutrition !== null) {
+    const raw = nutrition as Record<string, unknown>;
+    const dtoNutrition = new NutritionDto();
+    dtoNutrition.kcal = requireNumberArg(raw, 'kcal');
+    dtoNutrition.protein = requireNumberArg(raw, 'protein');
+    dtoNutrition.fat = requireNumberArg(raw, 'fat');
+    dtoNutrition.carbs = requireNumberArg(raw, 'carbs');
+    const fiber = numberArg(raw, 'fiber');
+    if (fiber !== undefined) {
+      dtoNutrition.fiber = fiber;
+    }
+    const salt = numberArg(raw, 'salt');
+    if (salt !== undefined) {
+      dtoNutrition.salt = salt;
+    }
+    dto.nutrition = dtoNutrition;
+  }
+  return dto;
+}
 
 function buildRecipeDto(args: Record<string, unknown>): CreateRecipeDto {
   const dto = new CreateRecipeDto();

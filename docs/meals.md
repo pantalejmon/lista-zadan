@@ -24,7 +24,10 @@ niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby ni
 - **Produkt** (`Product`) — pozycja słownika: nazwa, jednostka bazowa (`g`/`ml`/`szt`),
   `packageSize` (rozmiar standardowego opakowania) i `trackInPantry`. Produkty
   z `trackInPantry = false` to składniki „do smaku" (sól, pieprz) — **pomijane**
-  w spiżarni i zakupach.
+  w spiżarni i zakupach. Opcjonalnie niesie też **wartości odżywcze** (`nutrition`):
+  na 100 g / 100 ml, a dla `baseUnit = szt` na 1 sztukę. Zapisywane są kompletem
+  (kcal + białko + tłuszcz + węglowodany; błonnik i sól opcjonalnie) — z połowy
+  etykiety wychodziłoby cicho zaniżone makro przepisu. Szczegóły: `docs/nutrition.md`.
 - **Przepis** (`Recipe`) — ma listę składników `recipeIngredients` (`{name, quantity, unit}`).
   Składniki dopasowywane są do produktów **po nazwie** (case-insensitive), nie po
   twardym `productId` — dzięki temu ten sam produkt użyty w wielu przepisach agreguje

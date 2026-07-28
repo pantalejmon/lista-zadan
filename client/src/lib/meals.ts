@@ -14,6 +14,23 @@ export const BASE_UNITS: { value: BaseUnit; label: string }[] = [
   { value: 'szt', label: 'szt (sztuki)' },
 ];
 
+// Wartości odżywcze produktu. Jednostka odniesienia zależy od `baseUnit`:
+// `g`/`ml` → na 100 g / 100 ml, `szt` → na 1 sztukę (jajko, bułka).
+// kcal i trzy makroskładniki chodzą kompletem; błonnik i sól są opcjonalne.
+export interface Nutrition {
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  fiber?: number;
+  salt?: number;
+}
+
+// Podpis jednostki dla formularzy i podglądu makro.
+export function nutritionBasisLabel(baseUnit: BaseUnit): string {
+  return baseUnit === 'szt' ? 'na 1 szt' : `na 100 ${baseUnit}`;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -21,6 +38,7 @@ export interface Product {
   baseUnit: BaseUnit;
   packageSize?: number;
   trackInPantry: boolean;
+  nutrition?: Nutrition;
 }
 
 export interface ProductInput {
@@ -29,6 +47,7 @@ export interface ProductInput {
   baseUnit: BaseUnit;
   packageSize?: number;
   trackInPantry: boolean;
+  nutrition?: Nutrition;
 }
 
 export interface PantryItem {

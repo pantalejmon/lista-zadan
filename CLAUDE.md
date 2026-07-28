@@ -25,6 +25,8 @@ doc in the same commit** — the docs are the source of truth for the intent beh
   (cooked → subtract from pantry, bought → add to pantry), and shopping-list export to a todo list. Cloud-only,
   per household: the algorithms live **only** in `server/src/meal/domain/meal.service.ts`, and
   `client/src/lib/meals.ts` holds just types, constants and presentation helpers.
+- `docs/nutrition.md` — wartości odżywcze: jednostka odniesienia (100 g/ml vs 1 szt), zasada „komplet albo nic"
+  dla kcal + makroskładników, i (docelowo) liczenie makro przepisu oraz bilansu domowników.
 - `docs/home-service.md` — Serwis domu module: home assets + cyclic maintenance, `nextDueAt` derivation
   (`addMonths`), date-relative status (`overdue`/`soon`/`ok`/`none` with a 30-day soon threshold), and the
   "mark done" loop closer that rolls the next due date forward. Cloud-only, per household.

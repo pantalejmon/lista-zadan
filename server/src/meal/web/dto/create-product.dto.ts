@@ -1,5 +1,7 @@
-import { IsString, IsNotEmpty, IsOptional, IsIn, IsNumber, IsBoolean, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsIn, IsNumber, IsBoolean, Min, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import type { BaseUnit } from '../../domain/product.model';
+import { NutritionDto } from './nutrition.dto';
 
 export class CreateProductDto {
   @IsString()
@@ -21,4 +23,9 @@ export class CreateProductDto {
   @IsOptional()
   @IsBoolean()
   trackInPantry?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NutritionDto)
+  nutrition?: NutritionDto;
 }

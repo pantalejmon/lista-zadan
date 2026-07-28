@@ -103,7 +103,9 @@ odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który imp
 - przepisy: `create_recipe`, `update_recipe`, `delete_recipe`,
 - planer: `plan_meal` (przypisz przepis do dnia/pory), `mark_meal_cooked` (odejmij ze spiżarni), `remove_meal_entry`,
 - zakupy: `add_shopping_item`, `check_shopping_item` („kupione" → do spiżarni), `delete_shopping_item`, `generate_shopping_from_plan`,
-- produkty/spiżarnia: `create_product`, `update_product`, `delete_product`, `set_pantry_stock`, `adjust_pantry_stock`, `remove_pantry_item`.
+- produkty/spiżarnia: `create_product`, `update_product` (oba przyjmują `nutrition` — wartości odżywcze
+  na 100 g/ml, a dla `baseUnit = szt` na 1 sztukę), `delete_product`, `set_pantry_stock`, `adjust_pantry_stock`,
+  `remove_pantry_item`.
 
 **Gospodarstwa i członkowie** (scope `households:*`):
 - `list_households`, `create_household`, `rename_household`, `list_contacts`,

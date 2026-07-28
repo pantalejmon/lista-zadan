@@ -177,7 +177,9 @@ function BalanceTrend({ trend }: { trend: { at: number; balance: number }[] }) {
 
   return (
     <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
-      <div className="flex items-baseline justify-between gap-2 mb-2">
+      {/* Na wąskim ekranie tytuł i odczyt schodzą pod siebie — obok siebie oba
+          łamały się w połowie („Saldo w / czasie"), co wyglądało na błąd. */}
+      <div className="flex flex-col gap-0.5 mb-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
         <h2 className="text-sm font-semibold">Saldo w czasie</h2>
         {active ? (
           <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">

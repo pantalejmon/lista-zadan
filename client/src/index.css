@@ -187,8 +187,17 @@ input[type="range"] {
   accent-color: var(--color-primary-500);
 }
 
-* {
-  @apply outline-none;
+/* Obramowanie fokusu **tylko dla klawiatury**. Wcześniej `* { outline: none }`
+   gasiło je wszędzie, więc chodzenie po aplikacji Tabem było niewidoczne —
+   a elementy bez własnego `focus:ring-*` nie dawały żadnego sygnału, gdzie
+   jest kursor. `:focus-visible` zostawia myszkę i dotyk bez obwódki. */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
 }
 
 @keyframes fadeIn {

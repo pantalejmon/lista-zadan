@@ -329,7 +329,10 @@ function TransactionRow({
       <div className="flex items-center gap-2 mt-0.5">
         <span className="text-xs text-gray-400 shrink-0">{formatMoment(transaction.occurredAt)}</span>
         {transaction.category && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 truncate">
+          // `min-w-0` jest tu konieczne, żeby `truncate` w ogóle zadziałało:
+          // element flexa domyślnie nie zwęża się poniżej swojej treści, więc
+          // dłuższa kategoria („Wynagrodzenie") rozpychała wiersz pod ikony.
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 truncate min-w-0">
             {transaction.category}
           </span>
         )}

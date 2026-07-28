@@ -76,8 +76,43 @@ rodziny (np. `ml` dla produktu w `g`) też nie jest zgadywana — brakuje gęsto
 ### Pokrycie w UI
 
 `coverage < 1` **musi** być widoczne razem z wynikiem (`NutritionSummary`):
-„Policzono 75% składników. Nie policzono: Oliwa." Bez tego liczba wygląda na pewnik,
-a jest sumą tego, co akurat dało się policzyć.
+„Policzono 75% składników. Bez: Oliwa." Bez tego liczba wygląda na pewnik,
+a jest sumą tego, co akurat dało się policzyć. Ostrzeżenie niesie ikonę, nie tylko
+kolor — status nigdy nie zależy u nas od samej barwy.
+
+## Prezentacja makro (`NutritionSummary`)
+
+Kafelek to **liczba-bohater** (kcal na porcję) + **pasek składu 100%** + legenda
+z wartościami.
+
+**Pasek pokazuje udział energii, nie gramów.** Gram tłuszczu to 9 kcal, a gram
+białka czy węglowodanów 4 kcal (współczynniki Atwatera, `KCAL_PER_GRAM`). Pasek
+gramowy zaniżałby tłuszcz i kłamał o tym, z czego naprawdę jest ten posiłek.
+Legenda podaje **gramy** (tak są na etykiecie) i obok **procent energii**.
+
+**Trzy stałe barwy zamiast jednego odcienia.** `docs/finance.md` ustala, że
+porównanie wielkości robimy słupkami w jednym odcieniu — tam chodziło o *ranking
+kategorii*, których jest dużo i są zmienne. Tutaj zbiór jest **stały i trzyelementowy**,
+a zadaniem koloru jest *tożsamość* (który segment to tłuszcz), nie wielkość — więc
+paleta jest kategorialna:
+
+| Makroskładnik | Jasny | Ciemny |
+|---------------|-------|--------|
+| Białko | `#2a78d6` | `#3987e5` |
+| Tłuszcz | `#eb6834` | `#d95926` |
+| Węglowodany | `#1baf7a` | `#199e70` |
+
+Tokeny `--macro-*` w `index.css`. Zasady, których trzymamy się przy zmianach:
+
+- **Nie zależą od akcentu.** Akcent jest per użytkownik, a makro znaczy to samo
+  u wszystkich — kolor tłuszczu nie może być raz różowy, raz zielony.
+- Kroki dla trybu ciemnego są **dobrane osobno** pod ciemne tło, a nie przyciemnione
+  automatycznie.
+- Paleta przeszła walidację kontrastu i rozróżnialności przy zaburzeniach widzenia
+  barw (deuteranopia/tritanopia) na obu tłach. Przy podmianie kolorów **trzeba ją
+  zwalidować ponownie**, a nie oceniać na oko.
+- Tożsamość nigdy nie zależy od samego koloru: każdy segment ma kropkę + nazwę
+  + wartość w legendzie (która działa też jako wersja tabelaryczna).
 
 ## Dalsze etapy
 

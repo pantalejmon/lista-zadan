@@ -100,6 +100,24 @@ body {
   --color-primary-900: #881337;
 }
 
+/* ---- Makroskładniki (paski składu w Posiłkach) --------------------------- */
+/* Trzy stałe barwy kategorialne — białko / tłuszcz / węglowodany. Celowo NIE
+   zależą od akcentu: akcent zmienia się per użytkownik, a makro to skala o
+   ustalonym znaczeniu, więc kolor musi znaczyć to samo u wszystkich. Kroki dla
+   trybu ciemnego są dobrane osobno pod ciemne tło (nie są przyciemnieniem
+   jasnych). Paleta przechodzi walidację CVD dla obu trybów. */
+:root {
+  --macro-protein: #2a78d6;
+  --macro-fat: #eb6834;
+  --macro-carbs: #1baf7a;
+}
+
+:root:is(.dark) {
+  --macro-protein: #3987e5;
+  --macro-fat: #d95926;
+  --macro-carbs: #199e70;
+}
+
 * {
   @apply outline-none;
 }

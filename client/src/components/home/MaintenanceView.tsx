@@ -49,6 +49,19 @@ function dueLabel(m: Maintenance): string {
   return `${formatDate(m.nextDueAt)} · za ${m.daysUntilDue} dni`;
 }
 
+// Termin + cykl + koszt + wykonawca w jednej linijce. Renderowana dwa razy
+// (raz w rzędzie, raz pod nazwą), więc trzyma się tu, a nie w JSX-ie.
+function maintenanceMeta(m: Maintenance): string {
+  return [
+    dueLabel(m),
+    m.intervalMonths ? `co ${m.intervalMonths} mies.` : null,
+    m.cost !== null ? `${m.cost} zł` : null,
+    m.providerName,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 export function MaintenanceView({ householdId }: MaintenanceViewProps) {
   const [assets, setAssets] = useState<HomeAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,24 +139,32 @@ export function MaintenanceView({ householdId }: MaintenanceViewProps) {
             </p>
             <ul className="divide-y divide-gray-50 dark:divide-gray-800">
               {agenda.map(({ m, asset }) => (
-                <li key={m.id} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_META[m.status].dot}`} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium break-words">{m.type}</p>
-                    <p className="text-xs text-gray-400 truncate">{asset.name} · {dueLabel(m)}</p>
+                // Jak w karcie instalacji: na telefonie nazwa i opis mają cały
+                // wiersz, akcje schodzą pod spód. W jednym rzędzie zostawało
+                // z nazwy tyle, że łamała się po dwa słowa na linię.
+                <li key={m.id} className="px-4 py-2.5 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="flex items-start gap-3 min-w-0 sm:flex-1 sm:items-center">
+                    <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 sm:mt-0 ${STATUS_META[m.status].dot}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium break-words">{m.type}</p>
+                      <p className="text-xs text-gray-400 break-words sm:truncate">{asset.name} · {dueLabel(m)}</p>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setReminding({ maintenance: m, assetName: asset.name })}
-                    className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:underline shrink-0"
-                  >
-                    → Zadania
-                  </button>
-                  <button
-                    onClick={() => setCompleting(m)}
-                    className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline shrink-0"
-                  >
-                    Odhacz
-                  </button>
+                  <div className="flex items-center gap-3 pl-5 sm:pl-0">
+                    <span className="flex-1 sm:hidden" />
+                    <button
+                      onClick={() => setReminding({ maintenance: m, assetName: asset.name })}
+                      className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:underline shrink-0 px-1 py-2"
+                    >
+                      → Zadania
+                    </button>
+                    <button
+                      onClick={() => setCompleting(m)}
+                      className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline shrink-0 px-1 py-2"
+                    >
+                      Odhacz
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -266,30 +287,39 @@ function AssetCard({
       {asset.maintenance.length > 0 && (
         <ul className="divide-y divide-gray-50 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
           {asset.maintenance.map((m) => (
-            <li key={m.id} className="flex items-center gap-3 px-4 py-2.5">
-              <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${STATUS_META[m.status].badge}`}>{STATUS_META[m.status].label}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{m.type}</p>
-                <p className="text-xs text-gray-400 truncate">
-                  {dueLabel(m)}
-                  {m.intervalMonths ? ` · co ${m.intervalMonths} mies.` : ''}
-                  {m.cost !== null ? ` · ${m.cost} zł` : ''}
-                  {m.providerName ? ` · ${m.providerName}` : ''}
-                </p>
+            // Na telefonie nazwa przeglądu dostaje własny wiersz. Wciśnięta między
+            // plakietkę statusu a trzy kontrolki zostawała z niej sama końcówka
+            // („Przegląd …"), czyli znikała jedyna informacja, po której da się
+            // ten wiersz rozpoznać. Od `sm` wzwyż wszystko mieści się w rzędzie.
+            <li key={m.id} className="px-4 py-2.5 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+              <div className="flex items-start gap-2 min-w-0 sm:flex-1 sm:items-center sm:gap-3">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 mt-0.5 sm:mt-0 ${STATUS_META[m.status].badge}`}>{STATUS_META[m.status].label}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium break-words sm:truncate">{m.type}</p>
+                  <p className="hidden sm:block text-xs text-gray-400 truncate">{maintenanceMeta(m)}</p>
+                </div>
               </div>
-              <button onClick={() => onCompleteMaintenance(m)} className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline shrink-0" title="Oznacz jako wykonany">
-                Odhacz
-              </button>
-              <button onClick={() => onEditMaintenance(m)} className="p-1 rounded text-gray-300 hover:text-primary-600 shrink-0" aria-label="Edytuj przegląd">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button onClick={() => onDeleteMaintenance(m)} className="p-1 rounded text-gray-300 hover:text-red-500 shrink-0" aria-label="Usuń przegląd">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+
+              <p className="text-xs text-gray-400 break-words sm:hidden">{maintenanceMeta(m)}</p>
+
+              <div className="flex items-center gap-1 sm:gap-3">
+                {/* Odsuwa akcje na prawą krawędź — opis ma własny wiersz, więc
+                    przyciski nie wiszą w połowie zawiniętego tekstu. */}
+                <span className="flex-1 sm:hidden" />
+                <button onClick={() => onCompleteMaintenance(m)} className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline shrink-0 px-1 py-2" title="Oznacz jako wykonany">
+                  Odhacz
+                </button>
+                <button onClick={() => onEditMaintenance(m)} className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0" aria-label={`Edytuj przegląd: ${m.type}`}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button onClick={() => onDeleteMaintenance(m)} className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 shrink-0" aria-label={`Usuń przegląd: ${m.type}`}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </li>
           ))}
         </ul>

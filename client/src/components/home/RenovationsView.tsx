@@ -102,7 +102,10 @@ export function RenovationsView({ householdId }: { householdId?: string }) {
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="font-semibold truncate">{r.title}</h2>
+                      {/* `break-words`, nie `truncate`: pod spodem jest cała
+                          karta miejsca, a ucięty tytuł („Remont łazienki na …")
+                          nie mówi, o który projekt chodzi. Jak w karcie instalacji. */}
+                      <h2 className="font-semibold break-words min-w-0">{r.title}</h2>
                       <span className={`text-[11px] px-2 py-0.5 rounded-full ${STATUS_META[r.status].badge}`}>{STATUS_META[r.status].label}</span>
                     </div>
                     {(r.budget !== null || r.cost !== null) && (

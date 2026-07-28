@@ -163,7 +163,9 @@ Web depends on domain. The module file wires it all together via NestJS DI (`pro
 
 - **Logic in services, not controllers**: controllers are thin — they delegate to a service. All business
   logic, entity creation, repository calls, and relation lookups live in services. Controllers only handle HTTP
-  concerns (decorators, status codes, validation binding).
+  concerns (decorators, status codes, validation binding). **This includes WebSocket notifications** — they
+  belong in the service, so every path into it (REST, MCP tools, future integrations) notifies open clients
+  identically. Emitting from a controller silently breaks realtime for MCP callers.
 - **Subdirectories only when earned**: use `domain/`, `infrastructure/`, `web/` subdirectories when a module
   has 6+ files. For smaller modules, keep files flat in the module directory. The layer structure in the
   architecture section above is the target for mature modules, not a requirement from day one.

@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
 import { MealEntry } from '../domain/meal-entry.model';
 import { MealType } from '../domain/recipe-ingredient';
+import { MealParticipant } from '../domain/meal-participant';
 
 @Entity('meal_entry')
 export class MealEntryEntity {
@@ -26,6 +27,11 @@ export class MealEntryEntity {
   @Column('boolean', { default: false })
   cooked!: boolean;
 
+  // Uczestnicy jako JSON — jak składniki przepisu. Dane są tygodniowej skali
+  // i zawsze czytane razem z wpisem, więc osobna tabela nic by nie kupiła.
+  @Column('text', { nullable: true })
+  participants!: string | null;
+
   toDomain(): MealEntry {
     return new MealEntry(
       this.id,
@@ -35,6 +41,7 @@ export class MealEntryEntity {
       this.mealType,
       this.recipeId,
       this.cooked,
+      parseParticipants(this.participants),
     );
   }
 
@@ -47,6 +54,28 @@ export class MealEntryEntity {
     entity.mealType = entry.mealType;
     entity.recipeId = entry.recipeId;
     entity.cooked = entry.cooked;
+    entity.participants = JSON.stringify(entry.participants);
     return entity;
+  }
+}
+
+function parseParticipants(raw: string | null): MealParticipant[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter(
+      (p): p is MealParticipant =>
+        typeof p === 'object' &&
+        p !== null &&
+        typeof (p as MealParticipant).userId === 'string' &&
+        typeof (p as MealParticipant).portions === 'number',
+    );
+  } catch {
+    return [];
   }
 }

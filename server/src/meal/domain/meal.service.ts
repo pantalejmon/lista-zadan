@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { ListRole } from '../../sharing/domain/list-role';
 import { SharingService } from '../../sharing/domain/sharing.service';
 import { Recipe, type RecipeResponse } from './recipe.model';
@@ -12,6 +12,7 @@ import { Product, type ProductResponse } from './product.model';
 import { PantryItemRepositoryPort } from './pantry-item.repository.port';
 import { PantryItem, type PantryItemResponse } from './pantry-item.model';
 import { computeRecipeNutrition } from './nutrition';
+import { MealParticipant } from './meal-participant';
 import { MealGateway } from '../web/meal.gateway';
 import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
 import { CreateEntryDto } from '../web/dto/create-entry.dto';
@@ -175,16 +176,70 @@ export class MealService {
       dto.dayOfWeek,
       dto.mealType,
     );
+    const participants = dto.participants
+      ? await this.validateParticipants(householdId, userId, dto.participants)
+      : null;
     if (existing) {
-      const updated = existing.withRecipe(dto.recipeId);
+      const withRecipe = existing.withRecipe(dto.recipeId);
+      const updated = participants ? withRecipe.withParticipants(participants) : withRecipe;
       await this.entryRepo.update(updated);
       this.gateway.notifyChanged(householdId);
       return updated.toResponse();
     }
-    const entry = MealEntry.create(householdId, dto.weekStart, dto.dayOfWeek, dto.mealType, dto.recipeId);
+    const entry = MealEntry.create(
+      householdId,
+      dto.weekStart,
+      dto.dayOfWeek,
+      dto.mealType,
+      dto.recipeId,
+      participants ?? [],
+    );
     await this.entryRepo.save(entry);
     this.gateway.notifyChanged(householdId);
     return entry.toResponse();
+  }
+
+  // Kto je dany posiłek i w ilu porcjach — podstawa bilansu odżywczego.
+  // Pusta lista = „nieprzypisany": posiłek nadal liczy się do zakupów i spiżarni,
+  // ale nie wchodzi do niczyjego bilansu.
+  async setParticipants(
+    id: string,
+    userId: string,
+    participants: MealParticipant[],
+  ): Promise<MealEntryResponse> {
+    const entry = await this.entryRepo.findById(id);
+    if (!entry) {
+      throw new NotFoundException(`Meal entry ${id} not found`);
+    }
+    await this.sharingService.assertHouseholdPermission(entry.householdId, userId, WRITE_ROLES);
+    const validated = await this.validateParticipants(entry.householdId, userId, participants);
+    const updated = entry.withParticipants(validated);
+    await this.entryRepo.update(updated);
+    this.gateway.notifyChanged(entry.householdId);
+    return updated.toResponse();
+  }
+
+  // Do bilansu może wejść tylko domownik z tego gospodarstwa — inaczej przez API
+  // dałoby się dopisać komuś posiłki spoza jego domu. Duplikaty scalamy, zamiast
+  // liczyć tę samą osobę dwa razy.
+  private async validateParticipants(
+    householdId: string,
+    userId: string,
+    participants: MealParticipant[],
+  ): Promise<MealParticipant[]> {
+    if (participants.length === 0) {
+      return [];
+    }
+    const members = await this.sharingService.getHouseholdMembers(householdId, userId);
+    const memberIds = new Set(members.map((m) => m.userId));
+    const merged = new Map<string, number>();
+    for (const participant of participants) {
+      if (!memberIds.has(participant.userId)) {
+        throw new BadRequestException(`User ${participant.userId} is not a member of this household`);
+      }
+      merged.set(participant.userId, participant.portions);
+    }
+    return [...merged.entries()].map(([id, portions]) => ({ userId: id, portions }));
   }
 
   async removeEntry(id: string, userId: string): Promise<void> {

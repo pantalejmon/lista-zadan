@@ -1,6 +1,7 @@
 import { MealService } from '../../../meal/domain/meal.service';
 import { CreateProductDto } from '../../../meal/web/dto/create-product.dto';
 import { NutritionDto } from '../../../meal/web/dto/nutrition.dto';
+import { MealParticipantDto } from '../../../meal/web/dto/meal-participant.dto';
 import { CreateRecipeDto } from '../../../meal/web/dto/create-recipe.dto';
 import { RecipeIngredientDto } from '../../../meal/web/dto/recipe-ingredient.dto';
 import { CreateEntryDto } from '../../../meal/web/dto/create-entry.dto';
@@ -327,7 +328,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
       name: 'plan_meal',
       description:
         'Przypisuje przepis do dnia i pory w planie tygodnia (nadpisuje slot). Wymaga recipeId, weekStart (poniedziałek YYYY-MM-DD), ' +
-        'dayOfWeek (0=poniedziałek … 6=niedziela) i mealType (BREAKFAST/LUNCH/DINNER/SNACK).',
+        'dayOfWeek (0=poniedziałek … 6=niedziela) i mealType (BREAKFAST/LUNCH/DINNER/SNACK). ' +
+        'Opcjonalnie participants — kto je i w ilu porcjach.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
@@ -337,6 +339,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
           weekStart: { type: 'string', description: 'Poniedziałek tygodnia YYYY-MM-DD' },
           dayOfWeek: { type: 'number', description: '0=pon … 6=niedz' },
           mealType: { type: 'string', enum: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'], description: 'Pora posiłku' },
+          participants: participantsSchema,
         },
         required: ['recipeId', 'weekStart', 'dayOfWeek', 'mealType'],
         additionalProperties: false,
@@ -348,7 +351,35 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         dto.weekStart = requireStringArg(args, 'weekStart');
         dto.dayOfWeek = requireNumberArg(args, 'dayOfWeek');
         dto.mealType = requireStringArg(args, 'mealType') as MealType;
+        const participants = parseParticipants(args);
+        if (participants) {
+          dto.participants = participants;
+        }
         return mealService.addEntry(householdId, ctx.userId, dto);
+      },
+    },
+    {
+      name: 'set_meal_participants',
+      description:
+        'Ustawia, kto je zaplanowany posiłek i w ilu porcjach (0,5 = pół porcji, 2 = dokładka). ' +
+        'Zastępuje dotychczasową listę; pusta lista = posiłek nieprzypisany (poza bilansem). ' +
+        'Wymaga entryId. userId weź z list_household_members.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          entryId: { type: 'string', description: 'ID wpisu w planerze' },
+          participants: participantsSchema,
+        },
+        required: ['entryId', 'participants'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        return mealService.setParticipants(
+          requireStringArg(args, 'entryId'),
+          ctx.userId,
+          parseParticipants(args) ?? [],
+        );
       },
     },
     {
@@ -486,6 +517,36 @@ const ingredientSchema = {
   required: ['name'],
   additionalProperties: false,
 } as const;
+
+const participantsSchema = {
+  type: 'array',
+  description: 'Kto je ten posiłek: [{userId, portions}]. Porcje jako mnożnik porcji przepisu.',
+  items: {
+    type: 'object',
+    properties: {
+      userId: { type: 'string', description: 'ID domownika (z list_household_members)' },
+      portions: { type: 'number', description: 'Liczba porcji, np. 0.5 / 1 / 2' },
+    },
+    required: ['userId', 'portions'],
+    additionalProperties: false,
+  },
+} as const;
+
+// Zwraca undefined, gdy klucz nie został w ogóle podany — inaczej nie dałoby się
+// odróżnić „nie ruszaj uczestników" od „wyczyść listę".
+function parseParticipants(args: Record<string, unknown>): MealParticipantDto[] | undefined {
+  if (!Array.isArray(args.participants)) {
+    return undefined;
+  }
+  return args.participants
+    .filter((p): p is Record<string, unknown> => typeof p === 'object' && p !== null)
+    .map((raw) => {
+      const dto = new MealParticipantDto();
+      dto.userId = requireStringArg(raw, 'userId');
+      dto.portions = numberArg(raw, 'portions') ?? 1;
+      return dto;
+    });
+}
 
 // Wartości na 100 g / 100 ml, a dla produktów w `szt` — na 1 sztukę.
 const nutritionSchema = {

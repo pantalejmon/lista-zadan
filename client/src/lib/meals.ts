@@ -118,6 +118,16 @@ export const MEAL_TYPES: { type: MealType; label: string }[] = [
 
 export const WEEK_DAYS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
 
+// Kto je dany posiłek i w ilu porcjach (0,5 = pół porcji, 2 = dokładka).
+// Pusta lista = „nieprzypisany": posiłek liczy się do zakupów i spiżarni, ale
+// nie wchodzi do niczyjego bilansu.
+export interface MealParticipant {
+  userId: string;
+  portions: number;
+}
+
+export const PORTION_OPTIONS = [0.5, 1, 1.5, 2];
+
 export interface MealEntry {
   id: string;
   weekStart: string; // YYYY-MM-DD (Monday)
@@ -125,6 +135,7 @@ export interface MealEntry {
   mealType: MealType;
   recipeId: string;
   cooked: boolean;
+  participants: MealParticipant[];
 }
 
 export interface PlannerEntry extends MealEntry {
@@ -246,6 +257,7 @@ export interface MealStorage {
   addEntry(weekStart: string, recipeId: string, dayOfWeek: number, mealType: MealType): Promise<void>;
   removeEntry(id: string): Promise<void>;
   setCooked(id: string, cooked: boolean): Promise<void>;
+  setParticipants(id: string, participants: MealParticipant[]): Promise<void>;
   getShopping(): Promise<ShoppingItem[]>;
   addShoppingItem(name: string): Promise<void>;
   toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;

@@ -33,6 +33,11 @@ niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby ni
   twardym `productId` — dzięki temu ten sam produkt użyty w wielu przepisach agreguje
   się poprawnie.
 - **Wpis planera** (`MealEntry`) — przepis przypisany do slotu `(weekStart, dayOfWeek, mealType)`.
+  Niesie też `participants` — kto ten posiłek je i w ilu porcjach (`0,5` = pół porcji,
+  `2` = dokładka). Pusta lista znaczy „nieprzypisany": posiłek nadal liczy się do zakupów
+  i spiżarni, ale nie wchodzi do niczyjego bilansu (`docs/nutrition.md`). Uczestnikiem może
+  być wyłącznie członek gospodarstwa — walidowane przez `SharingService`. Zmiana przepisu
+  w slocie **nie** czyści uczestników: to ten sam slot i te same osoby, zmienia się danie.
   Pole `cooked` znaczy „ugotowane" (patrz pętle domykające).
 - **Spiżarnia** (`PantryItem`) — aktualny stan produktu (`quantity`) w gospodarstwie.
 - **Pozycja zakupowa** (`MealShoppingItem`) — `{name, quantity, unit, isChecked}`.

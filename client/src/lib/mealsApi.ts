@@ -9,6 +9,7 @@ import type {
   ShoppingItem,
   RecipeInput,
   MealType,
+  MealParticipant,
 } from './meals';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
@@ -87,6 +88,13 @@ export function createCloudMealStorage(householdId: string): MealStorage {
       await request<unknown>(`/meals/planner/entry/${id}/cooked`, {
         method: 'PATCH',
         body: JSON.stringify({ cooked }),
+      });
+    },
+
+    setParticipants: async (id, participants: MealParticipant[]) => {
+      await request<unknown>(`/meals/planner/entry/${id}/participants`, {
+        method: 'PATCH',
+        body: JSON.stringify({ participants }),
       });
     },
 

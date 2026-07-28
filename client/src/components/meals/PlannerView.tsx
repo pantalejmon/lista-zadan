@@ -12,13 +12,26 @@ import {
 } from '../../lib/meals';
 import { IconChevronLeft, IconChevronRight, IconClose, IconPlus, IconCheck } from './icons';
 import { RecipePreviewModal } from './RecipePreviewModal';
+import { ParticipantsBadges, ParticipantsPicker } from './ParticipantsPicker';
+import { getHouseholdMembers } from '../../lib/api';
+import type { HouseholdMember } from '../../lib/types';
 
-export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
+export function PlannerView({
+  storage,
+  householdId,
+  liveKey = 0,
+}: {
+  storage: MealStorage;
+  householdId: string;
+  liveKey?: number;
+}) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [entries, setEntries] = useState<PlannerEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [pickerSlot, setPickerSlot] = useState<{ day: number; meal: MealType } | null>(null);
   const [preview, setPreview] = useState<Recipe | null>(null);
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [participantsFor, setParticipantsFor] = useState<PlannerEntry | null>(null);
 
   const load = useCallback(async () => {
     setEntries(await storage.getWeek(weekStart));
@@ -26,6 +39,7 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
 
   useEffect(() => { load(); }, [load, liveKey]);
   useEffect(() => { storage.getRecipes().then(setRecipes); }, [storage, liveKey]);
+  useEffect(() => { getHouseholdMembers(householdId).then(setMembers).catch(() => setMembers([])); }, [householdId]);
 
   const getEntry = (day: number, mealType: MealType) =>
     entries.find((e) => e.dayOfWeek === day && e.mealType === mealType);
@@ -46,6 +60,15 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
 
   const handleCook = async (entry: PlannerEntry) => {
     await storage.setCooked(entry.id, !entry.cooked);
+    load();
+  };
+
+  const handleSaveParticipants = async (participants: { userId: string; portions: number }[]) => {
+    if (!participantsFor) {
+      return;
+    }
+    await storage.setParticipants(participantsFor.id, participants);
+    setParticipantsFor(null);
     load();
   };
 
@@ -146,6 +169,11 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                             </span>
                             <span>Zrobione</span>
                           </button>
+                          <ParticipantsBadges
+                            participants={entry.participants ?? []}
+                            members={members}
+                            onClick={() => setParticipantsFor(entry)}
+                          />
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="absolute top-0.5 right-0.5 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-60 group-hover:opacity-100 transition-opacity"
@@ -212,6 +240,11 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                           >
                             {entry.recipe?.title ?? '—'}
                           </button>
+                          <ParticipantsBadges
+                            participants={entry.participants ?? []}
+                            members={members}
+                            onClick={() => setParticipantsFor(entry)}
+                          />
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="text-gray-300 hover:text-red-500 shrink-0 p-1"
@@ -277,6 +310,15 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
       )}
 
       {preview && <RecipePreviewModal recipe={preview} onClose={() => setPreview(null)} />}
+
+      {participantsFor && (
+        <ParticipantsPicker
+          members={members}
+          initial={participantsFor.participants ?? []}
+          onSave={handleSaveParticipants}
+          onClose={() => setParticipantsFor(null)}
+        />
+      )}
     </div>
   );
 }

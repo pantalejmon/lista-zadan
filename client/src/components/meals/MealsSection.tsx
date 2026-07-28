@@ -64,7 +64,7 @@ export function MealsSection({ storage, householdId }: MealsSectionProps) {
       </div>
 
       <main className="flex-1">
-        {tab === 'planner' && <PlannerView storage={storage} liveKey={liveKey} />}
+        {tab === 'planner' && <PlannerView storage={storage} householdId={householdId} liveKey={liveKey} />}
         {tab === 'recipes' && <RecipesView storage={storage} liveKey={liveKey} />}
         {tab === 'products' && <ProductsView storage={storage} liveKey={liveKey} />}
         {tab === 'pantry' && <PantryView storage={storage} liveKey={liveKey} />}

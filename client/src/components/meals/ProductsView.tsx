@@ -119,10 +119,10 @@ export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; l
                   ) : (
                     <li
                       key={p.id}
-                      className="bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3 flex items-center gap-3"
+                      className="bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3 flex items-start gap-2"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{p.name}</p>
+                        <p className="font-medium break-words">{p.name}</p>
                         <p className="text-xs text-gray-400 dark:text-gray-500">
                           jedn. {p.baseUnit}
                           {p.packageSize ? ` · opak. ${p.packageSize} ${p.baseUnit}` : ''}

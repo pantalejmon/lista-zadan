@@ -140,39 +140,51 @@ function PantryRow({
     }
   };
 
+  // Na telefonie nazwa dostaje **całą szerokość** i własny wiersz, a kontrolki
+  // schodzą pod nią. Wciśnięte w jeden rząd zabierały jej tyle miejsca, że
+  // „Mleko 3,2%" wyświetlało się jako „Ml…" — przy pustym ekranie pod spodem.
+  // Od `sm` wzwyż mieści się wszystko obok siebie, więc wracamy do jednego rzędu.
   return (
-    <li className="bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3 flex items-center gap-3">
-      <div className="flex-1 min-w-0">
-        <p className="font-medium truncate">{item.name}</p>
+    <li className="bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <div className="min-w-0 sm:flex-1">
+        <p className="font-medium break-words sm:truncate">{item.name}</p>
         {item.packageSize ? (
           <p className="text-xs text-gray-400 dark:text-gray-500">opak. {item.packageSize} {item.baseUnit}</p>
         ) : null}
       </div>
-      <input
-        type="number"
-        value={qty}
-        onChange={(e) => setQty(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === 'Enter') { commit(); } }}
-        className="w-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
-      />
-      <span className="text-sm text-gray-400 w-8">{item.baseUnit}</span>
-      {item.packageSize ? (
+
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          inputMode="decimal"
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === 'Enter') { commit(); } }}
+          aria-label={`Stan: ${item.name}`}
+          className="w-24 sm:w-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-2 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <span className="text-sm text-gray-400 shrink-0">{item.baseUnit}</span>
+        {item.packageSize ? (
+          <button
+            onClick={onAddPackage}
+            className="text-xs font-medium px-2.5 py-2 rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-500/20 transition-colors shrink-0"
+            title={`Dodaj jedno opakowanie (${item.packageSize} ${item.baseUnit})`}
+          >
+            +opak.
+          </button>
+        ) : null}
+        {/* Kosz na koniec rzędu — na telefonie odsunięty na prawą krawędź,
+            żeby nie sąsiadował z „+opak." i nie łapało się go przez pomyłkę. */}
+        <span className="flex-1 sm:hidden" />
         <button
-          onClick={onAddPackage}
-          className="text-xs font-medium px-2 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-500/20 transition-colors shrink-0"
-          title="Dodaj jedno opakowanie"
+          onClick={onRemove}
+          className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all shrink-0"
+          aria-label={`Usuń ze spiżarni: ${item.name}`}
         >
-          +opak.
+          <IconTrash className="w-4 h-4" />
         </button>
-      ) : null}
-      <button
-        onClick={onRemove}
-        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all shrink-0"
-        aria-label="Usuń"
-      >
-        <IconTrash className="w-4 h-4" />
-      </button>
+      </div>
     </li>
   );
 }

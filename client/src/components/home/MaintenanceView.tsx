@@ -129,7 +129,7 @@ export function MaintenanceView({ householdId }: MaintenanceViewProps) {
                 <li key={m.id} className="flex items-center gap-3 px-4 py-2.5">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_META[m.status].dot}`} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{m.type}</p>
+                    <p className="text-sm font-medium break-words">{m.type}</p>
                     <p className="text-xs text-gray-400 truncate">{asset.name} · {dueLabel(m)}</p>
                   </div>
                   <button
@@ -240,7 +240,7 @@ function AssetCard({
       <div className="flex items-start gap-3 px-4 py-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="font-semibold truncate">{asset.name}</h2>
+            <h2 className="font-semibold break-words">{asset.name}</h2>
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400">{asset.type}</span>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">

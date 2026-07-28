@@ -262,31 +262,46 @@ export function PlannerView({
                 {MEAL_TYPES.map(({ type, label }) => {
                   const entry = getEntry(dayIdx, type);
                   return (
-                    <div key={type} className="px-4 py-2 flex items-center justify-between gap-3">
-                      <span className="text-xs text-gray-400 w-20 shrink-0">{label}</span>
-                      {entry ? (
-                        <div className="flex-1 flex items-center justify-between min-w-0 gap-2">
+                    // Nazwa dania i pora dostają własny wiersz — wciśnięte obok
+                    // czterech kontrolek zostawały z „Nal…" na wąskim ekranie.
+                    <div key={type} className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 w-16 shrink-0">{label}</span>
+                        {entry ? (
+                          <>
+                            <button
+                              onClick={() => handleCook(entry)}
+                              className={`w-5 h-5 shrink-0 rounded flex items-center justify-center border transition-colors ${
+                                entry.cooked
+                                  ? 'bg-green-500 border-green-500 text-white'
+                                  : 'border-gray-300 dark:border-gray-600 text-transparent'
+                              }`}
+                              aria-label={entry.cooked ? 'Cofnij ugotowanie' : 'Oznacz jako ugotowane'}
+                            >
+                              <IconCheck className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => entry.recipe && setPreview(entry.recipe)}
+                              disabled={!entry.recipe}
+                              className={`text-sm font-medium flex-1 min-w-0 text-left break-words ${
+                                entry.cooked ? 'line-through text-gray-400 dark:text-gray-500' : ''
+                              }`}
+                            >
+                              {entry.recipe?.title ?? entry.custom?.title ?? '—'}
+                            </button>
+                          </>
+                        ) : (
                           <button
-                            onClick={() => handleCook(entry)}
-                            className={`w-5 h-5 shrink-0 rounded flex items-center justify-center border transition-colors ${
-                              entry.cooked
-                                ? 'bg-green-500 border-green-500 text-white'
-                                : 'border-gray-300 dark:border-gray-600 text-transparent'
-                            }`}
-                            aria-label={entry.cooked ? 'Cofnij ugotowanie' : 'Oznacz jako ugotowane'}
+                            onClick={() => openPicker(dayIdx, type)}
+                            className="flex-1 inline-flex items-center gap-1 text-sm text-gray-300 dark:text-gray-600 hover:text-primary-600 dark:hover:text-primary-400 py-1"
                           >
-                            <IconCheck className="w-3 h-3" />
+                            <IconPlus className="w-3.5 h-3.5" /> Dodaj
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => entry.recipe && setPreview(entry.recipe)}
-                            disabled={!entry.recipe}
-                            className={`text-sm font-medium truncate flex-1 text-left ${
-                              entry.cooked ? 'line-through text-gray-400 dark:text-gray-500' : ''
-                            }`}
-                          >
-                            {entry.recipe?.title ?? entry.custom?.title ?? '—'}
-                          </button>
+                        )}
+                      </div>
+                      {entry && (
+                        <div className="flex items-center gap-2 mt-1.5 pl-[4.5rem]">
                           <ParticipantsBadges
                             participants={entry.participants ?? []}
                             members={members}
@@ -302,6 +317,7 @@ export function PlannerView({
                               {adjustmentLabel(entry) ?? '⇄'}
                             </button>
                           )}
+                          <span className="flex-1" />
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="text-gray-300 hover:text-red-500 shrink-0 p-1"
@@ -310,13 +326,6 @@ export function PlannerView({
                             <IconClose className="w-4 h-4" />
                           </button>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => openPicker(dayIdx, type)}
-                          className="flex-1 inline-flex items-center gap-1 text-sm text-gray-300 dark:text-gray-600 hover:text-primary-600 dark:hover:text-primary-400 py-1"
-                        >
-                          <IconPlus className="w-3.5 h-3.5" /> Dodaj
-                        </button>
                       )}
                     </div>
                   );

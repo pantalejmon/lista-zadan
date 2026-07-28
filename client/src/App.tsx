@@ -83,7 +83,7 @@ export default function App() {
   const { settings, update: updateSettings, toggleDark, hydrate: hydrateSettings, dark } = useSettings();
   const counts = useTodoCounts(currentMonth, refreshKey, storage, activeListId ?? undefined);
   const { mealHousehold, setMealHouseholdId } = useMealHousehold(households);
-  const mealStorage = useMealStorage(mode, mealHousehold?.id);
+  const mealStorage = useMealStorage(mealHousehold?.id);
 
   // Tasks are scoped to the globally-selected household (left sidebar): only its
   // lists are shown, and switching household re-points the active list.
@@ -476,7 +476,13 @@ export default function App() {
       </header>
 
       {section === 'meals' && (
-        <MealsSection storage={mealStorage} householdId={mealHousehold?.id} />
+        mealStorage && mealHousehold ? (
+          <MealsSection storage={mealStorage} householdId={mealHousehold.id} />
+        ) : (
+          <p className="max-w-lg mx-auto px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+            Wczytywanie gospodarstwa…
+          </p>
+        )
       )}
 
       {section === 'home' && (

@@ -21,7 +21,7 @@ const TABS: { id: MealsTab; label: string; Icon: (p: { className?: string }) => 
 
 interface MealsSectionProps {
   storage: MealStorage;
-  householdId?: string;
+  householdId: string;
 }
 
 const TAB_KEY = 'lista-zadan:meals-tab';
@@ -39,7 +39,7 @@ export function MealsSection({ storage, householdId }: MealsSectionProps) {
   }, [tab]);
 
   // Live updates from other household members.
-  useMealsRealtime(householdId, Boolean(householdId), () => setLiveKey((k) => k + 1));
+  useMealsRealtime(householdId, true, () => setLiveKey((k) => k + 1));
 
   return (
     <>

@@ -4,16 +4,20 @@ Sekcja „Posiłki" to zintegrowana część aplikacji domowej. Dane są **per g
 domowe** (nie per lista) i współdzielone między wszystkimi domownikami w czasie
 rzeczywistym (WebSocket namespace `meal`, pokój `household:<id>`, event `meal:changed`).
 
-Moduł działa w dwóch trybach za pośrednictwem wspólnego interfejsu `MealStorage`
-(`client/src/lib/meals.ts`):
+## Moduł jest cloud-only
 
-- **tryb lokalny** — `localMealStorage`, dane w IndexedDB (`lista-zadan-meals`),
-- **tryb chmurowy** — `createCloudMealStorage(householdId)`, REST do backendu.
+Tryb lokalny (bez konta) ogranicza się do modułu **Zadania** — nawigacja nie pokazuje
+Posiłków, a sekcja jest wymuszana na `tasks`. Posiłki wymagają gospodarstwa, więc
+istnieje **jedna** implementacja storage’u: `createCloudMealStorage(householdId)`
+(`client/src/lib/mealsApi.ts`), REST do backendu. Interfejs `MealStorage`
+(`client/src/lib/meals.ts`) opisuje jej kontrakt; sam plik trzyma już tylko typy,
+stałe i helpery prezentacyjne.
 
-Obie implementacje realizują **te same algorytmy** — logika opisana niżej jest
-zduplikowana świadomie (front lokalny musi działać offline), więc **każda zmiana
-algorytmu musi trafić w oba miejsca**: `client/src/lib/meals.ts` (lokalny) oraz
-`server/src/meal/domain/meal.service.ts` (chmura).
+**Algorytmy opisane niżej mają jedno miejsce prawdy:
+`server/src/meal/domain/meal.service.ts`.** (Do wersji sprzed tego uporządkowania front
+zawierał bliźniaczą implementację na IndexedDB — została usunięta jako nieosiągalna
+z UI. Osierocona baza `lista-zadan-meals` w przeglądarkach nie jest kasowana: mogą w
+niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby nieodwracalne.)
 
 ## Pojęcia
 
@@ -58,7 +62,6 @@ zakupowe tylko dla `toBuy > 0`. UI zakupów pozwala wybrać tydzień (strzałki)
 więc można zrobić listę zakupów np. tylko na weekend albo na przyszły tydzień. Filtr `days`
 jest przekazywany end-to-end: `GET /meals/needs` i `POST /meals/shopping/generate` przyjmują
 `?days=0,2,4`, a narzędzia MCP `what_is_missing` / `generate_shopping_from_plan` — pole `days`.
-Zmiana jest **zdublowana** w `client/src/lib/meals.ts` (offline) i `meal.service.ts` (cloud).
 
 ## Kategorie, wyszukiwanie i grupowanie
 

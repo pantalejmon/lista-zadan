@@ -103,6 +103,7 @@ odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który imp
 - przepisy: `create_recipe`, `update_recipe` (oba przyjmują `servings`), `delete_recipe`,
   `get_recipe_nutrition` (makro przepisu: `total`, `perServing`, `coverage`, `missing`),
 - planer: `plan_meal` (przypisz przepis do dnia/pory, opcjonalnie `participants`),
+  `plan_custom_meal` (posiłek bez przepisu, np. „jogurt i banan"),
   `set_meal_participants` (kto je i w ilu porcjach), `adjust_meal_entry` (mnożnik porcji / ilości
   składników w tym jednym posiłku), `mark_meal_cooked` (odejmij ze spiżarni), `remove_meal_entry`,
 - zakupy: `add_shopping_item`, `check_shopping_item` („kupione" → do spiżarni), `delete_shopping_item`, `generate_shopping_from_plan`,

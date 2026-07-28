@@ -2,13 +2,16 @@ import { randomUUID } from 'crypto';
 import { MealType } from './recipe-ingredient';
 import { MealParticipant } from './meal-participant';
 import { IngredientOverride } from './ingredient-override';
+import { CustomMeal } from './custom-meal';
 
 export interface MealEntryResponse {
   id: string;
   weekStart: string;
   dayOfWeek: number;
   mealType: MealType;
-  recipeId: string;
+  // Wpis to **albo** przepis (`recipeId`), **albo** posiłek doraźny (`custom`).
+  recipeId: string | null;
+  custom: CustomMeal | null;
   cooked: boolean;
   participants: MealParticipant[];
   portionScale: number;
@@ -22,7 +25,8 @@ export class MealEntry {
     readonly weekStart: string,
     readonly dayOfWeek: number,
     readonly mealType: MealType,
-    readonly recipeId: string,
+    readonly recipeId: string | null,
+    readonly custom: CustomMeal | null = null,
     readonly cooked: boolean = false,
     readonly participants: MealParticipant[] = [],
     // Korekty zrobione w slocie — patrz `effective-ingredients.ts`.
@@ -30,7 +34,7 @@ export class MealEntry {
     readonly ingredientOverrides: IngredientOverride[] = [],
   ) {}
 
-  static create(
+  static createFromRecipe(
     householdId: string,
     weekStart: string,
     dayOfWeek: number,
@@ -45,9 +49,39 @@ export class MealEntry {
       dayOfWeek,
       mealType,
       recipeId,
+      null,
       false,
       participants,
     );
+  }
+
+  // Posiłek doraźny — bez przepisu, ale ze składnikami, więc liczy się tak samo
+  // do zakupów, spiżarni i bilansu.
+  static createCustom(
+    householdId: string,
+    weekStart: string,
+    dayOfWeek: number,
+    mealType: MealType,
+    custom: CustomMeal,
+    participants: MealParticipant[] = [],
+  ): MealEntry {
+    return new MealEntry(
+      randomUUID(),
+      householdId,
+      weekStart,
+      dayOfWeek,
+      mealType,
+      null,
+      custom,
+      false,
+      participants,
+    );
+  }
+
+  // Tytuł do pokazania na kaflu: przepis nie jest tu dostępny, więc dla wpisów
+  // przepisowych zwraca null i wołający dokleja tytuł przepisu.
+  get title(): string | null {
+    return this.custom?.title ?? null;
   }
 
   withRecipe(recipeId: string): MealEntry {
@@ -62,6 +96,25 @@ export class MealEntry {
       this.dayOfWeek,
       this.mealType,
       recipeId,
+      null,
+      false,
+      this.participants,
+      1,
+      [],
+    );
+  }
+
+  // Podmiana zawartości slotu na posiłek doraźny — jak `withRecipe`, kasuje
+  // `cooked` i korekty (dotyczyły innego dania).
+  withCustom(custom: CustomMeal): MealEntry {
+    return new MealEntry(
+      this.id,
+      this.householdId,
+      this.weekStart,
+      this.dayOfWeek,
+      this.mealType,
+      null,
+      custom,
       false,
       this.participants,
       1,
@@ -77,6 +130,7 @@ export class MealEntry {
       this.dayOfWeek,
       this.mealType,
       this.recipeId,
+      this.custom,
       cooked,
       this.participants,
       this.portionScale,
@@ -92,6 +146,7 @@ export class MealEntry {
       this.dayOfWeek,
       this.mealType,
       this.recipeId,
+      this.custom,
       this.cooked,
       participants,
       this.portionScale,
@@ -107,6 +162,7 @@ export class MealEntry {
       this.dayOfWeek,
       this.mealType,
       this.recipeId,
+      this.custom,
       this.cooked,
       this.participants,
       portionScale,
@@ -121,6 +177,7 @@ export class MealEntry {
       dayOfWeek: this.dayOfWeek,
       mealType: this.mealType,
       recipeId: this.recipeId,
+      custom: this.custom,
       cooked: this.cooked,
       participants: this.participants,
       portionScale: this.portionScale,

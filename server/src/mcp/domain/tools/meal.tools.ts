@@ -4,6 +4,7 @@ import { NutritionDto } from '../../../meal/web/dto/nutrition.dto';
 import { MealParticipantDto } from '../../../meal/web/dto/meal-participant.dto';
 import { AdjustEntryDto } from '../../../meal/web/dto/adjust-entry.dto';
 import { IngredientOverrideDto } from '../../../meal/web/dto/ingredient-override.dto';
+import { CustomMealDto } from '../../../meal/web/dto/custom-meal.dto';
 import { CreateRecipeDto } from '../../../meal/web/dto/create-recipe.dto';
 import { RecipeIngredientDto } from '../../../meal/web/dto/recipe-ingredient.dto';
 import { CreateEntryDto } from '../../../meal/web/dto/create-entry.dto';
@@ -361,6 +362,45 @@ export function buildMealTools(mealService: MealService): McpTool[] {
       },
     },
     {
+      name: 'plan_custom_meal',
+      description:
+        'Wpisuje do planera posiłek **bez przepisu** („jogurt i banan"). Wymaga title, weekStart ' +
+        '(poniedziałek YYYY-MM-DD), dayOfWeek (0=pon…6=niedz) i mealType. Opcjonalnie ingredients — ' +
+        'ze składnikami posiłek liczy się do zakupów, spiżarni i bilansu tak samo jak przepis. ' +
+        'Nadpisuje zajęty slot.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          ...householdProp,
+          title: { type: 'string', description: 'Nazwa posiłku' },
+          weekStart: { type: 'string', description: 'Poniedziałek tygodnia YYYY-MM-DD' },
+          dayOfWeek: { type: 'number', description: '0=pon … 6=niedz' },
+          mealType: { type: 'string', enum: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'], description: 'Pora posiłku' },
+          ingredients: { type: 'array', description: 'Składniki (opcjonalnie)', items: ingredientSchema },
+          participants: participantsSchema,
+        },
+        required: ['title', 'weekStart', 'dayOfWeek', 'mealType'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const householdId = ctx.requireHousehold(stringArg(args, 'householdId'));
+        const dto = new CreateEntryDto();
+        dto.weekStart = requireStringArg(args, 'weekStart');
+        dto.dayOfWeek = requireNumberArg(args, 'dayOfWeek');
+        dto.mealType = requireStringArg(args, 'mealType') as MealType;
+        const custom = new CustomMealDto();
+        custom.title = requireStringArg(args, 'title');
+        custom.ingredients = parseIngredients(args);
+        dto.custom = custom;
+        const participants = parseParticipants(args);
+        if (participants) {
+          dto.participants = participants;
+        }
+        return mealService.addEntry(householdId, ctx.userId, dto);
+      },
+    },
+    {
       name: 'set_meal_participants',
       description:
         'Ustawia, kto je zaplanowany posiłek i w ilu porcjach (0,5 = pół porcji, 2 = dokładka). ' +
@@ -667,26 +707,34 @@ function buildRecipeDto(args: Record<string, unknown>): CreateRecipeDto {
   if (servings !== undefined) {
     dto.servings = servings;
   }
-  if (Array.isArray(args.ingredients)) {
-    dto.recipeIngredients = args.ingredients
-      .filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null)
-      .map((raw) => {
-        const ing = new RecipeIngredientDto();
-        ing.name = requireStringArg(raw, 'name');
-        const quantity = numberArg(raw, 'quantity');
-        if (quantity !== undefined) {
-          ing.quantity = quantity;
-        }
-        const unit = stringArg(raw, 'unit');
-        if (unit) {
-          ing.unit = unit;
-        }
-        const ingredientId = stringArg(raw, 'ingredientId');
-        if (ingredientId) {
-          ing.ingredientId = ingredientId;
-        }
-        return ing;
-      });
+  const ingredients = parseIngredients(args);
+  if (ingredients) {
+    dto.recipeIngredients = ingredients;
   }
   return dto;
+}
+
+function parseIngredients(args: Record<string, unknown>): RecipeIngredientDto[] | undefined {
+  if (!Array.isArray(args.ingredients)) {
+    return undefined;
+  }
+  return args.ingredients
+    .filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null)
+    .map((raw) => {
+      const ing = new RecipeIngredientDto();
+      ing.name = requireStringArg(raw, 'name');
+      const quantity = numberArg(raw, 'quantity');
+      if (quantity !== undefined) {
+        ing.quantity = quantity;
+      }
+      const unit = stringArg(raw, 'unit');
+      if (unit) {
+        ing.unit = unit;
+      }
+      const ingredientId = stringArg(raw, 'ingredientId');
+      if (ingredientId) {
+        ing.ingredientId = ingredientId;
+      }
+      return ing;
+    });
 }

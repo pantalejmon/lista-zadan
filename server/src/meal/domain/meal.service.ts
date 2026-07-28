@@ -20,6 +20,7 @@ import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
 import { CreateEntryDto } from '../web/dto/create-entry.dto';
 import { CreateProductDto } from '../web/dto/create-product.dto';
 import { AdjustEntryDto } from '../web/dto/adjust-entry.dto';
+import { RecipeIngredientDto } from '../web/dto/recipe-ingredient.dto';
 
 const WRITE_ROLES: ListRole[] = ['owner', 'editor'];
 const READ_ROLES: ListRole[] = ['owner', 'editor', 'viewer'];
@@ -161,18 +162,14 @@ export class MealService {
     const products = await this.productRepo.findByHousehold(householdId);
     const result: PlannerEntryResponse[] = [];
     for (const entry of entries) {
-      const recipe = await this.recipeRepo.findById(entry.recipeId);
+      const { recipe, ingredients, servings } = await this.resolveEntry(entry);
       result.push({
         ...entry.toResponse(),
         recipe: recipe ? this.toRecipeResponse(recipe, products) : null,
-        // Makro **tego posiłku** — po korektach ze slotu, w odróżnieniu od
-        // `recipe.nutrition`, które opisuje sam przepis. Stąd bierze je bilans.
-        nutrition: recipe
-          ? computeRecipeNutrition(
-            effectiveIngredients(recipe.recipeIngredients, entry.portionScale, entry.ingredientOverrides),
-            products,
-            recipe.servings,
-          )
+        // Makro **tego posiłku** — po korektach ze slotu i niezależnie od tego, czy
+        // stoi za nim przepis, czy posiłek doraźny. Stąd bierze je bilans.
+        nutrition: ingredients.length > 0
+          ? computeRecipeNutrition(ingredients, products, servings)
           : null,
       });
     }
@@ -191,24 +188,40 @@ export class MealService {
       dto.dayOfWeek,
       dto.mealType,
     );
+    // Slot trzyma przepis **albo** posiłek doraźny — jedno i tylko jedno.
+    if (!dto.recipeId === !dto.custom) {
+      throw new BadRequestException('Podaj recipeId albo custom (posiłek doraźny), nie oba naraz');
+    }
+    const custom = dto.custom
+      ? { title: dto.custom.title.trim(), ingredients: normaliseCustomIngredients(dto.custom.ingredients) }
+      : null;
     const participants = dto.participants
       ? await this.validateParticipants(householdId, userId, dto.participants)
       : null;
     if (existing) {
-      const withRecipe = existing.withRecipe(dto.recipeId);
-      const updated = participants ? withRecipe.withParticipants(participants) : withRecipe;
+      const replaced = custom ? existing.withCustom(custom) : existing.withRecipe(dto.recipeId as string);
+      const updated = participants ? replaced.withParticipants(participants) : replaced;
       await this.entryRepo.update(updated);
       this.gateway.notifyChanged(householdId);
       return updated.toResponse();
     }
-    const entry = MealEntry.create(
-      householdId,
-      dto.weekStart,
-      dto.dayOfWeek,
-      dto.mealType,
-      dto.recipeId,
-      participants ?? [],
-    );
+    const entry = custom
+      ? MealEntry.createCustom(
+        householdId,
+        dto.weekStart,
+        dto.dayOfWeek,
+        dto.mealType,
+        custom,
+        participants ?? [],
+      )
+      : MealEntry.createFromRecipe(
+        householdId,
+        dto.weekStart,
+        dto.dayOfWeek,
+        dto.mealType,
+        dto.recipeId as string,
+        participants ?? [],
+      );
     await this.entryRepo.save(entry);
     this.gateway.notifyChanged(householdId);
     return entry.toResponse();
@@ -279,17 +292,12 @@ export class MealService {
     if (entry.cooked === cooked) {
       return entry.toResponse();
     }
-    const recipe = await this.recipeRepo.findById(entry.recipeId);
-    if (recipe) {
-      // Cooking consumes stock (negative), un-cooking restores it (positive).
-      // Liczone z **efektywnych** składników, więc podwójna porcja odejmuje
-      // podwójnie — i tyle samo oddaje przy cofnięciu.
-      await this.applyIngredientsToPantry(
-        entry.householdId,
-        effectiveIngredients(recipe.recipeIngredients, entry.portionScale, entry.ingredientOverrides),
-        cooked ? -1 : 1,
-      );
-    }
+    // Cooking consumes stock (negative), un-cooking restores it (positive).
+    // Liczone z **efektywnych** składników (przepis albo posiłek doraźny, po
+    // korektach), więc podwójna porcja odejmuje podwójnie — i tyle samo oddaje
+    // przy cofnięciu.
+    const { ingredients } = await this.resolveEntry(entry);
+    await this.applyIngredientsToPantry(entry.householdId, ingredients, cooked ? -1 : 1);
     const updated = entry.withCooked(cooked);
     await this.entryRepo.update(updated);
     this.gateway.notifyChanged(entry.householdId);
@@ -314,19 +322,10 @@ export class MealService {
     const updated = entry.withAdjustments(portionScale, overrides);
 
     if (entry.cooked) {
-      const recipe = await this.recipeRepo.findById(entry.recipeId);
-      if (recipe) {
-        await this.applyIngredientsToPantry(
-          entry.householdId,
-          effectiveIngredients(recipe.recipeIngredients, entry.portionScale, entry.ingredientOverrides),
-          1,
-        );
-        await this.applyIngredientsToPantry(
-          entry.householdId,
-          effectiveIngredients(recipe.recipeIngredients, updated.portionScale, updated.ingredientOverrides),
-          -1,
-        );
-      }
+      const before = await this.resolveEntry(entry);
+      const after = await this.resolveEntry(updated);
+      await this.applyIngredientsToPantry(entry.householdId, before.ingredients, 1);
+      await this.applyIngredientsToPantry(entry.householdId, after.ingredients, -1);
     }
 
     await this.entryRepo.update(updated);
@@ -456,17 +455,10 @@ export class MealService {
       { productId: string | null; name: string; unit: string; required: number; packageSize: number | null }
     >();
     for (const entry of entries) {
-      const recipe = await this.recipeRepo.findById(entry.recipeId);
-      if (!recipe) {
-        continue;
-      }
       // Korekty ze slotu (mnożnik porcji, nadpisania ilości) muszą wejść do
-      // zakupów — inaczej podwójna porcja kupiłaby pojedynczą.
-      const ingredients = effectiveIngredients(
-        recipe.recipeIngredients,
-        entry.portionScale,
-        entry.ingredientOverrides,
-      );
+      // zakupów — inaczej podwójna porcja kupiłaby pojedynczą. Posiłki doraźne
+      // liczą się tak samo, ze swoich `custom.ingredients`.
+      const { ingredients } = await this.resolveEntry(entry);
       for (const ri of ingredients) {
         const product = byName.get(ri.name.toLowerCase());
         if (product && !product.trackInPantry) {
@@ -564,6 +556,22 @@ export class MealService {
 
   // ---- internals ----
 
+  // Składniki wpisu po korektach — z przepisu albo z posiłku doraźnego. Jedyne
+  // miejsce, które rozstrzyga „skąd biorą się składniki tego wpisu"; reszta
+  // serwisu pyta tutaj, zamiast sięgać po `recipeId` na własną rękę.
+  private async resolveEntry(
+    entry: MealEntry,
+  ): Promise<{ recipe: Recipe | null; ingredients: RecipeIngredient[]; servings: number }> {
+    const recipe = entry.recipeId ? await this.recipeRepo.findById(entry.recipeId) : null;
+    const base = recipe?.recipeIngredients ?? entry.custom?.ingredients ?? [];
+    return {
+      recipe,
+      ingredients: effectiveIngredients(base, entry.portionScale, entry.ingredientOverrides),
+      // Posiłek doraźny to zawsze jedna porcja — nie ma czego dzielić.
+      servings: recipe?.servings ?? 1,
+    };
+  }
+
   // Makro liczy się z produktów gospodarstwa, których model przepisu nie zna —
   // stąd doklejenie tutaj, a nie w `Recipe.toResponse()`.
   private toRecipeResponse(recipe: Recipe, products: Product[]): RecipeResponse {
@@ -596,4 +604,20 @@ export class MealService {
     }
     return product;
   }
+}
+
+// Posiłek doraźny przechodzi tę samą normalizację co składniki przepisu:
+// `ingredientId` domyślnie z nazwy, żeby korekty w slocie miały się czego uczepić.
+function normaliseCustomIngredients(ingredients: RecipeIngredientDto[] | undefined): RecipeIngredient[] {
+  if (!ingredients) {
+    return [];
+  }
+  return ingredients
+    .filter((i) => i.name?.trim())
+    .map((i) => ({
+      ingredientId: i.ingredientId?.trim() || i.name.trim(),
+      name: i.name.trim(),
+      quantity: typeof i.quantity === 'number' && Number.isFinite(i.quantity) ? i.quantity : 0,
+      unit: i.unit?.trim() ?? '',
+    }));
 }

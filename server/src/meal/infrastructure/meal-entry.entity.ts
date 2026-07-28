@@ -3,6 +3,7 @@ import { MealEntry } from '../domain/meal-entry.model';
 import { MealType } from '../domain/recipe-ingredient';
 import { MealParticipant } from '../domain/meal-participant';
 import { IngredientOverride } from '../domain/ingredient-override';
+import { RecipeIngredient } from '../domain/recipe-ingredient';
 
 @Entity('meal_entry')
 export class MealEntryEntity {
@@ -22,8 +23,15 @@ export class MealEntryEntity {
   @Column('varchar')
   mealType!: MealType;
 
-  @Column('varchar')
-  recipeId!: string;
+  // Wpis to albo przepis, albo posiłek doraźny — stąd oba pola nullable.
+  @Column('varchar', { nullable: true })
+  recipeId!: string | null;
+
+  @Column('varchar', { nullable: true })
+  customTitle!: string | null;
+
+  @Column('text', { nullable: true })
+  customIngredients!: string | null;
 
   @Column('boolean', { default: false })
   cooked!: boolean;
@@ -48,6 +56,9 @@ export class MealEntryEntity {
       this.dayOfWeek,
       this.mealType,
       this.recipeId,
+      this.customTitle === null
+        ? null
+        : { title: this.customTitle, ingredients: parseIngredients(this.customIngredients) },
       this.cooked,
       parseParticipants(this.participants),
       this.portionScale === null || this.portionScale === undefined ? 1 : Number(this.portionScale),
@@ -63,6 +74,8 @@ export class MealEntryEntity {
     entity.dayOfWeek = entry.dayOfWeek;
     entity.mealType = entry.mealType;
     entity.recipeId = entry.recipeId;
+    entity.customTitle = entry.custom?.title ?? null;
+    entity.customIngredients = entry.custom ? JSON.stringify(entry.custom.ingredients) : null;
     entity.cooked = entry.cooked;
     entity.participants = JSON.stringify(entry.participants);
     entity.portionScale = entry.portionScale;
@@ -107,6 +120,27 @@ function parseOverrides(raw: string | null): IngredientOverride[] {
         o !== null &&
         typeof (o as IngredientOverride).ingredientId === 'string' &&
         typeof (o as IngredientOverride).quantity === 'number',
+    );
+  } catch {
+    return [];
+  }
+}
+
+function parseIngredients(raw: string | null): RecipeIngredient[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter(
+      (i): i is RecipeIngredient =>
+        typeof i === 'object' &&
+        i !== null &&
+        typeof (i as RecipeIngredient).name === 'string' &&
+        typeof (i as RecipeIngredient).unit === 'string',
     );
   } catch {
     return [];

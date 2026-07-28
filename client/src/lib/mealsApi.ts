@@ -11,6 +11,7 @@ import type {
   MealType,
   MealParticipant,
   IngredientOverride,
+  CustomMeal,
 } from './meals';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
@@ -80,6 +81,13 @@ export function createCloudMealStorage(householdId: string): MealStorage {
       await request<unknown>(`/meals/planner/entry?householdId=${hh}`, {
         method: 'POST',
         body: JSON.stringify({ weekStart, recipeId, dayOfWeek, mealType }),
+      });
+    },
+
+    addCustomEntry: async (weekStart, custom: CustomMeal, dayOfWeek, mealType: MealType) => {
+      await request<unknown>(`/meals/planner/entry?householdId=${hh}`, {
+        method: 'POST',
+        body: JSON.stringify({ weekStart, dayOfWeek, mealType, custom }),
       });
     },
 

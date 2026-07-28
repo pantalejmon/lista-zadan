@@ -32,7 +32,11 @@ niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby ni
   Składniki dopasowywane są do produktów **po nazwie** (case-insensitive), nie po
   twardym `productId` — dzięki temu ten sam produkt użyty w wielu przepisach agreguje
   się poprawnie.
-- **Wpis planera** (`MealEntry`) — przepis przypisany do slotu `(weekStart, dayOfWeek, mealType)`.
+- **Wpis planera** (`MealEntry`) — slot `(weekStart, dayOfWeek, mealType)` wypełniony
+  **albo przepisem** (`recipeId`), **albo posiłkiem doraźnym** (`custom: {title, ingredients}`)
+  — dokładnie jednym z nich, walidowane w serwisie. Posiłek doraźny („jogurt i banan")
+  nie zasługuje na własny przepis, ale ze składnikami liczy się **tak samo** do zakupów,
+  spiżarni i bilansu; jest zawsze na 1 porcję. Usunięcie przepisu nie rusza wpisów doraźnych.
   Niesie też `participants` — kto ten posiłek je i w ilu porcjach (`0,5` = pół porcji,
   `2` = dokładka). Pusta lista znaczy „nieprzypisany": posiłek nadal liczy się do zakupów
   i spiżarni, ale nie wchodzi do niczyjego bilansu (`docs/nutrition.md`). Uczestnikiem może
@@ -98,6 +102,10 @@ a nie 4 × mnożnik. Nadpisanie na `0` zeruje składnik (a nie przywraca przepis
 `effectiveIngredients(ingredients, portionScale, overrides)` w
 `server/src/meal/domain/effective-ingredients.ts` to **jedyne miejsce**, w którym
 powstaje efektywna lista. Korzystają z niej **wszystkie trzy** ścieżki:
+
+Skąd biorą się składniki wpisu (przepis czy `custom`) rozstrzyga **wyłącznie**
+`MealService.resolveEntry` — reszta serwisu pyta tam, zamiast sięgać po `recipeId`
+na własną rękę.
 
 1. zakupy (`computeNeeds` / `generateFromPlan`),
 2. pętla „ugotowane → spiżarnia" (`setCooked`),

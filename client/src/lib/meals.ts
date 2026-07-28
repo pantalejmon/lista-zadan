@@ -135,12 +135,19 @@ export interface IngredientOverride {
   quantity: number;
 }
 
+// Posiłek doraźny — wpis planera bez przepisu.
+export interface CustomMeal {
+  title: string;
+  ingredients: RecipeIngredient[];
+}
+
 export interface MealEntry {
   id: string;
   weekStart: string; // YYYY-MM-DD (Monday)
   dayOfWeek: number; // 0 = Monday ... 6 = Sunday
   mealType: MealType;
-  recipeId: string;
+  recipeId: string | null;
+  custom: CustomMeal | null;
   cooked: boolean;
   participants: MealParticipant[];
   portionScale: number;
@@ -266,6 +273,7 @@ export interface MealStorage {
   deleteProduct(id: string): Promise<void>;
   getWeek(weekStart: string): Promise<PlannerEntry[]>;
   addEntry(weekStart: string, recipeId: string, dayOfWeek: number, mealType: MealType): Promise<void>;
+  addCustomEntry(weekStart: string, custom: CustomMeal, dayOfWeek: number, mealType: MealType): Promise<void>;
   removeEntry(id: string): Promise<void>;
   setCooked(id: string, cooked: boolean): Promise<void>;
   setParticipants(id: string, participants: MealParticipant[]): Promise<void>;

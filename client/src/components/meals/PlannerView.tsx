@@ -9,11 +9,13 @@ import {
   type PlannerEntry,
   type Recipe,
   type MealType,
+  type RecipeIngredient,
 } from '../../lib/meals';
 import { IconChevronLeft, IconChevronRight, IconClose, IconPlus, IconCheck } from './icons';
 import { RecipePreviewModal } from './RecipePreviewModal';
 import { ParticipantsBadges, ParticipantsPicker } from './ParticipantsPicker';
 import { AdjustEntryModal } from './AdjustEntryModal';
+import { QuickMealForm } from './QuickMealForm';
 import { getHouseholdMembers } from '../../lib/api';
 import type { HouseholdMember } from '../../lib/types';
 
@@ -45,6 +47,7 @@ export function PlannerView({
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [participantsFor, setParticipantsFor] = useState<PlannerEntry | null>(null);
   const [adjusting, setAdjusting] = useState<PlannerEntry | null>(null);
+  const [pickerTab, setPickerTab] = useState<'recipe' | 'quick'>('recipe');
 
   const load = useCallback(async () => {
     setEntries(await storage.getWeek(weekStart));
@@ -94,8 +97,18 @@ export function PlannerView({
     load();
   };
 
+  const handleAddCustom = async (title: string, ingredients: RecipeIngredient[]) => {
+    if (!pickerSlot) {
+      return;
+    }
+    await storage.addCustomEntry(weekStart, { title, ingredients }, pickerSlot.day, pickerSlot.meal);
+    setPickerSlot(null);
+    load();
+  };
+
   const openPicker = async (day: number, meal: MealType) => {
     setRecipes(await storage.getRecipes());
+    setPickerTab('recipe');
     setPickerSlot({ day, meal });
   };
 
@@ -170,7 +183,7 @@ export function PlannerView({
                                 ? 'text-green-800 dark:text-green-300 line-through decoration-green-500/60'
                                 : 'text-primary-900 dark:text-primary-200'
                             }`}>
-                            {entry.recipe?.title ?? '—'}
+                            {entry.recipe?.title ?? entry.custom?.title ?? '—'}
                           </button>
                           <button
                             onClick={() => handleCook(entry)}
@@ -272,7 +285,7 @@ export function PlannerView({
                               entry.cooked ? 'line-through text-gray-400 dark:text-gray-500' : ''
                             }`}
                           >
-                            {entry.recipe?.title ?? '—'}
+                            {entry.recipe?.title ?? entry.custom?.title ?? '—'}
                           </button>
                           <ParticipantsBadges
                             participants={entry.participants ?? []}
@@ -330,9 +343,29 @@ export function PlannerView({
                 <IconClose className="w-4 h-4" />
               </button>
             </div>
-            {recipes.length === 0 ? (
+            <div className="flex px-2 border-b border-gray-100 dark:border-gray-800">
+              {([['recipe', 'Z przepisu'], ['quick', 'Szybki posiłek']] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setPickerTab(id)}
+                  className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    pickerTab === id
+                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                      : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {pickerTab === 'quick' ? (
+              <div className="overflow-y-auto flex-1">
+                <QuickMealForm storage={storage} onSave={handleAddCustom} />
+              </div>
+            ) : recipes.length === 0 ? (
               <p className="p-6 text-center text-sm text-gray-400">
-                Brak przepisów. Dodaj przepis w zakładce „Przepisy”.
+                Brak przepisów. Dodaj przepis w zakładce „Przepisy” albo wpisz szybki posiłek.
               </p>
             ) : (
               <ul className="overflow-y-auto flex-1 p-2">

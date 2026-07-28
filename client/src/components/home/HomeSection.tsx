@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MaintenanceView } from './MaintenanceView';
 import { RenovationsView } from './RenovationsView';
 import { ProvidersView } from './ProvidersView';
-import { STICKY_UNDER_HEADER } from '../../lib/layout';
+import { SectionTabs, type SectionTab } from '../SectionTabs';
 
 interface HomeSectionProps {
   householdId?: string;
@@ -10,7 +10,7 @@ interface HomeSectionProps {
 
 type HomeTab = 'maintenance' | 'renovations' | 'providers';
 
-const TABS: { id: HomeTab; label: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
+const TABS: SectionTab<HomeTab>[] = [
   {
     id: 'maintenance',
     label: 'Przeglądy',
@@ -45,25 +45,7 @@ export function HomeSection({ householdId }: HomeSectionProps) {
 
   return (
     <>
-      {/* Sub-tab bar */}
-      <div className={`${STICKY_UNDER_HEADER} z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50`}>
-        <div className="max-w-lg mx-auto flex px-2">
-          {TABS.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-1 py-2.5 text-[11px] sm:text-xs font-medium border-b-2 transition-all ${
-                tab === id
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-              }`}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span className="truncate">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <SectionTabs tabs={TABS} active={tab} onSelect={setTab} />
 
       <main className="flex-1">
         {tab === 'maintenance' && <MaintenanceView householdId={householdId} />}

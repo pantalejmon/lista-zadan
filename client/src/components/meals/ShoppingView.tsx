@@ -184,15 +184,21 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
+          {/* Nazwa produktu i rachunek „potrzeba → kup" to dwie osobne
+              informacje, więc dostają osobne wiersze. Wciśnięte obok siebie
+              nazwa zostawała z kilkoma pikselami i łamała się po literze. */}
           {showNeeds && (
-            <ul className="px-4 pb-3 space-y-1.5">
+            <ul className="px-4 pb-3 divide-y divide-primary-100/70 dark:divide-primary-500/10">
               {needs.filter((n) => n.shortfall > 0).map((n, i) => (
-                <li key={i} className="text-xs text-gray-600 dark:text-gray-300 flex items-center justify-between gap-2">
-                  <span className="font-medium min-w-0 break-words">{n.name}</span>
-                  <span className="text-gray-500 dark:text-gray-400 shrink-0 tabular-nums">
-                    potrzeba {n.required} {n.unit} · masz {n.inStock} → <span className="text-primary-600 dark:text-primary-400 font-medium">kup {n.toBuy} {n.unit}</span>
+                <li key={i} className="py-1.5 text-xs text-gray-600 dark:text-gray-300">
+                  <p className="font-medium text-sm text-gray-800 dark:text-gray-100 break-words">{n.name}</p>
+                  <p className="text-gray-500 dark:text-gray-400 tabular-nums mt-0.5">
+                    potrzeba {n.required} {n.unit} · masz {n.inStock} →{' '}
+                    <span className="text-primary-600 dark:text-primary-400 font-medium">
+                      kup {n.toBuy} {n.unit}
+                    </span>
                     {n.packages ? ` (${n.packages} opak.)` : ''}
-                  </span>
+                  </p>
                 </li>
               ))}
             </ul>

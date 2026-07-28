@@ -1,8 +1,11 @@
 import { UNCATEGORISED } from '../../lib/meals';
 
-// Search box + horizontally-scrollable category chips. Shared by Produkty and
-// Przepisy. Mobile-first: full-width search, chips scroll sideways with big tap
-// targets, active chip highlighted. `active === null` means "Wszystkie".
+// Wyszukiwarka + chipy kategorii. Wspólne dla Produktów i Przepisów.
+//
+// Chipy **zawijają się** do kolejnych wierszy zamiast przewijać w bok: kategorii
+// jest kilka-kilkanaście i wszystkie mają być widoczne od razu. Przewijany rząd
+// chował je za krawędzią, więc filtr wyglądał na krótszy, niż jest.
+// `active === null` znaczy „Wszystkie".
 export function CategoryFilter({
   search,
   onSearch,
@@ -28,7 +31,7 @@ export function CategoryFilter({
         className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
       {categories.length > 1 && (
-        <div className="flex gap-1.5 overflow-x-auto -mx-4 px-4 pb-1">
+        <div className="flex flex-wrap gap-1.5">
           <Chip label="Wszystkie" active={active === null} onClick={() => onSelect(null)} />
           {categories.map((c) => (
             <Chip
@@ -49,7 +52,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+      className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 ${
         active
           ? 'bg-primary-500 text-white'
           : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'

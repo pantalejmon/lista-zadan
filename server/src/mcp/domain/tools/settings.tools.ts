@@ -1,11 +1,8 @@
 import { AuthService } from '../../../auth/domain/auth.service';
 import { UpdateSettingsDto } from '../../../auth/web/dto/update-settings.dto';
 import { McpTool, requireStringArg } from '../mcp-tool';
+import { ACCENTS, FONT_SIZES, HIDEABLE_MODULES, THEMES } from '../../../common/appearance';
 
-const THEMES = ['light', 'sand', 'dark', 'midnight'];
-const ACCENTS = ['slate', 'blue', 'teal', 'emerald', 'violet', 'plum', 'rose', 'terracotta', 'amber'];
-const FONT_SIZES = ['sm', 'md', 'lg', 'xl'];
-const HIDEABLE_MODULES = ['meals', 'home', 'finance', 'chat'];
 
 // Ustawienia aplikacji użytkownika (wygląd + widoczne moduły). To dane konta,
 // nie gospodarstwa — stąd własny scope `settings:*`, a nie `households:*`.
@@ -51,7 +48,8 @@ export function buildSettingsTools(authService: AuthService): McpTool[] {
         dto.fontSize = requireStringArg(args, 'fontSize');
         if (Array.isArray(args.hiddenModules)) {
           dto.hiddenModules = args.hiddenModules.filter(
-            (module): module is string => typeof module === 'string' && HIDEABLE_MODULES.includes(module),
+            (module): module is string =>
+              typeof module === 'string' && (HIDEABLE_MODULES as readonly string[]).includes(module),
           );
         }
         await authService.updateUserSettings(ctx.userId, {

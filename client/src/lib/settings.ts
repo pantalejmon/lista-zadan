@@ -4,22 +4,22 @@
 // so overriding those variables (see index.css) recolours everything at once
 // without touching a single component.
 
-export type ThemeId = 'light' | 'sand' | 'dark' | 'midnight';
-export type AccentId =
-  | 'slate'
-  | 'blue'
-  | 'teal'
-  | 'emerald'
-  | 'violet'
-  | 'plum'
-  | 'rose'
-  | 'terracotta'
-  | 'amber';
-export type FontSizeId = 'sm' | 'md' | 'lg' | 'xl';
+// Lista dopuszczalnych wartości ma jedno źródło — `server/src/common/appearance.ts`.
+// Tę samą listę egzekwuje walidacja żądania i schemat narzędzia MCP, więc UI nie
+// zaproponuje opcji, której serwer nie przyjmie. Tu dokładamy tylko warstwę
+// prezentacji: etykiety i próbki kolorów.
+import {
+  ACCENTS,
+  FONT_SIZES,
+  HIDEABLE_MODULES as HIDEABLE_MODULE_IDS,
+  THEMES,
+  type AccentId,
+  type FontSizeId,
+  type HideableModule,
+  type ThemeId,
+} from '@shared/appearance';
 
-// Moduły, których użytkownik nie chce widzieć w menu. Zadania są zawsze
-// dostępne (w trybie lokalnym to jedyna sekcja), więc nie da się ich ukryć.
-export type HideableModule = 'meals' | 'home' | 'finance' | 'chat';
+export type { AccentId, FontSizeId, HideableModule, ThemeId };
 
 export interface Settings {
   theme: ThemeId;
@@ -32,12 +32,17 @@ export const SETTINGS_KEY = 'lista-zadan:settings';
 
 export const DEFAULT_SETTINGS: Settings = { theme: 'light', accent: 'slate', fontSize: 'md', hiddenModules: [] };
 
-export const HIDEABLE_MODULES: { id: HideableModule; label: string; description: string }[] = [
-  { id: 'meals', label: 'Posiłki', description: 'Planer, przepisy, zakupy' },
-  { id: 'home', label: 'Serwis domu', description: 'Przeglądy, gwarancje, koszty' },
-  { id: 'finance', label: 'Finanse', description: 'Portfele, wydatki, statystyki' },
-  { id: 'chat', label: 'Czat', description: 'Rozmowy domowników' },
-];
+// `Record` po typie z kontraktu: dodanie modułu do listy dopuszczalnych bez
+// opisania go tutaj nie skompiluje się.
+const MODULE_META: Record<HideableModule, { label: string; description: string }> = {
+  meals: { label: 'Posiłki', description: 'Planer, przepisy, zakupy' },
+  home: { label: 'Serwis domu', description: 'Przeglądy, gwarancje, koszty' },
+  finance: { label: 'Finanse', description: 'Portfele, wydatki, statystyki' },
+  chat: { label: 'Czat', description: 'Rozmowy domowników' },
+};
+
+export const HIDEABLE_MODULES: { id: HideableModule; label: string; description: string }[] =
+  HIDEABLE_MODULE_IDS.map((id) => ({ id, ...MODULE_META[id] }));
 
 // Root font-size drives every rem-based size in the app, so this scales text and
 // spacing together — the accessible way to make the UI bigger, not just bolder.
@@ -82,12 +87,14 @@ export interface ThemeOption {
   card: string;
 }
 
-export const THEME_OPTIONS: ThemeOption[] = [
-  { id: 'light', label: 'Biały', mode: 'Jasny', dark: false, bg: '#f8fafc', card: '#ffffff' },
-  { id: 'sand', label: 'Piaskowy', mode: 'Jasny', dark: false, bg: '#f1e9db', card: '#faf6ee' },
-  { id: 'dark', label: 'Grafit', mode: 'Ciemny', dark: true, bg: '#0a0a0b', card: '#18181b' },
-  { id: 'midnight', label: 'Granatowy', mode: 'Ciemny', dark: true, bg: '#0b1120', card: '#131c31' },
-];
+const THEME_META: Record<ThemeId, Omit<ThemeOption, 'id'>> = {
+  light: { label: 'Biały', mode: 'Jasny', dark: false, bg: '#f8fafc', card: '#ffffff' },
+  sand: { label: 'Piaskowy', mode: 'Jasny', dark: false, bg: '#f1e9db', card: '#faf6ee' },
+  dark: { label: 'Grafit', mode: 'Ciemny', dark: true, bg: '#0a0a0b', card: '#18181b' },
+  midnight: { label: 'Granatowy', mode: 'Ciemny', dark: true, bg: '#0b1120', card: '#131c31' },
+};
+
+export const THEME_OPTIONS: ThemeOption[] = THEMES.map((id) => ({ id, ...THEME_META[id] }));
 
 export interface AccentOption {
   id: AccentId;
@@ -95,31 +102,38 @@ export interface AccentOption {
   color: string;
 }
 
-// Kolejność jak na kole barw — od chłodnych, przez zielenie, po ciepłe. Rząd
-// próbek czyta się wtedy jak paleta, a nie jak przypadkowy zestaw.
-export const ACCENT_OPTIONS: AccentOption[] = [
-  { id: 'slate', label: 'Stalowy', color: '#5b7f95' },
-  { id: 'blue', label: 'Błękitny', color: '#2563eb' },
-  { id: 'teal', label: 'Turkusowy', color: '#0d9488' },
-  { id: 'emerald', label: 'Zielony', color: '#10b981' },
-  { id: 'violet', label: 'Fioletowy', color: '#8b5cf6' },
-  { id: 'plum', label: 'Śliwkowy', color: '#a21caf' },
-  { id: 'rose', label: 'Różowy', color: '#f43f5e' },
-  { id: 'terracotta', label: 'Ceglany', color: '#c2410c' },
-  { id: 'amber', label: 'Bursztyn', color: '#c97e1f' },
-];
+// Próbka to krok 500 rampy z index.css. Kolejność bierze się z kontraktu
+// (ułożonego jak koło barw), więc rząd próbek czyta się jak paleta.
+const ACCENT_META: Record<AccentId, { label: string; color: string }> = {
+  slate: { label: 'Stalowy', color: '#5b7f95' },
+  blue: { label: 'Błękitny', color: '#2563eb' },
+  teal: { label: 'Turkusowy', color: '#0d9488' },
+  emerald: { label: 'Zielony', color: '#10b981' },
+  violet: { label: 'Fioletowy', color: '#8b5cf6' },
+  plum: { label: 'Śliwkowy', color: '#a21caf' },
+  rose: { label: 'Różowy', color: '#f43f5e' },
+  terracotta: { label: 'Ceglany', color: '#c2410c' },
+  amber: { label: 'Bursztyn', color: '#c97e1f' },
+};
+
+export const ACCENT_OPTIONS: AccentOption[] = ACCENTS.map((id) => ({ id, ...ACCENT_META[id] }));
 
 export interface FontSizeOption {
   id: FontSizeId;
   label: string;
 }
 
-export const FONT_SIZE_OPTIONS: FontSizeOption[] = [
-  { id: 'sm', label: 'Mały' },
-  { id: 'md', label: 'Normalny' },
-  { id: 'lg', label: 'Duży' },
-  { id: 'xl', label: 'Bardzo duży' },
-];
+const FONT_SIZE_LABELS: Record<FontSizeId, string> = {
+  sm: 'Mały',
+  md: 'Normalny',
+  lg: 'Duży',
+  xl: 'Bardzo duży',
+};
+
+export const FONT_SIZE_OPTIONS: FontSizeOption[] = FONT_SIZES.map((id) => ({
+  id,
+  label: FONT_SIZE_LABELS[id],
+}));
 
 export function applySettings(settings: Settings): void {
   const root = document.documentElement;

@@ -1,21 +1,23 @@
 import { IsIn, IsArray, IsOptional, ArrayMaxSize } from 'class-validator';
+import { ACCENTS, FONT_SIZES, HIDEABLE_MODULES, THEMES } from '../../../common/appearance';
 
-// Whitelisted values keep the stored JSON in lockstep with the client's options
-// (lib/settings.ts) and reject anything unexpected.
+// Dopuszczalne wartości pochodzą z kontraktu wyglądu (`common/appearance.ts`) —
+// tej samej listy używa klient i narzędzie MCP, więc nie da się dodać opcji
+// w UI, której serwer nie przyjmie.
 export class UpdateSettingsDto {
-  @IsIn(['light', 'sand', 'dark', 'midnight'])
+  @IsIn([...THEMES])
   theme!: string;
 
-  @IsIn(['slate', 'blue', 'teal', 'emerald', 'violet', 'plum', 'rose', 'terracotta', 'amber'])
+  @IsIn([...ACCENTS])
   accent!: string;
 
-  @IsIn(['sm', 'md', 'lg', 'xl'])
+  @IsIn([...FONT_SIZES])
   fontSize!: string;
 
   // Moduły ukryte w menu. Zadań nie da się ukryć, więc nie ma ich na liście.
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(4)
-  @IsIn(['meals', 'home', 'finance', 'chat'], { each: true })
+  @ArrayMaxSize(HIDEABLE_MODULES.length)
+  @IsIn([...HIDEABLE_MODULES], { each: true })
   hiddenModules?: string[];
 }

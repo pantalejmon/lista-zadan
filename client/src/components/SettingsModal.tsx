@@ -84,7 +84,9 @@ export function SettingsModal({ settings, onChange, onClose, isCloud }: Settings
         {/* Accent colour */}
         <section>
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Kolor akcentu</p>
-          <div className="flex flex-wrap gap-3">
+          {/* Siatka, nie zawijany rząd — dziewięć próbek w układzie 5+4 czyta
+              się jak paleta, a przy zawijaniu wychodziło przypadkowe 7+2. */}
+          <div className="grid grid-cols-5 gap-3 justify-items-center">
             {ACCENT_OPTIONS.map((option) => {
               const active = settings.accent === option.id;
               return (
@@ -125,7 +127,7 @@ export function SettingsModal({ settings, onChange, onClose, isCloud }: Settings
                       type="checkbox"
                       checked={visible}
                       onChange={() => toggleModule(module.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="w-4 h-4 rounded border-gray-300"
                     />
                     <span className="min-w-0">
                       <span className="block text-sm font-medium truncate">{module.label}</span>

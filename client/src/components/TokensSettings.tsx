@@ -208,7 +208,7 @@ export function TokensSettings({ households, onClose }: TokensSettingsProps) {
                         return (
                           // Cały wiersz etykiety jest dotykalny — sam checkbox 14px był za mały na telefonie
                           <label key={scope} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-2 -my-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <input type="checkbox" checked={selectedScopes.has(scope)} onChange={() => toggleScope(scope)} className="w-4 h-4 rounded accent-primary-500" />
+                            <input type="checkbox" checked={selectedScopes.has(scope)} onChange={() => toggleScope(scope)} className="w-4 h-4 rounded" />
                             {access}
                           </label>
                         );

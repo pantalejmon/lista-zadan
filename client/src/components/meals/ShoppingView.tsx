@@ -403,7 +403,7 @@ function ExportModal({ items, onClose }: { items: ShoppingItem[]; onClose: () =>
                   type="checkbox"
                   checked={onlyUnchecked}
                   onChange={(e) => setOnlyUnchecked(e.target.checked)}
-                  className="w-4 h-4 rounded accent-primary-500"
+                  className="w-4 h-4 rounded"
                 />
                 Tylko niekupione ({items.filter((i) => !i.isChecked).length})
               </label>

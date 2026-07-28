@@ -170,7 +170,7 @@ export function PlannerView({
                       {entry ? (
                         <div className={`rounded-lg p-1.5 text-xs group relative min-h-12 border ${
                           entry.cooked
-                            ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/30'
+                            ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30'
                             : 'bg-primary-50 dark:bg-primary-500/10 border-primary-200 dark:border-primary-500/30'
                         }`}>
                           <button
@@ -180,7 +180,7 @@ export function PlannerView({
                             title={entry.recipe ? 'Podejrzyj przepis' : undefined}
                             className={`block w-full text-left font-medium truncate pr-4 hover:underline ${
                               entry.cooked
-                                ? 'text-green-800 dark:text-green-300 line-through decoration-green-500/60'
+                                ? 'text-emerald-800 dark:text-emerald-300 line-through decoration-emerald-500/60'
                                 : 'text-primary-900 dark:text-primary-200'
                             }`}>
                             {entry.recipe?.title ?? entry.custom?.title ?? '—'}
@@ -189,15 +189,15 @@ export function PlannerView({
                             onClick={() => handleCook(entry)}
                             className={`mt-1 inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors ${
                               entry.cooked
-                                ? 'text-green-700 dark:text-green-400'
-                                : 'text-gray-400 hover:text-green-600 dark:hover:text-green-400'
+                                ? 'text-emerald-700 dark:text-emerald-400'
+                                : 'text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
                             }`}
                             aria-label={entry.cooked ? 'Cofnij ugotowanie' : 'Oznacz jako ugotowane'}
                             title={entry.cooked ? 'Odjęto składniki ze spiżarni' : 'Ugotowane — odejmie składniki ze spiżarni'}
                           >
                             <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${
                               entry.cooked
-                                ? 'bg-green-500 border-green-500 text-white'
+                                ? 'bg-emerald-500 border-emerald-500 text-white'
                                 : 'border-gray-300 dark:border-gray-600'
                             }`}>
                               {entry.cooked && <IconCheck className="w-2.5 h-2.5" />}
@@ -273,7 +273,7 @@ export function PlannerView({
                               onClick={() => handleCook(entry)}
                               className={`w-5 h-5 shrink-0 rounded flex items-center justify-center border transition-colors ${
                                 entry.cooked
-                                  ? 'bg-green-500 border-green-500 text-white'
+                                  ? 'bg-emerald-500 border-emerald-500 text-white'
                                   : 'border-gray-300 dark:border-gray-600 text-transparent'
                               }`}
                               aria-label={entry.cooked ? 'Cofnij ugotowanie' : 'Oznacz jako ugotowane'}

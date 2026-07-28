@@ -107,7 +107,7 @@ export function AdjustEntryModal({
               step="0.5"
               value={scale}
               onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="w-full accent-primary-500"
+              className="w-full"
             />
             <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-1 tabular-nums">
               {SCALE_STEPS.map((step) => <span key={step}>{formatQuantity(step)}×</span>)}

@@ -1,9 +1,29 @@
+import { randomUUID } from 'crypto';
 import { TodoService } from '../../../todo/domain/todo.service';
 import { SharingService } from '../../../sharing/domain/sharing.service';
 import { CreateTodoDto } from '../../../todo/web/dto/create-todo.dto';
 import { UpdateTodoDto } from '../../../todo/web/dto/update-todo.dto';
 import { CreateRecurringTodosDto } from '../../../todo/web/dto/create-recurring-todos.dto';
+import { ShoppingItemDto } from '../../../todo/web/dto/shopping-item.dto';
 import { McpTool, requireStringArg, stringArg, boolArg } from '../mcp-tool';
+
+// Pozycje listy zakupów agent podaje jako zwykłe napisy — id i kolejność to
+// szczegół modelu, którym nie ma po co go obarczać.
+function itemsArg(args: Record<string, unknown>): ShoppingItemDto[] | undefined {
+  if (!Array.isArray(args.items)) {
+    return undefined;
+  }
+  return args.items
+    .filter((text): text is string => typeof text === 'string' && text.trim().length > 0)
+    .map((text, index) => {
+      const item = new ShoppingItemDto();
+      item.id = randomUUID();
+      item.text = text.trim();
+      item.checked = false;
+      item.order = index;
+      return item;
+    });
+}
 
 // Agent tools for the todo/lists module. Reuses the domain services, so all
 // permission checks (household membership, roles) apply exactly as in the UI.
@@ -29,7 +49,8 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
     {
       name: 'list_todos',
       description:
-        'Zwraca zadania z listy. Podaj listId. Opcjonalnie date (YYYY-MM-DD) aby ograniczyć do jednego dnia.',
+        'Zwraca zadania z listy — w tym listy zakupów (pole kind oraz items z pozycjami). Podaj listId. ' +
+        'Opcjonalnie date (YYYY-MM-DD) aby ograniczyć do jednego dnia.',
       requiredScopes: ['todo:read'],
       inputSchema: {
         type: 'object',
@@ -49,9 +70,27 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
       },
     },
     {
+      name: 'dates_with_todos',
+      description:
+        'Zwraca daty (YYYY-MM-DD), na które lista ma zaplanowane zadania — do nawigacji po kalendarzu bez ' +
+        'pobierania wszystkich zadań. Wymaga listId.',
+      requiredScopes: ['todo:read'],
+      inputSchema: {
+        type: 'object',
+        properties: { listId: { type: 'string', description: 'ID listy zadań' } },
+        required: ['listId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        return todoService.getDatesWithTodos(requireStringArg(args, 'listId'), ctx.userId);
+      },
+    },
+    {
       name: 'add_todo',
       description:
-        'Dodaje zadanie do listy. Wymaga listId i text. Opcjonalnie date (YYYY-MM-DD) — bez daty trafia do „luźnych".',
+        'Dodaje zadanie albo listę zakupów do listy zadań. Wymaga listId i text. Opcjonalnie date ' +
+        '(YYYY-MM-DD) — bez daty trafia do „luźnych"; kind: „shopping" tworzy listę zakupów, a items ' +
+        'wypełnia ją od razu pozycjami (jedno wywołanie = gotowa lista na konkretny dzień).',
       requiredScopes: ['todo:write'],
       inputSchema: {
         type: 'object',
@@ -60,6 +99,12 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
           text: { type: 'string', description: 'Treść zadania' },
           date: { type: 'string', description: 'Opcjonalna data YYYY-MM-DD' },
           time: { type: 'string', description: 'Opcjonalna godzina HH:mm' },
+          kind: { type: 'string', enum: ['task', 'shopping'], description: 'Rodzaj (domyślnie task)' },
+          items: {
+            type: 'array',
+            description: 'Pozycje listy zakupów (tylko dla kind=shopping)',
+            items: { type: 'string' },
+          },
         },
         required: ['listId', 'text'],
         additionalProperties: false,
@@ -79,7 +124,20 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
         if (time) {
           dto.time = time;
         }
-        return todoService.create(dto, ctx.userId);
+        const kind = stringArg(args, 'kind');
+        if (kind === 'shopping' || kind === 'task') {
+          dto.kind = kind;
+        }
+        const todo = await todoService.create(dto, ctx.userId);
+        // Pozycje wypełniamy drugim krokiem, bo tworzenie ich nie przyjmuje —
+        // dla wołającego to nadal jedno wywołanie narzędzia.
+        const items = itemsArg(args);
+        if (!items) {
+          return todo;
+        }
+        const withItems = new UpdateTodoDto();
+        withItems.items = items;
+        return todoService.update(todo.id, withItems, ctx.userId);
       },
     },
     {
@@ -105,8 +163,9 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
     {
       name: 'update_todo',
       description:
-        'Edytuje zadanie. Wymaga todoId; podaj co najmniej jedno z: text, date (YYYY-MM-DD), time (HH:mm), completed. ' +
-        'Aby usunąć datę/godzinę przekaż pusty string.',
+        'Edytuje zadanie lub listę zakupów. Wymaga todoId; podaj co najmniej jedno z: text, date (YYYY-MM-DD), ' +
+        'time (HH:mm), completed, items (zawartość listy zakupów — zastępuje dotychczasową), month (YYYY-MM; ' +
+        'przenosi do „luźnych" danego miesiąca). Aby usunąć datę/godzinę przekaż pusty string.',
       requiredScopes: ['todo:write'],
       inputSchema: {
         type: 'object',
@@ -116,6 +175,12 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
           date: { type: 'string', description: 'Nowa data YYYY-MM-DD (pusty = usuń)' },
           time: { type: 'string', description: 'Nowa godzina HH:mm (pusty = usuń)' },
           completed: { type: 'boolean', description: 'Stan wykonania' },
+          items: {
+            type: 'array',
+            description: 'Nowa zawartość listy zakupów (zastępuje dotychczasową)',
+            items: { type: 'string' },
+          },
+          month: { type: 'string', description: 'YYYY-MM — przenosi zadanie do „luźnych" tego miesiąca' },
         },
         required: ['todoId'],
         additionalProperties: false,
@@ -136,6 +201,14 @@ export function buildTodoTools(todoService: TodoService, sharingService: Sharing
         const completed = boolArg(args, 'completed');
         if (completed !== undefined) {
           dto.completed = completed;
+        }
+        const items = itemsArg(args);
+        if (items) {
+          dto.items = items;
+        }
+        const month = stringArg(args, 'month');
+        if (month) {
+          dto.month = month;
         }
         return todoService.update(todoId, dto, ctx.userId);
       },

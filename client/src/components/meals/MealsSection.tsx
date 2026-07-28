@@ -7,9 +7,10 @@ import { ShoppingView } from './ShoppingView';
 import { STICKY_UNDER_HEADER } from '../../lib/layout';
 import { ProductsView } from './ProductsView';
 import { PantryView } from './PantryView';
-import { IconCalendar, IconBook, IconCart, IconTag, IconBox } from './icons';
+import { BalanceView } from './BalanceView';
+import { IconCalendar, IconBook, IconCart, IconTag, IconBox, IconBalance } from './icons';
 
-type MealsTab = 'planner' | 'recipes' | 'products' | 'pantry' | 'shopping';
+type MealsTab = 'planner' | 'recipes' | 'products' | 'pantry' | 'shopping' | 'balance';
 
 const TABS: { id: MealsTab; label: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { id: 'planner', label: 'Planer', Icon: IconCalendar },
@@ -17,11 +18,12 @@ const TABS: { id: MealsTab; label: string; Icon: (p: { className?: string }) => 
   { id: 'products', label: 'Produkty', Icon: IconTag },
   { id: 'pantry', label: 'Spiżarnia', Icon: IconBox },
   { id: 'shopping', label: 'Zakupy', Icon: IconCart },
+  { id: 'balance', label: 'Bilans', Icon: IconBalance },
 ];
 
 interface MealsSectionProps {
   storage: MealStorage;
-  householdId?: string;
+  householdId: string;
 }
 
 const TAB_KEY = 'lista-zadan:meals-tab';
@@ -39,18 +41,20 @@ export function MealsSection({ storage, householdId }: MealsSectionProps) {
   }, [tab]);
 
   // Live updates from other household members.
-  useMealsRealtime(householdId, Boolean(householdId), () => setLiveKey((k) => k + 1));
+  useMealsRealtime(householdId, true, () => setLiveKey((k) => k + 1));
 
   return (
     <>
       {/* Sub-tab bar */}
       <div className={`${STICKY_UNDER_HEADER} z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50`}>
-        <div className="max-w-lg mx-auto flex px-2">
+        {/* Sześć zakładek nie mieści się na telefonie — pasek jest przewijalny,
+            zamiast obcinać etykiety do „Prze…”. Tak samo jak chipy kategorii. */}
+        <div className="max-w-lg mx-auto flex px-2 overflow-x-auto">
           {TABS.map(({ id, label, Icon }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-1 py-2.5 text-[11px] sm:text-xs font-medium border-b-2 transition-all ${
+              className={`shrink-0 flex items-center justify-center gap-1 px-3 py-2.5 text-[11px] sm:text-xs font-medium border-b-2 transition-all ${
                 tab === id
                   ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                   : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
@@ -64,7 +68,8 @@ export function MealsSection({ storage, householdId }: MealsSectionProps) {
       </div>
 
       <main className="flex-1">
-        {tab === 'planner' && <PlannerView storage={storage} liveKey={liveKey} />}
+        {tab === 'planner' && <PlannerView storage={storage} householdId={householdId} liveKey={liveKey} />}
+        {tab === 'balance' && <BalanceView storage={storage} liveKey={liveKey} />}
         {tab === 'recipes' && <RecipesView storage={storage} liveKey={liveKey} />}
         {tab === 'products' && <ProductsView storage={storage} liveKey={liveKey} />}
         {tab === 'pantry' && <PantryView storage={storage} liveKey={liveKey} />}

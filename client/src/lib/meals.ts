@@ -1,6 +1,10 @@
-import { openDB, type IDBPDatabase } from 'idb';
-
-// --- Domain types (ported from the meal-planner app, adapted to local-first storage) ---
+// --- Domain types (shared by the views and the cloud storage adapter) ---
+//
+// Posiłki są **cloud-only** — dane żyją per gospodarstwo domowe na serwerze
+// (patrz `mealsApi.ts` i `server/src/meal/`). W trybie lokalnym (bez konta)
+// dostępny jest wyłącznie moduł Zadania, więc tu zostają same typy, stałe
+// i helpery prezentacyjne. Algorytmy (zakupy, spiżarnia, „czego brakuje")
+// mają jedną implementację — w `server/src/meal/domain/meal.service.ts`.
 
 export type BaseUnit = 'g' | 'ml' | 'szt';
 
@@ -10,6 +14,36 @@ export const BASE_UNITS: { value: BaseUnit; label: string }[] = [
   { value: 'szt', label: 'szt (sztuki)' },
 ];
 
+// Wartości odżywcze produktu. Jednostka odniesienia zależy od `baseUnit`:
+// `g`/`ml` → na 100 g / 100 ml, `szt` → na 1 sztukę (jajko, bułka).
+// kcal i trzy makroskładniki chodzą kompletem; błonnik i sól są opcjonalne.
+export interface Nutrition {
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  fiber?: number;
+  salt?: number;
+  // Rozbicie białka po pochodzeniu produktu. Suma bywa mniejsza niż `protein` —
+  // reszta pochodzi z produktów bez oznaczenia i UI musi to pokazać.
+  proteinPlant?: number;
+  proteinAnimal?: number;
+}
+
+// Pochodzenie produktu; brak wartości = nie określono (nie zgadujemy).
+export type ProductOrigin = 'plant' | 'animal';
+
+export const ORIGIN_OPTIONS: { id: ProductOrigin | ''; label: string }[] = [
+  { id: '', label: 'Nie określono' },
+  { id: 'plant', label: 'Roślinny' },
+  { id: 'animal', label: 'Zwierzęcy' },
+];
+
+// Podpis jednostki dla formularzy i podglądu makro.
+export function nutritionBasisLabel(baseUnit: BaseUnit): string {
+  return baseUnit === 'szt' ? 'na 1 szt' : `na 100 ${baseUnit}`;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -17,6 +51,8 @@ export interface Product {
   baseUnit: BaseUnit;
   packageSize?: number;
   trackInPantry: boolean;
+  nutrition?: Nutrition;
+  origin?: ProductOrigin;
 }
 
 export interface ProductInput {
@@ -25,6 +61,8 @@ export interface ProductInput {
   baseUnit: BaseUnit;
   packageSize?: number;
   trackInPantry: boolean;
+  nutrition?: Nutrition;
+  origin?: ProductOrigin;
 }
 
 export interface PantryItem {
@@ -55,6 +93,17 @@ export interface RecipeIngredient {
   unit: string;
 }
 
+// Makro przepisu policzone przez serwer ze składników dopasowanych do produktów.
+// `coverage` (0–1) mówi, jaka część składników z podaną ilością dała się policzyć,
+// a `missing` wymienia resztę — bez tego „450 kcal" z połowy przepisu wygląda
+// jak pewnik.
+export interface RecipeNutrition {
+  total: Nutrition;
+  perServing: Nutrition;
+  coverage: number;
+  missing: string[];
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -62,8 +111,10 @@ export interface Recipe {
   description?: string;
   instructions: string;
   recipeIngredients: RecipeIngredient[];
+  servings: number;
   createdAt: number;
   updatedAt: number;
+  nutrition?: RecipeNutrition;
 }
 
 // Suggested categories (freeform — used for datalist hints, filter chips and
@@ -82,17 +133,46 @@ export const MEAL_TYPES: { type: MealType; label: string }[] = [
 
 export const WEEK_DAYS = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
 
+// Kto je dany posiłek i w ilu porcjach (0,5 = pół porcji, 2 = dokładka).
+// Pusta lista = „nieprzypisany": posiłek liczy się do zakupów i spiżarni, ale
+// nie wchodzi do niczyjego bilansu.
+export interface MealParticipant {
+  userId: string;
+  portions: number;
+}
+
+export const PORTION_OPTIONS = [0.5, 1, 1.5, 2];
+
+// Ręczna korekta ilości składnika w konkretnym wpisie planera — bezwzględna
+// (nie mnożnik) i dotyczy tylko tego posiłku; przepis zostaje wzorcem.
+export interface IngredientOverride {
+  ingredientId: string;
+  quantity: number;
+}
+
+// Posiłek doraźny — wpis planera bez przepisu.
+export interface CustomMeal {
+  title: string;
+  ingredients: RecipeIngredient[];
+}
+
 export interface MealEntry {
   id: string;
   weekStart: string; // YYYY-MM-DD (Monday)
   dayOfWeek: number; // 0 = Monday ... 6 = Sunday
   mealType: MealType;
-  recipeId: string;
+  recipeId: string | null;
+  custom: CustomMeal | null;
   cooked: boolean;
+  participants: MealParticipant[];
+  portionScale: number;
+  ingredientOverrides: IngredientOverride[];
 }
 
 export interface PlannerEntry extends MealEntry {
   recipe: Recipe | null;
+  // Makro tego posiłku po korektach; `recipe.nutrition` opisuje sam przepis.
+  nutrition?: RecipeNutrition | null;
 }
 
 export interface ShoppingItem {
@@ -111,51 +191,48 @@ export interface RecipeInput {
   description?: string;
   instructions: string;
   recipeIngredients: RecipeIngredient[];
+  servings?: number;
 }
 
-// --- IndexedDB ---
+// --- Bilans odżywczy ---
 
-const DB_NAME = 'lista-zadan-meals';
-const DB_VERSION = 3;
-const RECIPES = 'recipes';
-const ENTRIES = 'mealEntries';
-const SHOPPING = 'shopping';
-const PRODUCTS = 'products';
-const PANTRY = 'pantry';
-
-function generateId(): string {
-  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+export interface NutritionGoal {
+  userId: string;
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
 }
 
-let dbPromise: Promise<IDBPDatabase> | null = null;
+export interface MealShare {
+  entryId: string;
+  mealType: MealType;
+  title: string;
+  portions: number;
+  nutrition: Nutrition;
+  complete: boolean;
+}
 
-function getDB(): Promise<IDBPDatabase> {
-  if (!dbPromise) {
-    dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains('ingredients')) {
-          db.createObjectStore('ingredients', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains(RECIPES)) {
-          db.createObjectStore(RECIPES, { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains(ENTRIES)) {
-          const entries = db.createObjectStore(ENTRIES, { keyPath: 'id' });
-          entries.createIndex('weekStart', 'weekStart', { unique: false });
-        }
-        if (!db.objectStoreNames.contains(SHOPPING)) {
-          db.createObjectStore(SHOPPING, { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains(PRODUCTS)) {
-          db.createObjectStore(PRODUCTS, { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains(PANTRY)) {
-          db.createObjectStore(PANTRY, { keyPath: 'id' });
-        }
-      },
-    });
-  }
-  return dbPromise;
+export interface DayBalance {
+  dayOfWeek: number;
+  date: string;
+  nutrition: Nutrition;
+  meals: MealShare[];
+  incompleteMeals: number;
+}
+
+export interface MemberBalance {
+  userId: string;
+  displayName: string;
+  goal: NutritionGoal | null;
+  days: DayBalance[];
+  weekTotal: Nutrition;
+}
+
+export interface NutritionBalance {
+  weekStart: string;
+  onlyCooked: boolean;
+  members: MemberBalance[];
 }
 
 // --- Week helpers ---
@@ -237,348 +314,7 @@ export function groupByCategory<T>(
     .map(([category, groupItems]) => ({ category, items: groupItems }));
 }
 
-// --- Products (dictionary) ---
-
-export async function getProducts(): Promise<Product[]> {
-  const db = await getDB();
-  const all = (await db.getAll(PRODUCTS)) as Product[];
-  return all.sort((a, b) => a.name.localeCompare(b.name, 'pl'));
-}
-
-export async function searchProducts(query: string): Promise<Product[]> {
-  const q = query.trim().toLowerCase();
-  const all = await getProducts();
-  return (q ? all.filter((p) => p.name.toLowerCase().includes(q)) : all).slice(0, 8);
-}
-
-export async function createProduct(input: ProductInput): Promise<Product> {
-  const db = await getDB();
-  const all = (await db.getAll(PRODUCTS)) as Product[];
-  const existing = all.find((p) => p.name.toLowerCase() === input.name.trim().toLowerCase());
-  if (existing) {
-    return existing;
-  }
-  const product: Product = {
-    id: generateId(),
-    name: input.name.trim(),
-    category: input.category?.trim() || undefined,
-    baseUnit: input.baseUnit,
-    packageSize: input.packageSize && input.packageSize > 0 ? input.packageSize : undefined,
-    trackInPantry: input.trackInPantry,
-  };
-  await db.put(PRODUCTS, product);
-  return product;
-}
-
-export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
-  const db = await getDB();
-  const product: Product = {
-    id,
-    name: input.name.trim(),
-    category: input.category?.trim() || undefined,
-    baseUnit: input.baseUnit,
-    packageSize: input.packageSize && input.packageSize > 0 ? input.packageSize : undefined,
-    trackInPantry: input.trackInPantry,
-  };
-  await db.put(PRODUCTS, product);
-  return product;
-}
-
-export async function deleteProduct(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete(PRODUCTS, id);
-}
-
-// --- Recipes ---
-
-export async function getRecipes(): Promise<Recipe[]> {
-  const db = await getDB();
-  const all = (await db.getAll(RECIPES)) as Recipe[];
-  return all.sort((a, b) => b.createdAt - a.createdAt);
-}
-
-export async function getRecipe(id: string): Promise<Recipe | undefined> {
-  const db = await getDB();
-  return (await db.get(RECIPES, id)) as Recipe | undefined;
-}
-
-export async function createRecipe(input: RecipeInput): Promise<Recipe> {
-  const db = await getDB();
-  const now = Date.now();
-  const recipe: Recipe = {
-    id: generateId(),
-    title: input.title.trim(),
-    category: input.category?.trim() || undefined,
-    description: input.description?.trim() || undefined,
-    instructions: input.instructions.trim(),
-    recipeIngredients: input.recipeIngredients,
-    createdAt: now,
-    updatedAt: now,
-  };
-  await db.put(RECIPES, recipe);
-  return recipe;
-}
-
-export async function updateRecipe(id: string, input: RecipeInput): Promise<Recipe> {
-  const db = await getDB();
-  const existing = (await db.get(RECIPES, id)) as Recipe | undefined;
-  const recipe: Recipe = {
-    id,
-    title: input.title.trim(),
-    category: input.category?.trim() || undefined,
-    description: input.description?.trim() || undefined,
-    instructions: input.instructions.trim(),
-    recipeIngredients: input.recipeIngredients,
-    createdAt: existing?.createdAt ?? Date.now(),
-    updatedAt: Date.now(),
-  };
-  await db.put(RECIPES, recipe);
-  return recipe;
-}
-
-export async function deleteRecipe(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete(RECIPES, id);
-  // Drop any planner entries referencing the removed recipe.
-  const entries = (await db.getAll(ENTRIES)) as MealEntry[];
-  const tx = db.transaction(ENTRIES, 'readwrite');
-  for (const entry of entries) {
-    if (entry.recipeId === id) {
-      await tx.store.delete(entry.id);
-    }
-  }
-  await tx.done;
-}
-
-// --- Planner ---
-
-export async function getWeek(weekStart: string): Promise<PlannerEntry[]> {
-  const db = await getDB();
-  const entries = (await db.getAllFromIndex(ENTRIES, 'weekStart', weekStart)) as MealEntry[];
-  const result: PlannerEntry[] = [];
-  for (const entry of entries) {
-    const recipe = (await db.get(RECIPES, entry.recipeId)) as Recipe | undefined;
-    result.push({ ...entry, cooked: entry.cooked ?? false, recipe: recipe ?? null });
-  }
-  return result;
-}
-
-export async function addEntry(
-  weekStart: string,
-  recipeId: string,
-  dayOfWeek: number,
-  mealType: MealType,
-): Promise<void> {
-  const db = await getDB();
-  const entries = (await db.getAllFromIndex(ENTRIES, 'weekStart', weekStart)) as MealEntry[];
-  const existing = entries.find((e) => e.dayOfWeek === dayOfWeek && e.mealType === mealType);
-  const entry: MealEntry = {
-    id: existing?.id ?? generateId(),
-    weekStart,
-    dayOfWeek,
-    mealType,
-    recipeId,
-    cooked: false, // changing the slot's recipe resets the cooked flag
-  };
-  await db.put(ENTRIES, entry);
-}
-
-export async function removeEntry(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete(ENTRIES, id);
-}
-
-// Loop closer: cooking a meal subtracts its ingredients from the pantry;
-// un-marking restores them. Idempotent.
-export async function setCooked(id: string, cooked: boolean): Promise<void> {
-  const db = await getDB();
-  const entry = (await db.get(ENTRIES, id)) as MealEntry | undefined;
-  if (!entry || (entry.cooked ?? false) === cooked) {
-    return;
-  }
-  const recipe = (await db.get(RECIPES, entry.recipeId)) as Recipe | undefined;
-  if (recipe) {
-    await applyRecipeToPantry(recipe, cooked ? -1 : 1);
-  }
-  await db.put(ENTRIES, { ...entry, cooked });
-}
-
-async function applyRecipeToPantry(recipe: Recipe, sign: number): Promise<void> {
-  const products = await getProducts();
-  const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
-  for (const ri of recipe.recipeIngredients) {
-    const product = byName.get(ri.name.toLowerCase());
-    if (!product || !product.trackInPantry || ri.quantity <= 0) {
-      continue;
-    }
-    await adjustPantryStock(product.id, sign * ri.quantity);
-  }
-}
-
-// --- Shopping ---
-
-export async function getShopping(): Promise<ShoppingItem[]> {
-  const db = await getDB();
-  const all = (await db.getAll(SHOPPING)) as ShoppingItem[];
-  return all.sort((a, b) => a.createdAt - b.createdAt);
-}
-
-export async function addShoppingItem(name: string, quantity?: number, unit?: string): Promise<void> {
-  const db = await getDB();
-  const item: ShoppingItem = {
-    id: generateId(),
-    name: name.trim(),
-    quantity,
-    unit,
-    isChecked: false,
-    createdAt: Date.now(),
-  };
-  await db.put(SHOPPING, item);
-}
-
-export async function toggleShoppingItem(id: string, isChecked: boolean): Promise<void> {
-  const db = await getDB();
-  const item = (await db.get(SHOPPING, id)) as ShoppingItem | undefined;
-  if (!item) {
-    return;
-  }
-  // Loop closer: buying a quantified, pantry-tracked item adds it to the pantry;
-  // un-checking reverses that.
-  if ((item.isChecked ?? false) !== isChecked && item.quantity && item.quantity > 0) {
-    const products = await getProducts();
-    const product = products.find((p) => p.name.toLowerCase() === item.name.trim().toLowerCase());
-    if (product && product.trackInPantry) {
-      await adjustPantryStock(product.id, isChecked ? item.quantity : -item.quantity);
-    }
-  }
-  await db.put(SHOPPING, { ...item, isChecked });
-}
-
-export async function removeShoppingItem(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete(SHOPPING, id);
-}
-
-// Pantry-aware: buys only what's missing, rounded up to whole packages.
-export async function generateShoppingFromPlan(weekStart: string, days?: number[]): Promise<number> {
-  const needs = (await computeNeeds(weekStart, days)).filter((n) => n.toBuy > 0);
-  const db = await getDB();
-  const now = Date.now();
-  const tx = db.transaction(SHOPPING, 'readwrite');
-  let count = 0;
-  for (const n of needs) {
-    const item: ShoppingItem = {
-      id: generateId(),
-      name: n.name,
-      quantity: n.toBuy || undefined,
-      unit: n.unit || undefined,
-      isChecked: false,
-      createdAt: now + count,
-    };
-    await tx.store.put(item);
-    count += 1;
-  }
-  await tx.done;
-  return count;
-}
-
-// --- Pantry (spiżarnia) ---
-
-interface PantryRow {
-  id: string;
-  productId: string;
-  quantity: number;
-}
-
-export async function getPantry(): Promise<PantryItem[]> {
-  const db = await getDB();
-  const [rows, products] = await Promise.all([
-    db.getAll(PANTRY) as Promise<PantryRow[]>,
-    getProducts(),
-  ]);
-  const byId = new Map(products.map((p) => [p.id, p]));
-  const result: PantryItem[] = [];
-  for (const r of rows) {
-    const p = byId.get(r.productId);
-    if (!p) {
-      continue;
-    }
-    result.push({ id: r.id, productId: r.productId, name: p.name, baseUnit: p.baseUnit, packageSize: p.packageSize, quantity: r.quantity });
-  }
-  return result.sort((a, b) => a.name.localeCompare(b.name, 'pl'));
-}
-
-export async function setPantryStock(productId: string, quantity: number): Promise<void> {
-  const db = await getDB();
-  const rows = (await db.getAll(PANTRY)) as PantryRow[];
-  const existing = rows.find((r) => r.productId === productId);
-  const row: PantryRow = { id: existing?.id ?? generateId(), productId, quantity: Math.max(0, quantity) };
-  await db.put(PANTRY, row);
-}
-
-export async function adjustPantryStock(productId: string, delta: number): Promise<void> {
-  const db = await getDB();
-  const rows = (await db.getAll(PANTRY)) as PantryRow[];
-  const existing = rows.find((r) => r.productId === productId);
-  await setPantryStock(productId, (existing?.quantity ?? 0) + delta);
-}
-
-export async function removePantryItem(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete(PANTRY, id);
-}
-
-export async function computeNeeds(weekStart: string, days?: number[]): Promise<NeedItem[]> {
-  const [allEntries, products, pantry] = await Promise.all([getWeek(weekStart), getProducts(), getPantry()]);
-  // Optional day filter (0=Mon…6=Sun) so the user can shop for just part of the week.
-  const entries = days && days.length > 0 ? allEntries.filter((e) => days.includes(e.dayOfWeek)) : allEntries;
-  const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
-  const stock = new Map(pantry.map((x) => [x.productId, x.quantity]));
-  const agg = new Map<string, { productId: string | null; name: string; unit: string; required: number; packageSize?: number }>();
-  for (const e of entries) {
-    if (!e.recipe) {
-      continue;
-    }
-    for (const ri of e.recipe.recipeIngredients) {
-      const product = byName.get(ri.name.toLowerCase());
-      if (product && !product.trackInPantry) {
-        continue;
-      }
-      const key = product ? product.id : `name:${ri.name.toLowerCase()}`;
-      const cur = agg.get(key);
-      if (cur) {
-        cur.required += ri.quantity;
-      } else {
-        agg.set(key, {
-          productId: product?.id ?? null,
-          name: product?.name ?? ri.name,
-          unit: product?.baseUnit ?? ri.unit,
-          required: ri.quantity,
-          packageSize: product?.packageSize,
-        });
-      }
-    }
-  }
-  const needs: NeedItem[] = [];
-  for (const a of agg.values()) {
-    const inStock = a.productId ? (stock.get(a.productId) ?? 0) : 0;
-    const shortfall = Math.max(0, a.required - inStock);
-    let toBuy = 0;
-    let packages: number | undefined;
-    if (shortfall > 0) {
-      if (a.packageSize && a.packageSize > 0) {
-        packages = Math.ceil(shortfall / a.packageSize);
-        toBuy = packages * a.packageSize;
-      } else {
-        toBuy = shortfall;
-      }
-    }
-    needs.push({ productId: a.productId, name: a.name, unit: a.unit, required: a.required, inStock, shortfall, packageSize: a.packageSize, toBuy, packages });
-  }
-  return needs.sort((x, y) => x.name.localeCompare(y.name, 'pl'));
-}
-
-// --- Storage abstraction (local IndexedDB vs cloud household) ---
+// --- Storage contract (implemented by the cloud adapter in mealsApi.ts) ---
 
 export interface MealStorage {
   getRecipes(): Promise<Recipe[]>;
@@ -593,8 +329,11 @@ export interface MealStorage {
   deleteProduct(id: string): Promise<void>;
   getWeek(weekStart: string): Promise<PlannerEntry[]>;
   addEntry(weekStart: string, recipeId: string, dayOfWeek: number, mealType: MealType): Promise<void>;
+  addCustomEntry(weekStart: string, custom: CustomMeal, dayOfWeek: number, mealType: MealType): Promise<void>;
   removeEntry(id: string): Promise<void>;
   setCooked(id: string, cooked: boolean): Promise<void>;
+  setParticipants(id: string, participants: MealParticipant[]): Promise<void>;
+  adjustEntry(id: string, portionScale: number, overrides: IngredientOverride[]): Promise<void>;
   getShopping(): Promise<ShoppingItem[]>;
   addShoppingItem(name: string): Promise<void>;
   toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;
@@ -605,31 +344,6 @@ export interface MealStorage {
   adjustPantryStock(productId: string, delta: number): Promise<void>;
   removePantryItem(id: string): Promise<void>;
   computeNeeds(weekStart: string, days?: number[]): Promise<NeedItem[]>;
+  getNutritionBalance(weekStart: string, onlyCooked: boolean): Promise<NutritionBalance>;
+  setNutritionGoal(goal: NutritionGoal): Promise<void>;
 }
-
-export const localMealStorage: MealStorage = {
-  getRecipes,
-  getRecipe,
-  createRecipe,
-  updateRecipe,
-  deleteRecipe,
-  getProducts,
-  searchProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  getWeek,
-  addEntry,
-  removeEntry,
-  setCooked,
-  getShopping,
-  addShoppingItem: (name) => addShoppingItem(name),
-  toggleShoppingItem,
-  removeShoppingItem,
-  generateShoppingFromPlan,
-  getPantry,
-  setPantryStock,
-  adjustPantryStock,
-  removePantryItem,
-  computeNeeds,
-};

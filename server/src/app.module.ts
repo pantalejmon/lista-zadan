@@ -38,6 +38,13 @@ import { AddFinanceTables1764201600000 } from './migration/1764201600000-AddFina
 import { AddSettingsToUser1764288000000 } from './migration/1764288000000-AddSettingsToUser';
 import { AddOAuthTables1764374400000 } from './migration/1764374400000-AddOAuthTables';
 import { AddRecipeCategory1764460800000 } from './migration/1764460800000-AddRecipeCategory';
+import { AddProductNutrition1764547200000 } from './migration/1764547200000-AddProductNutrition';
+import { AddRecipeServings1764633600000 } from './migration/1764633600000-AddRecipeServings';
+import { AddMealEntryParticipants1764720000000 } from './migration/1764720000000-AddMealEntryParticipants';
+import { AddMealEntryOverrides1764806400000 } from './migration/1764806400000-AddMealEntryOverrides';
+import { AllowAdHocMealEntry1764892800000 } from './migration/1764892800000-AllowAdHocMealEntry';
+import { AddNutritionGoalTable1764979200000 } from './migration/1764979200000-AddNutritionGoalTable';
+import { AddProductOrigin1765065600000 } from './migration/1765065600000-AddProductOrigin';
 import configuration from './config/configuration';
 
 @Module({
@@ -78,6 +85,13 @@ import configuration from './config/configuration';
           AddSettingsToUser1764288000000,
           AddOAuthTables1764374400000,
           AddRecipeCategory1764460800000,
+          AddProductNutrition1764547200000,
+          AddRecipeServings1764633600000,
+          AddMealEntryParticipants1764720000000,
+          AddMealEntryOverrides1764806400000,
+          AllowAdHocMealEntry1764892800000,
+          AddNutritionGoalTable1764979200000,
+          AddProductOrigin1765065600000,
         ],
       }),
     }),

@@ -1,5 +1,6 @@
 import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
-import { Product, BaseUnit } from '../domain/product.model';
+import { Product, BaseUnit, ProductOrigin } from '../domain/product.model';
+import { Nutrition } from '../domain/nutrition';
 
 @Entity('meal_product')
 export class ProductEntity {
@@ -25,6 +26,30 @@ export class ProductEntity {
   @Column('boolean', { default: true })
   trackInPantry!: boolean;
 
+  // Wartości odżywcze na 100 g/ml (albo na 1 szt) — patrz domain/nutrition.ts.
+  // Rozpłaszczone do kolumn, bo makro filtruje się i sumuje po stronie bazy.
+  @Column('float', { nullable: true })
+  kcal!: number | null;
+
+  @Column('float', { nullable: true })
+  protein!: number | null;
+
+  @Column('float', { nullable: true })
+  fat!: number | null;
+
+  @Column('float', { nullable: true })
+  carbs!: number | null;
+
+  @Column('float', { nullable: true })
+  fiber!: number | null;
+
+  @Column('float', { nullable: true })
+  salt!: number | null;
+
+  // 'plant' | 'animal' | null (nie określono) — patrz domain/product.model.ts.
+  @Column('varchar', { nullable: true })
+  origin!: ProductOrigin | null;
+
   toDomain(): Product {
     return new Product(
       this.id,
@@ -34,6 +59,8 @@ export class ProductEntity {
       this.baseUnit,
       this.packageSize === null ? null : Number(this.packageSize),
       this.trackInPantry,
+      this.toNutrition(),
+      this.origin,
     );
   }
 
@@ -46,6 +73,30 @@ export class ProductEntity {
     entity.baseUnit = product.baseUnit;
     entity.packageSize = product.packageSize;
     entity.trackInPantry = product.trackInPantry;
+    entity.kcal = product.nutrition?.kcal ?? null;
+    entity.protein = product.nutrition?.protein ?? null;
+    entity.fat = product.nutrition?.fat ?? null;
+    entity.carbs = product.nutrition?.carbs ?? null;
+    entity.fiber = product.nutrition?.fiber ?? null;
+    entity.salt = product.nutrition?.salt ?? null;
+    entity.origin = product.origin;
     return entity;
+  }
+
+  // Makro zapisuje się kompletem (kcal + 3 makroskładniki), więc brak kcal =
+  // produkt bez wartości odżywczych. Pozostałe pola i tak domykamy zerem, żeby
+  // ręcznie dopisany wiersz nie wywrócił liczenia.
+  private toNutrition(): Nutrition | null {
+    if (this.kcal === null) {
+      return null;
+    }
+    return {
+      kcal: Number(this.kcal),
+      protein: Number(this.protein ?? 0),
+      fat: Number(this.fat ?? 0),
+      carbs: Number(this.carbs ?? 0),
+      fiber: this.fiber === null ? undefined : Number(this.fiber),
+      salt: this.salt === null ? undefined : Number(this.salt),
+    };
   }
 }

@@ -20,7 +20,6 @@ import { SyncTodosDto } from './dto/sync-todos.dto';
 import { TodoResponse } from './dto/todo.response';
 import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
 import { User } from '../../auth/domain/user.model';
-import { TodosGateway } from './todos.gateway';
 import { RateLimiterGuard } from './rate-limiter.guard';
 
 @Controller('todos')
@@ -28,7 +27,6 @@ import { RateLimiterGuard } from './rate-limiter.guard';
 export class TodoController {
   constructor(
     private readonly todoService: TodoService,
-    private readonly todosGateway: TodosGateway,
   ) {}
 
   @Get()
@@ -51,9 +49,7 @@ export class TodoController {
   @UseGuards(RateLimiterGuard)
   async create(@Req() req: Request, @Body() dto: CreateTodoDto): Promise<TodoResponse> {
     const userId = (req.user as User).id;
-    const todo = await this.todoService.create(dto, userId);
-    this.todosGateway.notifyTodoCreated(dto.listId, todo);
-    return todo;
+    return this.todoService.create(dto, userId);
   }
 
   @Put(':id')
@@ -63,30 +59,20 @@ export class TodoController {
     @Body() dto: UpdateTodoDto,
   ): Promise<TodoResponse> {
     const userId = (req.user as User).id;
-    const todo = await this.todoService.update(id, dto, userId);
-    if (todo.listId) {
-      this.todosGateway.notifyTodoUpdated(todo.listId, todo);
-    }
-    return todo;
+    return this.todoService.update(id, dto, userId);
   }
 
   @Delete(':id')
   async delete(@Req() req: Request, @Param('id') id: string): Promise<void> {
     const userId = (req.user as User).id;
-    const todo = await this.todoService.findById(id);
     await this.todoService.delete(id, userId);
-    if (todo?.listId) {
-      this.todosGateway.notifyTodoDeleted(todo.listId, id);
-    }
   }
 
   @Post('recurring')
   @UseGuards(RateLimiterGuard)
   async createRecurring(@Req() req: Request, @Body() dto: CreateRecurringTodosDto): Promise<TodoResponse[]> {
     const userId = (req.user as User).id;
-    const todos = await this.todoService.createRecurring(dto, userId);
-    this.todosGateway.notifyRecurrenceCreated(dto.listId, todos);
-    return todos;
+    return this.todoService.createRecurring(dto, userId);
   }
 
   @Delete('recurrence-group/:groupId')
@@ -95,11 +81,8 @@ export class TodoController {
     @Param('groupId') groupId: string,
   ): Promise<void> {
     const userId = (req.user as User).id;
-    const listId = await this.todoService.getListIdForRecurrenceGroup(groupId, userId);
+    await this.todoService.getListIdForRecurrenceGroup(groupId, userId);
     await this.todoService.deleteRecurrenceGroup(groupId, userId);
-    if (listId) {
-      this.todosGateway.notifyRecurrenceDeleted(listId, groupId);
-    }
   }
 
   @Post('sync')

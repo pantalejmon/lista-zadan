@@ -20,6 +20,8 @@ const SCOPE_LABELS: Record<ApiScope, string> = {
   'households:write': 'Zmiana gospodarstw domowych',
   'finance:read': 'Odczyt finansów (portfele, transakcje)',
   'finance:write': 'Zmiana finansów (portfele, transakcje)',
+  'settings:read': 'Odczyt ustawień aplikacji',
+  'settings:write': 'Zmiana ustawień aplikacji (wygląd, widoczne moduły)',
 };
 
 // OAuth 2.1 authorization-server endpoints for MCP connectors. Bodies are accepted

@@ -12,8 +12,9 @@ write bad code.
 
 ## Project Overview
 
-PWA todo application with React 19 frontend and NestJS backend. Supports local-only mode (IndexedDB) and
-cloud mode (server storage with Google OAuth). Polish language UI.
+PWA todo application with React 19 frontend and NestJS backend. Runs in local-only mode (IndexedDB) or cloud
+mode (server storage with Google OAuth). **Local mode covers the todo module only** — Posiłki, Serwis domu,
+Finanse and Czat require an account and a household, so they are cloud-only. Polish language UI.
 
 ## Feature Documentation
 
@@ -21,9 +22,11 @@ Non-trivial feature algorithms are documented under `docs/`. **When you change h
 doc in the same commit** — the docs are the source of truth for the intent behind the code.
 
 - `docs/meals.md` — Posiłki module: pantry-aware shopping (`computeNeeds` + package rounding), loop closers
-  (cooked → subtract from pantry, bought → add to pantry), and shopping-list export to a todo list. **Critical:**
-  the meal algorithms are duplicated between `client/src/lib/meals.ts` (offline/local) and
-  `server/src/meal/domain/meal.service.ts` (cloud) — a change to one must be mirrored in the other.
+  (cooked → subtract from pantry, bought → add to pantry), and shopping-list export to a todo list. Cloud-only,
+  per household: the algorithms live **only** in `server/src/meal/domain/meal.service.ts`, and
+  `client/src/lib/meals.ts` holds just types, constants and presentation helpers.
+- `docs/nutrition.md` — wartości odżywcze: jednostka odniesienia (100 g/ml vs 1 szt), zasada „komplet albo nic"
+  dla kcal + makroskładników, i (docelowo) liczenie makro przepisu oraz bilansu domowników.
 - `docs/home-service.md` — Serwis domu module: home assets + cyclic maintenance, `nextDueAt` derivation
   (`addMonths`), date-relative status (`overdue`/`soon`/`ok`/`none` with a 30-day soon threshold), and the
   "mark done" loop closer that rolls the next due date forward. Cloud-only, per household.
@@ -160,7 +163,9 @@ Web depends on domain. The module file wires it all together via NestJS DI (`pro
 
 - **Logic in services, not controllers**: controllers are thin — they delegate to a service. All business
   logic, entity creation, repository calls, and relation lookups live in services. Controllers only handle HTTP
-  concerns (decorators, status codes, validation binding).
+  concerns (decorators, status codes, validation binding). **This includes WebSocket notifications** — they
+  belong in the service, so every path into it (REST, MCP tools, future integrations) notifies open clients
+  identically. Emitting from a controller silently breaks realtime for MCP callers.
 - **Subdirectories only when earned**: use `domain/`, `infrastructure/`, `web/` subdirectories when a module
   has 6+ files. For smaller modules, keep files flat in the module directory. The layer structure in the
   architecture section above is the target for mature modules, not a requirement from day one.

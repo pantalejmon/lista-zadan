@@ -9,16 +9,45 @@ import {
   type PlannerEntry,
   type Recipe,
   type MealType,
+  type RecipeIngredient,
 } from '../../lib/meals';
 import { IconChevronLeft, IconChevronRight, IconClose, IconPlus, IconCheck } from './icons';
 import { RecipePreviewModal } from './RecipePreviewModal';
+import { ParticipantsBadges, ParticipantsPicker } from './ParticipantsPicker';
+import { AdjustEntryModal } from './AdjustEntryModal';
+import { QuickMealForm } from './QuickMealForm';
+import { getHouseholdMembers } from '../../lib/api';
+import type { HouseholdMember } from '../../lib/types';
 
-export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; liveKey?: number }) {
+// Krótki znacznik korekty na kaflu — user musi widzieć, że ten posiłek liczy się
+// inaczej niż przepis (do zakupów i spiżarni też).
+function adjustmentLabel(entry: PlannerEntry): string | null {
+  const scale = entry.portionScale ?? 1;
+  const overrides = entry.ingredientOverrides?.length ?? 0;
+  if (scale !== 1) {
+    return `${Number(scale.toFixed(2)).toString().replace('.', ',')}×`;
+  }
+  return overrides > 0 ? '≠' : null;
+}
+
+export function PlannerView({
+  storage,
+  householdId,
+  liveKey = 0,
+}: {
+  storage: MealStorage;
+  householdId: string;
+  liveKey?: number;
+}) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [entries, setEntries] = useState<PlannerEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [pickerSlot, setPickerSlot] = useState<{ day: number; meal: MealType } | null>(null);
   const [preview, setPreview] = useState<Recipe | null>(null);
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [participantsFor, setParticipantsFor] = useState<PlannerEntry | null>(null);
+  const [adjusting, setAdjusting] = useState<PlannerEntry | null>(null);
+  const [pickerTab, setPickerTab] = useState<'recipe' | 'quick'>('recipe');
 
   const load = useCallback(async () => {
     setEntries(await storage.getWeek(weekStart));
@@ -26,6 +55,7 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
 
   useEffect(() => { load(); }, [load, liveKey]);
   useEffect(() => { storage.getRecipes().then(setRecipes); }, [storage, liveKey]);
+  useEffect(() => { getHouseholdMembers(householdId).then(setMembers).catch(() => setMembers([])); }, [householdId]);
 
   const getEntry = (day: number, mealType: MealType) =>
     entries.find((e) => e.dayOfWeek === day && e.mealType === mealType);
@@ -49,8 +79,36 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
     load();
   };
 
+  const handleSaveParticipants = async (participants: { userId: string; portions: number }[]) => {
+    if (!participantsFor) {
+      return;
+    }
+    await storage.setParticipants(participantsFor.id, participants);
+    setParticipantsFor(null);
+    load();
+  };
+
+  const handleAdjust = async (portionScale: number, overrides: { ingredientId: string; quantity: number }[]) => {
+    if (!adjusting) {
+      return;
+    }
+    await storage.adjustEntry(adjusting.id, portionScale, overrides);
+    setAdjusting(null);
+    load();
+  };
+
+  const handleAddCustom = async (title: string, ingredients: RecipeIngredient[]) => {
+    if (!pickerSlot) {
+      return;
+    }
+    await storage.addCustomEntry(weekStart, { title, ingredients }, pickerSlot.day, pickerSlot.meal);
+    setPickerSlot(null);
+    load();
+  };
+
   const openPicker = async (day: number, meal: MealType) => {
     setRecipes(await storage.getRecipes());
+    setPickerTab('recipe');
     setPickerSlot({ day, meal });
   };
 
@@ -125,7 +183,7 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                                 ? 'text-green-800 dark:text-green-300 line-through decoration-green-500/60'
                                 : 'text-primary-900 dark:text-primary-200'
                             }`}>
-                            {entry.recipe?.title ?? '—'}
+                            {entry.recipe?.title ?? entry.custom?.title ?? '—'}
                           </button>
                           <button
                             onClick={() => handleCook(entry)}
@@ -146,6 +204,23 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                             </span>
                             <span>Zrobione</span>
                           </button>
+                          <div className="flex items-center gap-1">
+                            <ParticipantsBadges
+                              participants={entry.participants ?? []}
+                              members={members}
+                              onClick={() => setParticipantsFor(entry)}
+                            />
+                            {entry.recipe && (
+                              <button
+                                onClick={() => setAdjusting(entry)}
+                                title="Dopasuj porcje i składniki"
+                                aria-label="Dopasuj porcje i składniki"
+                                className="rounded px-1 py-0.5 text-[10px] font-medium text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                              >
+                                {adjustmentLabel(entry) ?? '⇄'}
+                              </button>
+                            )}
+                          </div>
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="absolute top-0.5 right-0.5 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-60 group-hover:opacity-100 transition-opacity"
@@ -187,31 +262,62 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                 {MEAL_TYPES.map(({ type, label }) => {
                   const entry = getEntry(dayIdx, type);
                   return (
-                    <div key={type} className="px-4 py-2 flex items-center justify-between gap-3">
-                      <span className="text-xs text-gray-400 w-20 shrink-0">{label}</span>
-                      {entry ? (
-                        <div className="flex-1 flex items-center justify-between min-w-0 gap-2">
+                    // Nazwa dania i pora dostają własny wiersz — wciśnięte obok
+                    // czterech kontrolek zostawały z „Nal…" na wąskim ekranie.
+                    <div key={type} className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 w-16 shrink-0">{label}</span>
+                        {entry ? (
+                          <>
+                            <button
+                              onClick={() => handleCook(entry)}
+                              className={`w-5 h-5 shrink-0 rounded flex items-center justify-center border transition-colors ${
+                                entry.cooked
+                                  ? 'bg-green-500 border-green-500 text-white'
+                                  : 'border-gray-300 dark:border-gray-600 text-transparent'
+                              }`}
+                              aria-label={entry.cooked ? 'Cofnij ugotowanie' : 'Oznacz jako ugotowane'}
+                            >
+                              <IconCheck className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => entry.recipe && setPreview(entry.recipe)}
+                              disabled={!entry.recipe}
+                              className={`text-sm font-medium flex-1 min-w-0 text-left break-words ${
+                                entry.cooked ? 'line-through text-gray-400 dark:text-gray-500' : ''
+                              }`}
+                            >
+                              {entry.recipe?.title ?? entry.custom?.title ?? '—'}
+                            </button>
+                          </>
+                        ) : (
                           <button
-                            onClick={() => handleCook(entry)}
-                            className={`w-5 h-5 shrink-0 rounded flex items-center justify-center border transition-colors ${
-                              entry.cooked
-                                ? 'bg-green-500 border-green-500 text-white'
-                                : 'border-gray-300 dark:border-gray-600 text-transparent'
-                            }`}
-                            aria-label={entry.cooked ? 'Cofnij ugotowanie' : 'Oznacz jako ugotowane'}
+                            onClick={() => openPicker(dayIdx, type)}
+                            className="flex-1 inline-flex items-center gap-1 text-sm text-gray-300 dark:text-gray-600 hover:text-primary-600 dark:hover:text-primary-400 py-1"
                           >
-                            <IconCheck className="w-3 h-3" />
+                            <IconPlus className="w-3.5 h-3.5" /> Dodaj
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => entry.recipe && setPreview(entry.recipe)}
-                            disabled={!entry.recipe}
-                            className={`text-sm font-medium truncate flex-1 text-left ${
-                              entry.cooked ? 'line-through text-gray-400 dark:text-gray-500' : ''
-                            }`}
-                          >
-                            {entry.recipe?.title ?? '—'}
-                          </button>
+                        )}
+                      </div>
+                      {entry && (
+                        <div className="flex items-center gap-2 mt-1.5 pl-[4.5rem]">
+                          <ParticipantsBadges
+                            participants={entry.participants ?? []}
+                            members={members}
+                            onClick={() => setParticipantsFor(entry)}
+                          />
+                          {entry.recipe && (
+                            <button
+                              onClick={() => setAdjusting(entry)}
+                              title="Dopasuj porcje i składniki"
+                              aria-label="Dopasuj porcje i składniki"
+                              className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            >
+                              {adjustmentLabel(entry) ?? '⇄'}
+                            </button>
+                          )}
+                          <span className="flex-1" />
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="text-gray-300 hover:text-red-500 shrink-0 p-1"
@@ -220,13 +326,6 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                             <IconClose className="w-4 h-4" />
                           </button>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => openPicker(dayIdx, type)}
-                          className="flex-1 inline-flex items-center gap-1 text-sm text-gray-300 dark:text-gray-600 hover:text-primary-600 dark:hover:text-primary-400 py-1"
-                        >
-                          <IconPlus className="w-3.5 h-3.5" /> Dodaj
-                        </button>
                       )}
                     </div>
                   );
@@ -253,9 +352,29 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
                 <IconClose className="w-4 h-4" />
               </button>
             </div>
-            {recipes.length === 0 ? (
+            <div className="flex px-2 border-b border-gray-100 dark:border-gray-800">
+              {([['recipe', 'Z przepisu'], ['quick', 'Szybki posiłek']] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setPickerTab(id)}
+                  className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    pickerTab === id
+                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                      : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {pickerTab === 'quick' ? (
+              <div className="overflow-y-auto flex-1">
+                <QuickMealForm storage={storage} onSave={handleAddCustom} />
+              </div>
+            ) : recipes.length === 0 ? (
               <p className="p-6 text-center text-sm text-gray-400">
-                Brak przepisów. Dodaj przepis w zakładce „Przepisy”.
+                Brak przepisów. Dodaj przepis w zakładce „Przepisy” albo wpisz szybki posiłek.
               </p>
             ) : (
               <ul className="overflow-y-auto flex-1 p-2">
@@ -277,6 +396,24 @@ export function PlannerView({ storage, liveKey = 0 }: { storage: MealStorage; li
       )}
 
       {preview && <RecipePreviewModal recipe={preview} onClose={() => setPreview(null)} />}
+
+      {adjusting?.recipe && (
+        <AdjustEntryModal
+          entry={adjusting}
+          recipe={adjusting.recipe}
+          onSave={handleAdjust}
+          onClose={() => setAdjusting(null)}
+        />
+      )}
+
+      {participantsFor && (
+        <ParticipantsPicker
+          members={members}
+          initial={participantsFor.participants ?? []}
+          onSave={handleSaveParticipants}
+          onClose={() => setParticipantsFor(null)}
+        />
+      )}
     </div>
   );
 }

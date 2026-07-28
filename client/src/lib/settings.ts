@@ -8,15 +8,27 @@ export type ThemeId = 'light' | 'sand' | 'dark' | 'midnight';
 export type AccentId = 'slate' | 'emerald' | 'violet' | 'amber' | 'rose';
 export type FontSizeId = 'sm' | 'md' | 'lg' | 'xl';
 
+// Moduły, których użytkownik nie chce widzieć w menu. Zadania są zawsze
+// dostępne (w trybie lokalnym to jedyna sekcja), więc nie da się ich ukryć.
+export type HideableModule = 'meals' | 'home' | 'finance' | 'chat';
+
 export interface Settings {
   theme: ThemeId;
   accent: AccentId;
   fontSize: FontSizeId;
+  hiddenModules: HideableModule[];
 }
 
 export const SETTINGS_KEY = 'lista-zadan:settings';
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'light', accent: 'slate', fontSize: 'md' };
+export const DEFAULT_SETTINGS: Settings = { theme: 'light', accent: 'slate', fontSize: 'md', hiddenModules: [] };
+
+export const HIDEABLE_MODULES: { id: HideableModule; label: string; description: string }[] = [
+  { id: 'meals', label: 'Posiłki', description: 'Planer, przepisy, zakupy' },
+  { id: 'home', label: 'Serwis domu', description: 'Przeglądy, gwarancje, koszty' },
+  { id: 'finance', label: 'Finanse', description: 'Portfele, wydatki, statystyki' },
+  { id: 'chat', label: 'Czat', description: 'Rozmowy domowników' },
+];
 
 // Root font-size drives every rem-based size in the app, so this scales text and
 // spacing together — the accessible way to make the UI bigger, not just bolder.
@@ -114,7 +126,14 @@ export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
-      return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<Settings>) };
+      const stored = JSON.parse(raw) as Partial<Settings>;
+      return {
+        ...DEFAULT_SETTINGS,
+        ...stored,
+        // Zapisy sprzed tej opcji nie mają pola — bez tego byłoby `undefined`
+        // i każdy `.includes` by wybuchł.
+        hiddenModules: stored.hiddenModules ?? [],
+      };
     }
     // Migrate the old standalone dark toggle so existing users keep their mode.
     const legacy = localStorage.getItem('theme');

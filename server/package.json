@@ -13,6 +13,14 @@
     "migration:generate": "typeorm migration:generate -d src/data-source.ts",
     "migration:run": "typeorm migration:run -d src/data-source.ts"
   },
+  "jest": {
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testEnvironment": "node"
+  },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.3",

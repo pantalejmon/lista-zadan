@@ -319,7 +319,7 @@ function TransactionRow({
     // kwota i dwie ikony zjadały opis („Biedronka duże zaku…") na telefonie.
     <li className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 px-4 py-2.5">
       <div className="flex items-baseline gap-3">
-        <span className="text-sm font-medium truncate min-w-0 flex-1">{transaction.description}</span>
+        <span className="text-sm font-medium break-words min-w-0 flex-1">{transaction.description}</span>
         <span className={`text-sm font-semibold tabular-nums shrink-0 ${
           isExpense ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
         }`}>

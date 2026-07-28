@@ -188,7 +188,7 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
             <ul className="px-4 pb-3 space-y-1.5">
               {needs.filter((n) => n.shortfall > 0).map((n, i) => (
                 <li key={i} className="text-xs text-gray-600 dark:text-gray-300 flex items-center justify-between gap-2">
-                  <span className="font-medium truncate">{n.name}</span>
+                  <span className="font-medium min-w-0 break-words">{n.name}</span>
                   <span className="text-gray-500 dark:text-gray-400 shrink-0 tabular-nums">
                     potrzeba {n.required} {n.unit} · masz {n.inStock} → <span className="text-primary-600 dark:text-primary-400 font-medium">kup {n.toBuy} {n.unit}</span>
                     {n.packages ? ` (${n.packages} opak.)` : ''}
@@ -282,15 +282,19 @@ function ShoppingRow({
         {item.isChecked && <IconCheck className="w-3 h-3" />}
       </button>
 
-      <span className={`flex-1 text-sm ${item.isChecked ? 'line-through text-gray-400' : ''}`}>{item.name}</span>
+      {/* Nazwa zawija się zamiast wypychać ilość poza kartę — na liście zakupów
+          liczy się właśnie ilość obok nazwy. */}
+      <span className={`flex-1 min-w-0 text-sm break-words ${item.isChecked ? 'line-through text-gray-400' : ''}`}>
+        {item.name}
+      </span>
 
       {(item.quantity || item.unit) && (
-        <span className="text-sm text-gray-400 tabular-nums">{item.quantity} {item.unit}</span>
+        <span className="text-sm text-gray-400 tabular-nums shrink-0">{item.quantity} {item.unit}</span>
       )}
 
       <button
         onClick={() => onRemove(item.id)}
-        className="flex-shrink-0 p-1 rounded-md text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+        className="shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-md text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
         aria-label="Usuń produkt"
       >
         <IconClose className="w-3.5 h-3.5" />

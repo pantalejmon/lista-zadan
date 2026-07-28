@@ -18,6 +18,7 @@ import { SyncOperationDto } from '../web/dto/sync-todos.dto';
 import { TodoResponse } from '../web/dto/todo.response';
 import { SharingService } from '../../sharing/domain/sharing.service';
 import { UserRepositoryPort } from '../../auth/domain/user.repository.port';
+import { TodosGateway } from '../web/todos.gateway';
 
 function todoStorageBytes(todo: Todo): number {
   const itemsBytes = todo.items
@@ -26,6 +27,10 @@ function todoStorageBytes(todo: Todo): number {
   return Buffer.byteLength(todo.text, 'utf8') + 200 + itemsBytes;
 }
 
+// Powiadomienia WebSocket wychodzą **z serwisu**, nie z kontrolera: każda ścieżka
+// zmiany — REST, narzędzia MCP, przyszłe integracje — musi odświeżać otwartych
+// klientów tak samo. Gdy siedziały w kontrolerze, zmiany zrobione przez agenta
+// były niewidoczne do czasu przeładowania strony (#97).
 @Injectable()
 export class TodoService {
   constructor(
@@ -33,6 +38,7 @@ export class TodoService {
     private readonly sharingService: SharingService,
     private readonly userRepository: UserRepositoryPort,
     private readonly configService: ConfigService,
+    private readonly gateway: TodosGateway,
   ) {}
 
   private get maxStorageBytes(): number {
@@ -66,7 +72,9 @@ export class TodoService {
     await this.assertQuota(userId, bytes);
     await this.repository.save(todo);
     await this.userRepository.addStorageUsed(userId, bytes);
-    return todo.toResponse();
+    const response = todo.toResponse();
+    this.gateway.notifyTodoCreated(dto.listId, response);
+    return response;
   }
 
   async update(id: string, dto: UpdateTodoDto, userId: string): Promise<TodoResponse> {
@@ -80,7 +88,11 @@ export class TodoService {
     if (delta !== 0) {
       await this.userRepository.addStorageUsed(userId, delta);
     }
-    return updated.toResponse();
+    const response = updated.toResponse();
+    if (response.listId) {
+      this.gateway.notifyTodoUpdated(response.listId, response);
+    }
+    return response;
   }
 
   async findById(id: string): Promise<Todo | null> {
@@ -92,6 +104,9 @@ export class TodoService {
     const bytes = todoStorageBytes(todo);
     await this.repository.delete(id);
     await this.userRepository.addStorageUsed(userId, -bytes);
+    if (todo.listId) {
+      this.gateway.notifyTodoDeleted(todo.listId, id);
+    }
   }
 
   async createRecurring(dto: CreateRecurringTodosDto, userId: string): Promise<TodoResponse[]> {
@@ -108,7 +123,9 @@ export class TodoService {
     await this.assertQuota(userId, totalBytes);
     await this.repository.saveMany(todos);
     await this.userRepository.addStorageUsed(userId, totalBytes);
-    return todos.map((t) => t.toResponse());
+    const responses = todos.map((t) => t.toResponse());
+    this.gateway.notifyRecurrenceCreated(dto.listId, responses);
+    return responses;
   }
 
   async getListIdForRecurrenceGroup(groupId: string, userId: string): Promise<string | null> {
@@ -126,8 +143,12 @@ export class TodoService {
   async deleteRecurrenceGroup(groupId: string, userId: string): Promise<void> {
     const todos = await this.repository.findByRecurrenceGroupId(groupId);
     const totalBytes = todos.reduce((sum, t) => sum + todoStorageBytes(t), 0);
+    const listId = todos[0]?.listId ?? null;
     await this.repository.deleteByRecurrenceGroupId(groupId);
     await this.userRepository.addStorageUsed(userId, -totalBytes);
+    if (listId) {
+      this.gateway.notifyRecurrenceDeleted(listId, groupId);
+    }
   }
 
   async syncOperations(operations: SyncOperationDto[], userId: string): Promise<TodoResponse[]> {

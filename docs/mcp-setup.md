@@ -93,20 +93,30 @@ Zestaw pokrywa **całą aplikację** — każdy moduł da się sterować przez M
 odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który implikuje `:read`).
 
 **Todo / listy** (scope `todo:*`):
-- odczyt: `list_todo_lists`, `list_todos`, `list_unassigned_todos`,
-- zadania: `add_todo`, `update_todo` (edytuj treść/datę/godzinę/stan), `complete_todo`, `delete_todo`,
+- odczyt: `list_todo_lists`, `list_todos` (z `kind` i pozycjami list zakupów), `list_unassigned_todos`,
+  `dates_with_todos`,
+- zadania: `add_todo` (również `kind: 'shopping'` + `items` — gotowa lista zakupów na wskazany dzień
+  jednym wywołaniem), `update_todo` (treść/data/godzina/stan/`items`/`month`), `complete_todo`, `delete_todo`,
 - cykliczne: `add_recurring_todos`, `delete_recurrence_group`,
 - listy: `create_todo_list`, `rename_todo_list`, `delete_todo_list`, `move_todo_list`.
 
 **Posiłki** (scope `meals:*`, gospodarstwo z tokenu lub argumentu `householdId`):
 - odczyt: `list_recipes`, `get_recipe`, `get_week_plan`, `get_shopping_list`, `what_is_missing`, `list_products`, `get_pantry`,
-- przepisy: `create_recipe`, `update_recipe`, `delete_recipe`,
-- planer: `plan_meal` (przypisz przepis do dnia/pory), `mark_meal_cooked` (odejmij ze spiżarni), `remove_meal_entry`,
+- bilans odżywczy: `get_nutrition_balance` (ile kto zjadł w tygodniu), `get_nutrition_goals`, `set_nutrition_goal`,
+- przepisy: `create_recipe`, `update_recipe` (oba przyjmują `servings`), `delete_recipe`,
+  `get_recipe_nutrition` (makro przepisu: `total`, `perServing`, `coverage`, `missing`),
+- planer: `plan_meal` (przypisz przepis do dnia/pory, opcjonalnie `participants`),
+  `plan_custom_meal` (posiłek bez przepisu, np. „jogurt i banan"),
+  `set_meal_participants` (kto je i w ilu porcjach), `adjust_meal_entry` (mnożnik porcji / ilości
+  składników w tym jednym posiłku), `mark_meal_cooked` (odejmij ze spiżarni), `remove_meal_entry`,
 - zakupy: `add_shopping_item`, `check_shopping_item` („kupione" → do spiżarni), `delete_shopping_item`, `generate_shopping_from_plan`,
-- produkty/spiżarnia: `create_product`, `update_product`, `delete_product`, `set_pantry_stock`, `adjust_pantry_stock`, `remove_pantry_item`.
+- produkty/spiżarnia: `create_product`, `update_product` (oba przyjmują `nutrition` — wartości odżywcze
+  na 100 g/ml, a dla `baseUnit = szt` na 1 sztukę — oraz `origin`: `plant`/`animal`, z którego bierze się
+  rozbicie białka), `delete_product`, `set_pantry_stock`, `adjust_pantry_stock`, `remove_pantry_item`.
 
 **Gospodarstwa i członkowie** (scope `households:*`):
-- `list_households`, `create_household`, `rename_household`, `list_contacts`,
+- `list_households`, `setup_household` (pierwsze gospodarstwo + domyślna lista), `create_household`,
+  `rename_household`, `list_contacts`,
 - członkowie: `list_household_members`, `invite_to_household`, `change_member_role`, `remove_household_member`, `leave_household`,
 - zaproszenia: `list_pending_invitations`, `accept_invitation`, `decline_invitation`,
 - `export_shopping_to_list` — eksport listy zakupów posiłków do listy zadań (dodatkowo `meals:read`+`todo:write`).
@@ -123,6 +133,19 @@ odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który imp
   (kwota dodatnia = przychód, ujemna = wydatek),
 - cykliczne: `list_recurring_transactions`, `add_recurring_transaction`, `update_recurring_transaction`, `delete_recurring_transaction`,
 - statystyki: `get_finance_stats`, `list_finance_categories`.
+
+**Ustawienia aplikacji** (scope `settings:*`, dane konta — nie gospodarstwa):
+- `get_settings`, `update_settings` (motyw, akcent, rozmiar tekstu, widoczne moduły).
+
+### Czego świadomie NIE wystawiamy
+
+Żeby kolejny audyt parytetu nie zgłaszał tego jako braków:
+
+- **Czat** (`/chat/:householdId/messages`) — decyzja produktowa: rozmowy domowników zostają między ludźmi.
+- **Odhaczanie pozycji listy zakupów** — to czynność „w sklepie", wygodniejsza w aplikacji. Agent listę
+  *zakłada i definiuje*, nie obsługuje jej w trakcie zakupów.
+- `POST /todos/sync` — mechanika trybu offline, nie capability użytkownika.
+- `/push/*` — subskrypcja konkretnego urządzenia.
 
 Wszystkie narzędzia przechodzą przez te same serwisy domenowe co UI, więc obowiązują
 identyczne uprawnienia (członkostwo w gospodarstwie, role owner/editor/viewer). Narzędzia

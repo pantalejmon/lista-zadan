@@ -1,3 +1,4 @@
+import type { Settings } from './settings';
 import {
   IconTileTasks,
   IconTileMeals,
@@ -23,3 +24,14 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'finance', label: 'Finanse', description: 'Portfele, wydatki, statystyki', Icon: IconTileFinance },
   { id: 'chat', label: 'Czat', description: 'Rozmowy domowników', Icon: IconTileChat },
 ];
+
+// Jedno miejsce, które decyduje o widocznych sekcjach: tryb lokalny (tylko
+// Zadania) **i** moduły ukryte w ustawieniach. Menu i górna belka czytają
+// stąd, zamiast trzymać dwa równoległe warunki.
+export function visibleNavItems(settings: Settings, isCloud: boolean): NavItem[] {
+  return NAV_ITEMS.filter(
+    (item) =>
+      item.id === 'tasks' ||
+      (isCloud && !settings.hiddenModules.includes(item.id as 'meals' | 'home' | 'finance' | 'chat')),
+  );
+}

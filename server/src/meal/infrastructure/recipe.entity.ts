@@ -26,6 +26,9 @@ export class RecipeEntity {
   @Column('text', { nullable: true })
   ingredients!: string | null;
 
+  @Column('int', { default: 1 })
+  servings!: number;
+
   @Column('bigint')
   createdAt!: number;
 
@@ -41,6 +44,7 @@ export class RecipeEntity {
       this.description,
       this.instructions,
       parseIngredients(this.ingredients),
+      Number(this.servings ?? 1),
       Number(this.createdAt),
       Number(this.updatedAt),
     );
@@ -55,6 +59,7 @@ export class RecipeEntity {
     entity.description = recipe.description;
     entity.instructions = recipe.instructions;
     entity.ingredients = JSON.stringify(recipe.recipeIngredients);
+    entity.servings = recipe.servings;
     entity.createdAt = recipe.createdAt;
     entity.updatedAt = recipe.updatedAt;
     return entity;

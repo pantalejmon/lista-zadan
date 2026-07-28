@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { PushToggle } from './PushToggle';
 import { HouseholdSwitcher } from './HouseholdSwitcher';
 import { IconBrandHome } from './AppIcons';
-import { NAV_ITEMS, type AppSection } from '../lib/navigation';
+import { type NavItem, type AppSection } from '../lib/navigation';
 import type { AuthUser } from '../hooks/useAuth';
 import type { Household } from '../lib/types';
 import type { WsStatus } from '../hooks/useWebSocket';
@@ -33,6 +33,8 @@ interface AppSidebarProps {
   syncStatus: SyncStatus;
   pendingCount: number;
   isCloud: boolean;
+  // Sekcje po filtrach (tryb lokalny + moduły ukryte w ustawieniach).
+  navItems: NavItem[];
   onOpenTokens?: () => void;
   onOpenSettings: () => void;
   households: Household[];
@@ -85,6 +87,7 @@ function SidebarContent({
   syncStatus,
   pendingCount,
   isCloud,
+  navItems,
   onOpenTokens,
   onOpenSettings,
   households,
@@ -134,7 +137,7 @@ function SidebarContent({
         {/* Feature navigation — Posiłki/Czat wymagają konta (gospodarstwa); lokalnie tylko Zadania */}
         <nav className="px-3 py-3 space-y-0.5">
           <p className="px-2 mb-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Aplikacje</p>
-          {NAV_ITEMS.filter((item) => isCloud || item.id === 'tasks').map(({ id, label, description, Icon }) => {
+          {navItems.map(({ id, label, description, Icon }) => {
             const chatCount = id === 'chat' ? (badges?.chat ?? 0) : 0;
             const tasksDot = id === 'tasks' && Boolean(badges?.tasks);
             return (
@@ -234,11 +237,11 @@ function SidebarContent({
       <div className="px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-800">
         {user ? (
           <div className="flex items-center gap-2 px-2">
-            {/* Kliknięcie profilu otwiera ustawienia wyglądu (motyw, akcent, tekst) */}
+            {/* Kliknięcie profilu otwiera ustawienia (wygląd + widoczne moduły) */}
             <button
               onClick={() => { onOpenSettings(); onClose(); }}
               className="flex items-center gap-3 flex-1 min-w-0 -mx-2 px-2 py-1 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors text-left"
-              title="Ustawienia wyglądu"
+              title="Ustawienia"
             >
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full shrink-0" referrerPolicy="no-referrer" />
@@ -249,7 +252,7 @@ function SidebarContent({
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate">{user.displayName}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">Ustawienia i wygląd</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">Wygląd i moduły</p>
               </div>
               <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

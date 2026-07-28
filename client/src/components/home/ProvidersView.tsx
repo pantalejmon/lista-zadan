@@ -72,7 +72,7 @@ export function ProvidersView({ householdId }: { householdId?: string }) {
             <li key={p.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3 flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold truncate">{p.name}</span>
+                  <span className="font-semibold break-words">{p.name}</span>
                   {p.trade && <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400">{p.trade}</span>}
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">

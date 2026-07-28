@@ -116,3 +116,11 @@ export function IconCheck({ className = 'w-3 h-3' }: IconProps) {
     </svg>
   );
 }
+
+export function IconBalance({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 20h18M7 20V10m5 10V4m5 16v-7" />
+    </Svg>
+  );
+}

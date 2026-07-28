@@ -285,7 +285,7 @@ function ProductForm({ product, onSave, onCancel }: { product?: Product; onSave:
           type="checkbox"
           checked={trackInPantry}
           onChange={(e) => setTrackInPantry(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          className="w-4 h-4 rounded border-gray-300"
         />
         Śledź w spiżarni
       </label>

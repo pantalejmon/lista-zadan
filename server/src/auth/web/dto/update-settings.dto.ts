@@ -6,7 +6,7 @@ export class UpdateSettingsDto {
   @IsIn(['light', 'sand', 'dark', 'midnight'])
   theme!: string;
 
-  @IsIn(['slate', 'emerald', 'violet', 'amber', 'rose'])
+  @IsIn(['slate', 'blue', 'teal', 'emerald', 'violet', 'plum', 'rose', 'terracotta', 'amber'])
   accent!: string;
 
   @IsIn(['sm', 'md', 'lg', 'xl'])

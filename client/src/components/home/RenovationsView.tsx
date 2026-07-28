@@ -248,7 +248,7 @@ function RenovationForm({
                 type="checkbox"
                 checked={item.done}
                 onChange={(e) => setItems((prev) => prev.map((c, i) => (i === idx ? { ...c, done: e.target.checked } : c)))}
-                className="w-4 h-4 rounded accent-primary-500"
+                className="w-4 h-4 rounded"
               />
               <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : ''}`}>{item.text}</span>
               <button onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))} className="text-gray-300 hover:text-red-500 p-1" aria-label="Usuń pozycję">

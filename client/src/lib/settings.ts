@@ -5,7 +5,16 @@
 // without touching a single component.
 
 export type ThemeId = 'light' | 'sand' | 'dark' | 'midnight';
-export type AccentId = 'slate' | 'emerald' | 'violet' | 'amber' | 'rose';
+export type AccentId =
+  | 'slate'
+  | 'blue'
+  | 'teal'
+  | 'emerald'
+  | 'violet'
+  | 'plum'
+  | 'rose'
+  | 'terracotta'
+  | 'amber';
 export type FontSizeId = 'sm' | 'md' | 'lg' | 'xl';
 
 // Moduły, których użytkownik nie chce widzieć w menu. Zadania są zawsze
@@ -86,12 +95,18 @@ export interface AccentOption {
   color: string;
 }
 
+// Kolejność jak na kole barw — od chłodnych, przez zielenie, po ciepłe. Rząd
+// próbek czyta się wtedy jak paleta, a nie jak przypadkowy zestaw.
 export const ACCENT_OPTIONS: AccentOption[] = [
   { id: 'slate', label: 'Stalowy', color: '#5b7f95' },
+  { id: 'blue', label: 'Błękitny', color: '#2563eb' },
+  { id: 'teal', label: 'Turkusowy', color: '#0d9488' },
   { id: 'emerald', label: 'Zielony', color: '#10b981' },
   { id: 'violet', label: 'Fioletowy', color: '#8b5cf6' },
-  { id: 'amber', label: 'Bursztyn', color: '#c97e1f' },
+  { id: 'plum', label: 'Śliwkowy', color: '#a21caf' },
   { id: 'rose', label: 'Różowy', color: '#f43f5e' },
+  { id: 'terracotta', label: 'Ceglany', color: '#c2410c' },
+  { id: 'amber', label: 'Bursztyn', color: '#c97e1f' },
 ];
 
 export interface FontSizeOption {

@@ -3,7 +3,7 @@ import { UpdateSettingsDto } from '../../../auth/web/dto/update-settings.dto';
 import { McpTool, requireStringArg } from '../mcp-tool';
 
 const THEMES = ['light', 'sand', 'dark', 'midnight'];
-const ACCENTS = ['slate', 'emerald', 'violet', 'amber', 'rose'];
+const ACCENTS = ['slate', 'blue', 'teal', 'emerald', 'violet', 'plum', 'rose', 'terracotta', 'amber'];
 const FONT_SIZES = ['sm', 'md', 'lg', 'xl'];
 const HIDEABLE_MODULES = ['meals', 'home', 'finance', 'chat'];
 

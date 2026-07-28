@@ -128,6 +128,13 @@ export interface MealParticipant {
 
 export const PORTION_OPTIONS = [0.5, 1, 1.5, 2];
 
+// Ręczna korekta ilości składnika w konkretnym wpisie planera — bezwzględna
+// (nie mnożnik) i dotyczy tylko tego posiłku; przepis zostaje wzorcem.
+export interface IngredientOverride {
+  ingredientId: string;
+  quantity: number;
+}
+
 export interface MealEntry {
   id: string;
   weekStart: string; // YYYY-MM-DD (Monday)
@@ -136,10 +143,14 @@ export interface MealEntry {
   recipeId: string;
   cooked: boolean;
   participants: MealParticipant[];
+  portionScale: number;
+  ingredientOverrides: IngredientOverride[];
 }
 
 export interface PlannerEntry extends MealEntry {
   recipe: Recipe | null;
+  // Makro tego posiłku po korektach; `recipe.nutrition` opisuje sam przepis.
+  nutrition?: RecipeNutrition | null;
 }
 
 export interface ShoppingItem {
@@ -258,6 +269,7 @@ export interface MealStorage {
   removeEntry(id: string): Promise<void>;
   setCooked(id: string, cooked: boolean): Promise<void>;
   setParticipants(id: string, participants: MealParticipant[]): Promise<void>;
+  adjustEntry(id: string, portionScale: number, overrides: IngredientOverride[]): Promise<void>;
   getShopping(): Promise<ShoppingItem[]>;
   addShoppingItem(name: string): Promise<void>;
   toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;

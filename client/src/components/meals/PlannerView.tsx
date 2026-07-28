@@ -13,8 +13,20 @@ import {
 import { IconChevronLeft, IconChevronRight, IconClose, IconPlus, IconCheck } from './icons';
 import { RecipePreviewModal } from './RecipePreviewModal';
 import { ParticipantsBadges, ParticipantsPicker } from './ParticipantsPicker';
+import { AdjustEntryModal } from './AdjustEntryModal';
 import { getHouseholdMembers } from '../../lib/api';
 import type { HouseholdMember } from '../../lib/types';
+
+// Krótki znacznik korekty na kaflu — user musi widzieć, że ten posiłek liczy się
+// inaczej niż przepis (do zakupów i spiżarni też).
+function adjustmentLabel(entry: PlannerEntry): string | null {
+  const scale = entry.portionScale ?? 1;
+  const overrides = entry.ingredientOverrides?.length ?? 0;
+  if (scale !== 1) {
+    return `${Number(scale.toFixed(2)).toString().replace('.', ',')}×`;
+  }
+  return overrides > 0 ? '≠' : null;
+}
 
 export function PlannerView({
   storage,
@@ -32,6 +44,7 @@ export function PlannerView({
   const [preview, setPreview] = useState<Recipe | null>(null);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [participantsFor, setParticipantsFor] = useState<PlannerEntry | null>(null);
+  const [adjusting, setAdjusting] = useState<PlannerEntry | null>(null);
 
   const load = useCallback(async () => {
     setEntries(await storage.getWeek(weekStart));
@@ -69,6 +82,15 @@ export function PlannerView({
     }
     await storage.setParticipants(participantsFor.id, participants);
     setParticipantsFor(null);
+    load();
+  };
+
+  const handleAdjust = async (portionScale: number, overrides: { ingredientId: string; quantity: number }[]) => {
+    if (!adjusting) {
+      return;
+    }
+    await storage.adjustEntry(adjusting.id, portionScale, overrides);
+    setAdjusting(null);
     load();
   };
 
@@ -169,11 +191,23 @@ export function PlannerView({
                             </span>
                             <span>Zrobione</span>
                           </button>
-                          <ParticipantsBadges
-                            participants={entry.participants ?? []}
-                            members={members}
-                            onClick={() => setParticipantsFor(entry)}
-                          />
+                          <div className="flex items-center gap-1">
+                            <ParticipantsBadges
+                              participants={entry.participants ?? []}
+                              members={members}
+                              onClick={() => setParticipantsFor(entry)}
+                            />
+                            {entry.recipe && (
+                              <button
+                                onClick={() => setAdjusting(entry)}
+                                title="Dopasuj porcje i składniki"
+                                aria-label="Dopasuj porcje i składniki"
+                                className="rounded px-1 py-0.5 text-[10px] font-medium text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                              >
+                                {adjustmentLabel(entry) ?? '⇄'}
+                              </button>
+                            )}
+                          </div>
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="absolute top-0.5 right-0.5 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-60 group-hover:opacity-100 transition-opacity"
@@ -245,6 +279,16 @@ export function PlannerView({
                             members={members}
                             onClick={() => setParticipantsFor(entry)}
                           />
+                          {entry.recipe && (
+                            <button
+                              onClick={() => setAdjusting(entry)}
+                              title="Dopasuj porcje i składniki"
+                              aria-label="Dopasuj porcje i składniki"
+                              className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            >
+                              {adjustmentLabel(entry) ?? '⇄'}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleRemove(entry.id)}
                             className="text-gray-300 hover:text-red-500 shrink-0 p-1"
@@ -310,6 +354,15 @@ export function PlannerView({
       )}
 
       {preview && <RecipePreviewModal recipe={preview} onClose={() => setPreview(null)} />}
+
+      {adjusting?.recipe && (
+        <AdjustEntryModal
+          entry={adjusting}
+          recipe={adjusting.recipe}
+          onSave={handleAdjust}
+          onClose={() => setAdjusting(null)}
+        />
+      )}
 
       {participantsFor && (
         <ParticipantsPicker

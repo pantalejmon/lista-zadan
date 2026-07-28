@@ -2,6 +2,8 @@ import { MealService } from '../../../meal/domain/meal.service';
 import { CreateProductDto } from '../../../meal/web/dto/create-product.dto';
 import { NutritionDto } from '../../../meal/web/dto/nutrition.dto';
 import { MealParticipantDto } from '../../../meal/web/dto/meal-participant.dto';
+import { AdjustEntryDto } from '../../../meal/web/dto/adjust-entry.dto';
+import { IngredientOverrideDto } from '../../../meal/web/dto/ingredient-override.dto';
 import { CreateRecipeDto } from '../../../meal/web/dto/create-recipe.dto';
 import { RecipeIngredientDto } from '../../../meal/web/dto/recipe-ingredient.dto';
 import { CreateEntryDto } from '../../../meal/web/dto/create-entry.dto';
@@ -380,6 +382,54 @@ export function buildMealTools(mealService: MealService): McpTool[] {
           ctx.userId,
           parseParticipants(args) ?? [],
         );
+      },
+    },
+    {
+      name: 'adjust_meal_entry',
+      description:
+        'Koryguje zaplanowany posiłek bez zmieniania przepisu: portionScale (mnożnik porcji, np. 2 = podwójna) ' +
+        'i/lub overrides (bezwzględne ilości wybranych składników, np. 4 jajka zamiast 2). Korekty wchodzą do ' +
+        'zakupów, spiżarni i makro tego posiłku. portionScale=1 i overrides=[] przywracają przepis. Wymaga entryId.',
+      requiredScopes: ['meals:write'],
+      inputSchema: {
+        type: 'object',
+        properties: {
+          entryId: { type: 'string', description: 'ID wpisu w planerze' },
+          portionScale: { type: 'number', description: 'Mnożnik porcji (0.25–10), np. 2 = podwójna porcja' },
+          overrides: {
+            type: 'array',
+            description: 'Bezwzględne ilości wybranych składników: [{ingredientId, quantity}]',
+            items: {
+              type: 'object',
+              properties: {
+                ingredientId: { type: 'string', description: 'ingredientId ze składnika przepisu (get_recipe)' },
+                quantity: { type: 'number', description: 'Nowa ilość w jednostce składnika' },
+              },
+              required: ['ingredientId', 'quantity'],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ['entryId'],
+        additionalProperties: false,
+      },
+      handler: async (args, ctx) => {
+        const dto = new AdjustEntryDto();
+        const portionScale = numberArg(args, 'portionScale');
+        if (portionScale !== undefined) {
+          dto.portionScale = portionScale;
+        }
+        if (Array.isArray(args.overrides)) {
+          dto.ingredientOverrides = args.overrides
+            .filter((o): o is Record<string, unknown> => typeof o === 'object' && o !== null)
+            .map((raw) => {
+              const override = new IngredientOverrideDto();
+              override.ingredientId = requireStringArg(raw, 'ingredientId');
+              override.quantity = requireNumberArg(raw, 'quantity');
+              return override;
+            });
+        }
+        return mealService.adjustEntry(requireStringArg(args, 'entryId'), ctx.userId, dto);
       },
     },
     {

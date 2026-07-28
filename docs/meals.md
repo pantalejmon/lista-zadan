@@ -38,7 +38,9 @@ niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby ni
   i spiżarni, ale nie wchodzi do niczyjego bilansu (`docs/nutrition.md`). Uczestnikiem może
   być wyłącznie członek gospodarstwa — walidowane przez `SharingService`. Zmiana przepisu
   w slocie **nie** czyści uczestników: to ten sam slot i te same osoby, zmienia się danie.
-  Pole `cooked` znaczy „ugotowane" (patrz pętle domykające).
+  Pole `cooked` znaczy „ugotowane" (patrz pętle domykające). Niesie też **korekty
+  w slocie**: `portionScale` (mnożnik porcji) i `ingredientOverrides` (bezwzględne
+  ilości wybranych składników) — patrz „Korekty w slocie" niżej.
 - **Spiżarnia** (`PantryItem`) — aktualny stan produktu (`quantity`) w gospodarstwie.
 - **Pozycja zakupowa** (`MealShoppingItem`) — `{name, quantity, unit, isChecked}`.
 
@@ -50,7 +52,8 @@ Wejście: tydzień (`weekStart`) oraz opcjonalnie `days` — lista dni tygodnia
 
 1. Pobierz wpisy planera z tygodnia (i odfiltruj do `days`, gdy podano), produkty i stan spiżarni gospodarstwa.
 2. Zbuduj mapę produktów **po nazwie** (`name.toLowerCase() → Product`).
-3. Dla każdego wpisu → przepisu → składnika:
+3. Dla każdego wpisu weź **efektywne składniki** (`effectiveIngredients` — przepis
+   po korektach ze slotu), a potem dla każdego składnika:
    - dopasuj produkt po nazwie,
    - jeśli produkt istnieje i `trackInPantry = false` → **pomiń** („do smaku"),
    - w przeciwnym razie **agreguj** wymaganą ilość po produkcie (klucz = `productId`,
@@ -81,6 +84,37 @@ i przewijalnymi chipami kategorii (`CategoryFilter`) — ergonomicznie na telefo
 przepisu jest częścią modelu i przechodzi przez REST oraz narzędzia MCP `create_recipe` /
 `update_recipe` (pole `category`).
 
+## Korekty w slocie (`effectiveIngredients`)
+
+„W ten wtorek 4 jajka zamiast 2" i „gotuję podwójną porcję" — bez ruszania przepisu,
+który zostaje wzorcem. Wpis planera niesie:
+
+- `portionScale` — mnożnik wszystkich ilości (0,25–10),
+- `ingredientOverrides` — `[{ingredientId, quantity}]`, ilości **bezwzględne**.
+
+Nadpisanie **wygrywa ze skalowaniem**: skoro user wpisał „4 jajka", to znaczy 4 jajka,
+a nie 4 × mnożnik. Nadpisanie na `0` zeruje składnik (a nie przywraca przepisu).
+
+`effectiveIngredients(ingredients, portionScale, overrides)` w
+`server/src/meal/domain/effective-ingredients.ts` to **jedyne miejsce**, w którym
+powstaje efektywna lista. Korzystają z niej **wszystkie trzy** ścieżki:
+
+1. zakupy (`computeNeeds` / `generateFromPlan`),
+2. pętla „ugotowane → spiżarnia" (`setCooked`),
+3. makro wpisu (`PlannerEntryResponse.nutrition`, w odróżnieniu od `recipe.nutrition`,
+   które opisuje sam przepis).
+
+Policzenie którejkolwiek z surowego przepisu rozjeżdża stan spiżarni — stąd jedna
+funkcja, nie trzy kopie.
+
+**Korekta wpisu już ugotowanego** (`adjustEntry`) przelicza spiżarnię **różnicą**:
+oddaje stare ilości i pobiera nowe. Bez tego sekwencja „ugotuj → zmień na podwójną →
+cofnij ugotowanie" oddałaby do spiżarni więcej, niż z niej zeszło.
+
+**Zmiana przepisu w slocie kasuje korekty** (`withRecipe`) razem z flagą `cooked` —
+dotyczyły innego dania. Uczestnicy (`participants`) zostają: to ten sam slot i te same
+osoby, zmienia się tylko danie.
+
 ## Pętle domykające (loop closers)
 
 Domykają obieg **planer → spiżarnia → zakupy → spiżarnia**, żeby stan spiżarni sam
@@ -91,7 +125,9 @@ się aktualizował.
 `setCooked(entryId, cooked)`:
 
 - operacja jest **idempotentna** — przełączenie na ten sam stan nie robi nic,
-- zmiana `false → true` (ugotowano): dla każdego składnika przepisu dopasowanego
+- ilości brane są z **efektywnych składników** (po korektach ze slotu), więc podwójna
+  porcja odejmuje podwójnie — i tyle samo oddaje przy cofnięciu,
+- zmiana `false → true` (ugotowano): dla każdego składnika dopasowanego
   po nazwie do produktu z `trackInPantry = true` **odejmij** `quantity` ze spiżarni
   (znak `-1`),
 - zmiana `true → false` (cofnięcie): **dodaj** z powrotem (znak `+1`),

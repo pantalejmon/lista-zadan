@@ -10,6 +10,7 @@ import type {
   RecipeInput,
   MealType,
   MealParticipant,
+  IngredientOverride,
 } from './meals';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
@@ -95,6 +96,13 @@ export function createCloudMealStorage(householdId: string): MealStorage {
       await request<unknown>(`/meals/planner/entry/${id}/participants`, {
         method: 'PATCH',
         body: JSON.stringify({ participants }),
+      });
+    },
+
+    adjustEntry: async (id, portionScale: number, overrides: IngredientOverride[]) => {
+      await request<unknown>(`/meals/planner/entry/${id}/adjust`, {
+        method: 'PATCH',
+        body: JSON.stringify({ portionScale, ingredientOverrides: overrides }),
       });
     },
 

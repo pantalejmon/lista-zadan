@@ -41,6 +41,7 @@ import { AddRecipeCategory1764460800000 } from './migration/1764460800000-AddRec
 import { AddProductNutrition1764547200000 } from './migration/1764547200000-AddProductNutrition';
 import { AddRecipeServings1764633600000 } from './migration/1764633600000-AddRecipeServings';
 import { AddMealEntryParticipants1764720000000 } from './migration/1764720000000-AddMealEntryParticipants';
+import { AddMealEntryOverrides1764806400000 } from './migration/1764806400000-AddMealEntryOverrides';
 import configuration from './config/configuration';
 
 @Module({
@@ -84,6 +85,7 @@ import configuration from './config/configuration';
           AddProductNutrition1764547200000,
           AddRecipeServings1764633600000,
           AddMealEntryParticipants1764720000000,
+          AddMealEntryOverrides1764806400000,
         ],
       }),
     }),

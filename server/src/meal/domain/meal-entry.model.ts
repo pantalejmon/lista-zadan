@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { MealType } from './recipe-ingredient';
 import { MealParticipant } from './meal-participant';
+import { IngredientOverride } from './ingredient-override';
 
 export interface MealEntryResponse {
   id: string;
@@ -10,6 +11,8 @@ export interface MealEntryResponse {
   recipeId: string;
   cooked: boolean;
   participants: MealParticipant[];
+  portionScale: number;
+  ingredientOverrides: IngredientOverride[];
 }
 
 export class MealEntry {
@@ -22,6 +25,9 @@ export class MealEntry {
     readonly recipeId: string,
     readonly cooked: boolean = false,
     readonly participants: MealParticipant[] = [],
+    // Korekty zrobione w slocie — patrz `effective-ingredients.ts`.
+    readonly portionScale: number = 1,
+    readonly ingredientOverrides: IngredientOverride[] = [],
   ) {}
 
   static create(
@@ -45,8 +51,10 @@ export class MealEntry {
   }
 
   withRecipe(recipeId: string): MealEntry {
-    // Changing the recipe resets the cooked flag. Uczestnicy zostają — to ten sam
-    // slot i te same osoby, zmienia się tylko danie.
+    // Zmiana przepisu w slocie kasuje `cooked` **oraz korekty ilości** — te
+    // dotyczyły innego dania, a zostawione odjęłyby ze spiżarni ilości z
+    // poprzedniego przepisu. Uczestnicy zostają: ten sam slot i te same osoby,
+    // zmienia się tylko danie.
     return new MealEntry(
       this.id,
       this.householdId,
@@ -56,6 +64,8 @@ export class MealEntry {
       recipeId,
       false,
       this.participants,
+      1,
+      [],
     );
   }
 
@@ -69,6 +79,8 @@ export class MealEntry {
       this.recipeId,
       cooked,
       this.participants,
+      this.portionScale,
+      this.ingredientOverrides,
     );
   }
 
@@ -82,6 +94,23 @@ export class MealEntry {
       this.recipeId,
       this.cooked,
       participants,
+      this.portionScale,
+      this.ingredientOverrides,
+    );
+  }
+
+  withAdjustments(portionScale: number, ingredientOverrides: IngredientOverride[]): MealEntry {
+    return new MealEntry(
+      this.id,
+      this.householdId,
+      this.weekStart,
+      this.dayOfWeek,
+      this.mealType,
+      this.recipeId,
+      this.cooked,
+      this.participants,
+      portionScale,
+      ingredientOverrides,
     );
   }
 
@@ -94,6 +123,8 @@ export class MealEntry {
       recipeId: this.recipeId,
       cooked: this.cooked,
       participants: this.participants,
+      portionScale: this.portionScale,
+      ingredientOverrides: this.ingredientOverrides,
     };
   }
 }

@@ -11,18 +11,24 @@ import { ProductRepositoryPort } from './product.repository.port';
 import { Product, type ProductResponse } from './product.model';
 import { PantryItemRepositoryPort } from './pantry-item.repository.port';
 import { PantryItem, type PantryItemResponse } from './pantry-item.model';
-import { computeRecipeNutrition } from './nutrition';
+import { computeRecipeNutrition, type RecipeNutrition } from './nutrition';
+import { effectiveIngredients } from './effective-ingredients';
+import type { RecipeIngredient } from './recipe-ingredient';
 import { MealParticipant } from './meal-participant';
 import { MealGateway } from '../web/meal.gateway';
 import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
 import { CreateEntryDto } from '../web/dto/create-entry.dto';
 import { CreateProductDto } from '../web/dto/create-product.dto';
+import { AdjustEntryDto } from '../web/dto/adjust-entry.dto';
 
 const WRITE_ROLES: ListRole[] = ['owner', 'editor'];
 const READ_ROLES: ListRole[] = ['owner', 'editor', 'viewer'];
 
 export interface PlannerEntryResponse extends MealEntryResponse {
   recipe: RecipeResponse | null;
+  // Makro tego konkretnego posiłku (po korektach w slocie). `recipe.nutrition`
+  // opisuje sam przepis i nie zna korekt.
+  nutrition: RecipeNutrition | null;
 }
 
 export interface NeedResponse {
@@ -159,6 +165,15 @@ export class MealService {
       result.push({
         ...entry.toResponse(),
         recipe: recipe ? this.toRecipeResponse(recipe, products) : null,
+        // Makro **tego posiłku** — po korektach ze slotu, w odróżnieniu od
+        // `recipe.nutrition`, które opisuje sam przepis. Stąd bierze je bilans.
+        nutrition: recipe
+          ? computeRecipeNutrition(
+            effectiveIngredients(recipe.recipeIngredients, entry.portionScale, entry.ingredientOverrides),
+            products,
+            recipe.servings,
+          )
+          : null,
       });
     }
     return result;
@@ -267,9 +282,53 @@ export class MealService {
     const recipe = await this.recipeRepo.findById(entry.recipeId);
     if (recipe) {
       // Cooking consumes stock (negative), un-cooking restores it (positive).
-      await this.applyRecipeToPantry(entry.householdId, recipe, cooked ? -1 : 1);
+      // Liczone z **efektywnych** składników, więc podwójna porcja odejmuje
+      // podwójnie — i tyle samo oddaje przy cofnięciu.
+      await this.applyIngredientsToPantry(
+        entry.householdId,
+        effectiveIngredients(recipe.recipeIngredients, entry.portionScale, entry.ingredientOverrides),
+        cooked ? -1 : 1,
+      );
     }
     const updated = entry.withCooked(cooked);
+    await this.entryRepo.update(updated);
+    this.gateway.notifyChanged(entry.householdId);
+    return updated.toResponse();
+  }
+
+  // Korekta przepisu w slocie: mnożnik porcji i/lub bezwzględne nadpisania
+  // ilości. Sam przepis zostaje nietknięty — to zmiana jednego posiłku.
+  //
+  // Gdy wpis jest już oznaczony jako ugotowany, spiżarnia dostaje **różnicę**:
+  // oddajemy stare ilości i pobieramy nowe. Inaczej „ugotowałem, potem zmieniłem
+  // na podwójną porcję, potem cofnąłem" oddałoby do spiżarni więcej, niż z niej
+  // zeszło.
+  async adjustEntry(id: string, userId: string, dto: AdjustEntryDto): Promise<MealEntryResponse> {
+    const entry = await this.entryRepo.findById(id);
+    if (!entry) {
+      throw new NotFoundException(`Meal entry ${id} not found`);
+    }
+    await this.sharingService.assertHouseholdPermission(entry.householdId, userId, WRITE_ROLES);
+    const portionScale = dto.portionScale ?? entry.portionScale;
+    const overrides = dto.ingredientOverrides ?? entry.ingredientOverrides;
+    const updated = entry.withAdjustments(portionScale, overrides);
+
+    if (entry.cooked) {
+      const recipe = await this.recipeRepo.findById(entry.recipeId);
+      if (recipe) {
+        await this.applyIngredientsToPantry(
+          entry.householdId,
+          effectiveIngredients(recipe.recipeIngredients, entry.portionScale, entry.ingredientOverrides),
+          1,
+        );
+        await this.applyIngredientsToPantry(
+          entry.householdId,
+          effectiveIngredients(recipe.recipeIngredients, updated.portionScale, updated.ingredientOverrides),
+          -1,
+        );
+      }
+    }
+
     await this.entryRepo.update(updated);
     this.gateway.notifyChanged(entry.householdId);
     return updated.toResponse();
@@ -401,7 +460,14 @@ export class MealService {
       if (!recipe) {
         continue;
       }
-      for (const ri of recipe.recipeIngredients) {
+      // Korekty ze slotu (mnożnik porcji, nadpisania ilości) muszą wejść do
+      // zakupów — inaczej podwójna porcja kupiłaby pojedynczą.
+      const ingredients = effectiveIngredients(
+        recipe.recipeIngredients,
+        entry.portionScale,
+        entry.ingredientOverrides,
+      );
+      for (const ri of ingredients) {
         const product = byName.get(ri.name.toLowerCase());
         if (product && !product.trackInPantry) {
           continue; // „do smaku" — pomijamy w spiżarni/zakupach
@@ -451,12 +517,17 @@ export class MealService {
     return needs.sort((x, y) => x.name.localeCompare(y.name, 'pl'));
   }
 
-  // Applies a recipe's ingredients to the pantry with the given sign
-  // (-1 consumes, +1 restores). Only pantry-tracked, name-matched products move.
-  private async applyRecipeToPantry(householdId: string, recipe: Recipe, sign: number): Promise<void> {
+  // Applies ingredients to the pantry with the given sign (-1 consumes,
+  // +1 restores). Only pantry-tracked, name-matched products move. Wołający
+  // podaje **efektywne** składniki (po korektach w slocie), nie surowy przepis.
+  private async applyIngredientsToPantry(
+    householdId: string,
+    ingredients: readonly RecipeIngredient[],
+    sign: number,
+  ): Promise<void> {
     const products = await this.productRepo.findByHousehold(householdId);
     const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
-    for (const ri of recipe.recipeIngredients) {
+    for (const ri of ingredients) {
       const product = byName.get(ri.name.toLowerCase());
       if (!product || !product.trackInPantry || ri.quantity <= 0) {
         continue;

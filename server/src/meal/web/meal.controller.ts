@@ -18,6 +18,7 @@ import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { SetCookedDto } from './dto/set-cooked.dto';
 import { SetParticipantsDto } from './dto/set-participants.dto';
+import { AdjustEntryDto } from './dto/adjust-entry.dto';
 import { CreateShoppingItemDto } from './dto/create-shopping-item.dto';
 import { UpdateShoppingItemDto } from './dto/update-shopping-item.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -148,6 +149,15 @@ export class MealController {
     @Body() dto: SetParticipantsDto,
   ): Promise<MealEntryResponse> {
     return this.mealService.setParticipants(id, this.userId(req), dto.participants);
+  }
+
+  @Patch('planner/entry/:id/adjust')
+  adjustEntry(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() dto: AdjustEntryDto,
+  ): Promise<MealEntryResponse> {
+    return this.mealService.adjustEntry(id, this.userId(req), dto);
   }
 
   @Delete('planner/entry/:id')

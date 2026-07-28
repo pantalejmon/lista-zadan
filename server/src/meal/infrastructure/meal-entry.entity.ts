@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
 import { MealEntry } from '../domain/meal-entry.model';
 import { MealType } from '../domain/recipe-ingredient';
 import { MealParticipant } from '../domain/meal-participant';
+import { IngredientOverride } from '../domain/ingredient-override';
 
 @Entity('meal_entry')
 export class MealEntryEntity {
@@ -32,6 +33,13 @@ export class MealEntryEntity {
   @Column('text', { nullable: true })
   participants!: string | null;
 
+  // Korekty zrobione w slocie: mnożnik porcji i bezwzględne nadpisania ilości.
+  @Column('float', { default: 1 })
+  portionScale!: number;
+
+  @Column('text', { nullable: true })
+  ingredientOverrides!: string | null;
+
   toDomain(): MealEntry {
     return new MealEntry(
       this.id,
@@ -42,6 +50,8 @@ export class MealEntryEntity {
       this.recipeId,
       this.cooked,
       parseParticipants(this.participants),
+      this.portionScale === null || this.portionScale === undefined ? 1 : Number(this.portionScale),
+      parseOverrides(this.ingredientOverrides),
     );
   }
 
@@ -55,6 +65,8 @@ export class MealEntryEntity {
     entity.recipeId = entry.recipeId;
     entity.cooked = entry.cooked;
     entity.participants = JSON.stringify(entry.participants);
+    entity.portionScale = entry.portionScale;
+    entity.ingredientOverrides = JSON.stringify(entry.ingredientOverrides);
     return entity;
   }
 }
@@ -74,6 +86,27 @@ function parseParticipants(raw: string | null): MealParticipant[] {
         p !== null &&
         typeof (p as MealParticipant).userId === 'string' &&
         typeof (p as MealParticipant).portions === 'number',
+    );
+  } catch {
+    return [];
+  }
+}
+
+function parseOverrides(raw: string | null): IngredientOverride[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter(
+      (o): o is IngredientOverride =>
+        typeof o === 'object' &&
+        o !== null &&
+        typeof (o as IngredientOverride).ingredientId === 'string' &&
+        typeof (o as IngredientOverride).quantity === 'number',
     );
   } catch {
     return [];

@@ -38,8 +38,11 @@ export function AllTodosView({ refreshKey, onRefresh, storage, listId, allowUnas
     setLoading(false);
   }, [storage, listId]);
 
+  // Bez `setLoading(true)` przy odświeżeniu: każda zmiana w liście woła
+  // `onRefresh()`, co podbija `refreshKey` — a wtedy spinner na moment zastępował
+  // całą listę i przy odhaczaniu pozycji zakupów wyglądało to jak mryganie.
+  // Widok kalendarza od początku odświeżał się bez tego i działał dobrze.
   useEffect(() => {
-    setLoading(true);
     load();
   }, [load, refreshKey]);
 

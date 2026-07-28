@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -13,8 +14,19 @@ export default defineConfig({
     __BUILD_DATE__: JSON.stringify(buildDate),
   },
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      // Kontrakt wyglądu (motywy, akcenty, rozmiary tekstu, ukrywalne moduły)
+      // ma jedno źródło — waliduje go serwer, a UI renderuje dokładnie to, co
+      // serwer przyjmie. To zwykłe stałe bez zależności; bundler je wkleja,
+      // więc klient nie zyskuje żadnej zależności runtime od serwera.
+      '@shared': fileURLToPath(new URL('../server/src/common', import.meta.url)),
+    },
+  },
   server: {
     host: true,
+    // Dev-serwer musi móc odczytać plik kontraktu spoza katalogu klienta.
+    fs: { allow: ['..'] },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

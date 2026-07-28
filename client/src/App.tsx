@@ -17,7 +17,7 @@ import { InvitationBanner } from './components/InvitationBanner';
 import { UnassignedView } from './components/UnassignedView';
 import { AppSidebar } from './components/AppSidebar';
 import { NAV_ITEMS, visibleNavItems, type AppSection } from './lib/navigation';
-import { STICKY_UNDER_HEADER } from './lib/layout';
+import { SectionTabs, type SectionTab } from './components/SectionTabs';
 import { Onboarding } from './components/Onboarding';
 import { setupHousehold, updateUserSettings } from './lib/api';
 import { MealsSection } from './components/meals/MealsSection';
@@ -39,6 +39,36 @@ import { useMealStorage } from './hooks/useMealStorage';
 import { useMealHousehold } from './hooks/useMealHousehold';
 
 type View = 'calendar' | 'all' | 'unassigned';
+
+const VIEW_TABS: SectionTab<View>[] = [
+  {
+    id: 'calendar',
+    label: 'Kalendarz',
+    Icon: ({ className }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'all',
+    label: 'Zadania',
+    Icon: ({ className }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+      </svg>
+    ),
+  },
+  {
+    id: 'unassigned',
+    label: 'Luźne',
+    Icon: ({ className }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    ),
+  },
+];
 
 function formatDateLabel(date: Date): string {
   if (isToday(date)) return 'Dzisiaj';
@@ -521,50 +551,8 @@ export default function App() {
         />
       )}
 
-      {/* Tab bar */}
-      <div className={`${STICKY_UNDER_HEADER} z-10 backdrop-blur-xl bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200/50 dark:border-gray-800/50 overflow-x-clip`}>
-        <div className="max-w-lg mx-auto flex px-2">
-          <button
-            onClick={() => setView('calendar')}
-            className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-xs font-medium border-b-2 transition-all ${
-              view === 'calendar'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-            }`}
-          >
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Kalendarz
-          </button>
-          <button
-            onClick={() => setView('all')}
-            className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-xs font-medium border-b-2 transition-all ${
-              view === 'all'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-            }`}
-          >
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            Zadania
-          </button>
-          <button
-            onClick={() => setView('unassigned')}
-            className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-xs font-medium border-b-2 transition-all ${
-              view === 'unassigned'
-                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-            }`}
-          >
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            Luźne
-          </button>
-        </div>
-      </div>
+      {/* Widoki Zadań — ten sam pasek, co podzakładki pozostałych sekcji */}
+      <SectionTabs tabs={VIEW_TABS} active={view} onSelect={setView} />
 
       {/* Calendar view */}
       {view === 'calendar' && (

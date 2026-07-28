@@ -4,7 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- `interactive-widget=resizes-content`: przy otwarciu klawiatury przeglądarka
+         ma skurczyć **layout viewport**, a nie tylko widoczny obszar. Bez tego
+         (domyślne `resizes-visual` w Chrome na Androidzie) strona przesuwa się
+         w górę razem z przypiętym paskiem górnym, który znika z ekranu. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#ffffff" />
     <!-- Apply saved appearance settings before first paint to avoid a theme flash.
          Mirrors lib/settings.ts — keep the maps in sync. -->

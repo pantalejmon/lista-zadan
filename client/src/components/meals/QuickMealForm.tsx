@@ -25,6 +25,11 @@ export function QuickMealForm({
   const updateRow = (index: number, patch: Partial<Row>) =>
     setRows(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
 
+  const withoutNutrition = rows
+    .map((r) => r.product)
+    .filter((p): p is Product => p !== null && !p.nutrition)
+    .map((p) => p.name);
+
   const submit = () => {
     if (!title.trim()) {
       return;
@@ -53,6 +58,14 @@ export function QuickMealForm({
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
           Składniki (opcjonalnie) — z nimi posiłek policzy się do makro i spiżarni.
         </p>
+        {/* Produkt bez wartości odżywczych wypada z bilansu po cichu — lepiej
+            powiedzieć to teraz niż zostawić pusty Bilans do odkrycia (#111). */}
+        {withoutNutrition.length > 0 && (
+          <p className="text-xs text-amber-700 dark:text-amber-500 mb-2">
+            Bez wartości odżywczych: {withoutNutrition.join(', ')} — ten posiłek nie wejdzie do bilansu,
+            dopóki nie uzupełnisz makro w zakładce Produkty.
+          </p>
+        )}
         <ul className="space-y-2">
           {rows.map((row, index) => (
             <li key={index} className="flex items-center gap-2">

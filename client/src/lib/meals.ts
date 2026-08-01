@@ -80,7 +80,12 @@ export interface NeedItem {
   unit: string;
   required: number;
   inStock: number;
+  // Niedobór wobec samej spiżarni (`required - inStock`), jeszcze bez listy zakupów.
   shortfall: number;
+  // Ile tej pozycji leży już na liście zakupów; `onListUnknownQty` = jest na liście,
+  // ale bez policzalnej ilości (dopisana ręcznie). W obu wypadkach `toBuy` maleje.
+  onList: number;
+  onListUnknownQty: boolean;
   packageSize?: number;
   toBuy: number;
   packages?: number;
@@ -185,6 +190,15 @@ export interface ShoppingItem {
   createdAt: number;
 }
 
+// Skutek odhaczenia pozycji zakupowej dla spiżarni. `delta` dodatnia = tyle przybyło,
+// ujemna = tyle zeszło (cofnięcie zakupu).
+export interface PantryEffect {
+  productId: string;
+  name: string;
+  delta: number;
+  unit: string;
+}
+
 export interface RecipeInput {
   title: string;
   category?: string;
@@ -229,10 +243,18 @@ export interface MemberBalance {
   weekTotal: Nutrition;
 }
 
+// Czego bilans nie policzył i dlaczego — żeby pusty ekran mówił, co naprawić.
+export interface BalanceSkipped {
+  noParticipants: number;
+  noNutrition: number;
+  missingProducts: string[];
+}
+
 export interface NutritionBalance {
   weekStart: string;
   onlyCooked: boolean;
   members: MemberBalance[];
+  skipped: BalanceSkipped;
 }
 
 // --- Week helpers ---
@@ -335,8 +357,10 @@ export interface MealStorage {
   setParticipants(id: string, participants: MealParticipant[]): Promise<void>;
   adjustEntry(id: string, portionScale: number, overrides: IngredientOverride[]): Promise<void>;
   getShopping(): Promise<ShoppingItem[]>;
-  addShoppingItem(name: string): Promise<void>;
-  toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;
+  addShoppingItem(name: string, quantity?: number, unit?: string): Promise<void>;
+  // Zwraca to, co odhaczenie zrobiło ze spiżarnią (albo `null`, gdy nic) — UI musi
+  // móc to pokazać, inaczej pętla „kupione → spiżarnia" jest niewidoczna.
+  toggleShoppingItem(id: string, isChecked: boolean): Promise<PantryEffect | null>;
   removeShoppingItem(id: string): Promise<void>;
   generateShoppingFromPlan(weekStart: string, days?: number[]): Promise<number>;
   getPantry(): Promise<PantryItem[]>;

@@ -19,6 +19,31 @@ import { QuickMealForm } from './QuickMealForm';
 import { getHouseholdMembers } from '../../lib/api';
 import type { HouseholdMember } from '../../lib/types';
 
+function entryTitle(entry: PlannerEntry): string {
+  return entry.recipe?.title ?? entry.custom?.title ?? 'Posiłek';
+}
+
+// Składniki **przed** korektami ze slotu — z przepisu albo z posiłku doraźnego.
+// Modal korekty potrzebuje ich jako punktu odniesienia dla mnożnika.
+function baseIngredients(entry: PlannerEntry): RecipeIngredient[] {
+  return entry.recipe?.recipeIngredients ?? entry.custom?.ingredients ?? [];
+}
+
+// kcal jednej porcji dania przed korektami. Przepis niesie je wprost; posiłek doraźny
+// zna tylko makro **po** korektach, więc odkręcamy sam mnożnik. Przy ręcznych
+// nadpisaniach ilości nie da się tego zrobić uczciwie — wtedy podglądu nie ma.
+function baseKcalPerServing(entry: PlannerEntry): number | null {
+  const fromRecipe = entry.recipe?.nutrition;
+  if (fromRecipe && fromRecipe.coverage > 0) {
+    return Math.round(fromRecipe.perServing.kcal);
+  }
+  const own = entry.nutrition;
+  if (!own || own.coverage === 0 || (entry.ingredientOverrides?.length ?? 0) > 0) {
+    return null;
+  }
+  return Math.round(own.perServing.kcal / (entry.portionScale || 1));
+}
+
 // Krótki znacznik korekty na kaflu — user musi widzieć, że ten posiłek liczy się
 // inaczej niż przepis (do zakupów i spiżarni też).
 function adjustmentLabel(entry: PlannerEntry): string | null {
@@ -210,7 +235,7 @@ export function PlannerView({
                               members={members}
                               onClick={() => setParticipantsFor(entry)}
                             />
-                            {entry.recipe && (
+                            {baseIngredients(entry).length > 0 && (
                               <button
                                 onClick={() => setAdjusting(entry)}
                                 title="Dopasuj porcje i składniki"
@@ -307,7 +332,7 @@ export function PlannerView({
                             members={members}
                             onClick={() => setParticipantsFor(entry)}
                           />
-                          {entry.recipe && (
+                          {baseIngredients(entry).length > 0 && (
                             <button
                               onClick={() => setAdjusting(entry)}
                               title="Dopasuj porcje i składniki"
@@ -397,10 +422,12 @@ export function PlannerView({
 
       {preview && <RecipePreviewModal recipe={preview} onClose={() => setPreview(null)} />}
 
-      {adjusting?.recipe && (
+      {adjusting && (
         <AdjustEntryModal
           entry={adjusting}
-          recipe={adjusting.recipe}
+          title={entryTitle(adjusting)}
+          ingredients={baseIngredients(adjusting)}
+          baseKcalPerServing={baseKcalPerServing(adjusting)}
           onSave={handleAdjust}
           onClose={() => setAdjusting(null)}
         />
@@ -410,6 +437,8 @@ export function PlannerView({
         <ParticipantsPicker
           members={members}
           initial={participantsFor.participants ?? []}
+          servings={participantsFor.recipe?.servings ?? 1}
+          perServingKcal={baseKcalPerServing(participantsFor)}
           onSave={handleSaveParticipants}
           onClose={() => setParticipantsFor(null)}
         />

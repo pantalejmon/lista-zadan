@@ -65,8 +65,9 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     {
       name: 'what_is_missing',
       description:
-        'Zwraca czego brakuje (plan minus spiżarnia, zaokrąglone do opakowań). Opcjonalnie week oraz days ' +
-        '(lista dni tygodnia 0=pon…6=niedz, aby liczyć tylko wybrane dni).',
+        'Zwraca czego brakuje (plan minus spiżarnia minus to, co już leży na liście zakupów, zaokrąglone ' +
+        'do opakowań). Opcjonalnie week oraz days (lista dni tygodnia 0=pon…6=niedz, aby liczyć tylko ' +
+        'wybrane dni).',
       requiredScopes: ['meals:read'],
       inputSchema: {
         type: 'object',
@@ -147,11 +148,18 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     },
     {
       name: 'add_shopping_item',
-      description: 'Dodaje pozycję do listy zakupów posiłków. Wymaga name.',
+      description:
+        'Dodaje pozycję do listy zakupów posiłków. Wymaga name; opcjonalnie quantity i unit — bez ilości ' +
+        'odhaczenie pozycji nie zaktualizuje spiżarni.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
-        properties: { ...householdProp, name: { type: 'string', description: 'Nazwa produktu' } },
+        properties: {
+          ...householdProp,
+          name: { type: 'string', description: 'Nazwa produktu' },
+          quantity: { type: 'number', description: 'Ilość (opcjonalnie)' },
+          unit: { type: 'string', description: 'Jednostka, np. g/ml/szt (opcjonalnie)' },
+        },
         required: ['name'],
         additionalProperties: false,
       },
@@ -161,14 +169,15 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         if (!name) {
           throw new Error('Missing required argument: name');
         }
-        return mealService.addShoppingItem(householdId, ctx.userId, name);
+        return mealService.addShoppingItem(householdId, ctx.userId, name, numberArg(args, 'quantity'), stringArg(args, 'unit'));
       },
     },
     {
       name: 'generate_shopping_from_plan',
       description:
-        'Generuje listę zakupów z planu, kupując tylko braki zaokrąglone do opakowań. Opcjonalnie week oraz days ' +
-        '(lista dni 0=pon…6=niedz, aby kupić tylko na wybrane dni).',
+        'Generuje listę zakupów z planu, kupując tylko braki zaokrąglone do opakowań. Powtarzalne — pozycje ' +
+        'już obecne na liście nie są dodawane drugi raz, a ręczne dopiski zostają nietknięte. Opcjonalnie ' +
+        'week oraz days (lista dni 0=pon…6=niedz, aby kupić tylko na wybrane dni).',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
@@ -402,7 +411,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
       description:
         'Przypisuje przepis do dnia i pory w planie tygodnia (nadpisuje slot). Wymaga recipeId, weekStart (poniedziałek YYYY-MM-DD), ' +
         'dayOfWeek (0=poniedziałek … 6=niedziela) i mealType (BREAKFAST/LUNCH/DINNER/SNACK). ' +
-        'Opcjonalnie participants — kto je i w ilu porcjach.',
+        'Opcjonalnie participants — kto je i w ilu porcjach; pominięte = wszyscy domownicy po jednej ' +
+        'porcji, a jawnie przesłana pusta lista zostawia posiłek poza bilansem.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
@@ -437,6 +447,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         'Wpisuje do planera posiłek **bez przepisu** („jogurt i banan"). Wymaga title, weekStart ' +
         '(poniedziałek YYYY-MM-DD), dayOfWeek (0=pon…6=niedz) i mealType. Opcjonalnie ingredients — ' +
         'ze składnikami posiłek liczy się do zakupów, spiżarni i bilansu tak samo jak przepis. ' +
+        'Bez podanych participants posiłek dostaje wszystkich domowników po jednej porcji. ' +
         'Nadpisuje zajęty slot.',
       requiredScopes: ['meals:write'],
       inputSchema: {
@@ -582,7 +593,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
       name: 'check_shopping_item',
       description:
         'Zaznacza/odznacza pozycję na liście zakupów posiłków. Zaznaczenie pozycji o znanej ilości (produkt śledzony) ' +
-        'dodaje ją do spiżarni („kupione"), odznaczenie cofa. Wymaga itemId; isChecked domyślnie true.',
+        'dodaje ją do spiżarni („kupione"), odznaczenie cofa — pole `pantry` w odpowiedzi mówi, co się zmieniło ' +
+        '(`null` = spiżarnia bez zmian). Wymaga itemId; isChecked domyślnie true.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',

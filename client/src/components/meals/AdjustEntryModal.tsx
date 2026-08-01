@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { IngredientOverride, PlannerEntry, Recipe } from '../../lib/meals';
+import type { IngredientOverride, PlannerEntry, RecipeIngredient } from '../../lib/meals';
 import { IconClose } from './icons';
 
 const SCALE_STEPS = [0.5, 1, 1.5, 2, 2.5, 3];
@@ -10,14 +10,22 @@ function formatQuantity(value: number): string {
 
 // Korekta jednego posiłku: mnożnik porcji i ręczne ilości wybranych składników
 // („w ten wtorek 4 jajka zamiast 2"). Sam przepis zostaje nietknięty.
+//
+// Bierze tytuł i składniki wprost, zamiast `Recipe`, bo skalowanie działa tak samo
+// dla posiłku doraźnego — serwer liczy jedno i drugie przez `effectiveIngredients` (#113).
 export function AdjustEntryModal({
   entry,
-  recipe,
+  title,
+  ingredients,
+  baseKcalPerServing,
   onSave,
   onClose,
 }: {
   entry: PlannerEntry;
-  recipe: Recipe;
+  title: string;
+  ingredients: RecipeIngredient[];
+  // Makro **nieskorygowanego** dania; `null`, gdy nie da się go policzyć.
+  baseKcalPerServing: number | null;
   onSave: (portionScale: number, overrides: IngredientOverride[]) => void;
   onClose: () => void;
 }) {
@@ -59,9 +67,7 @@ export function AdjustEntryModal({
   const modified = scale !== 1 || overrides.size > 0;
   // Podgląd kcal działa tylko dla mnożnika: przeliczenie ręcznych ilości wymaga
   // makro produktów, a te liczy serwer (jedno miejsce prawdy dla algorytmu).
-  const previewKcal = recipe.nutrition && recipe.nutrition.coverage > 0
-    ? Math.round(recipe.nutrition.perServing.kcal * scale)
-    : null;
+  const previewKcal = baseKcalPerServing !== null ? Math.round(baseKcalPerServing * scale) : null;
 
   return (
     <div
@@ -74,7 +80,7 @@ export function AdjustEntryModal({
       >
         <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
           <div className="min-w-0">
-            <h2 className="font-semibold truncate">Dopasuj: {recipe.title}</h2>
+            <h2 className="font-semibold truncate">Dopasuj: {title}</h2>
             <p className="text-xs text-gray-400 dark:text-gray-500">
               Zmienia tylko ten posiłek — przepis zostaje bez zmian.
             </p>
@@ -117,10 +123,10 @@ export function AdjustEntryModal({
           <section>
             <p className="text-sm font-medium mb-1">Składniki</p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
-              Puste pole = ilość z przepisu przemnożona przez porcje. Wpisana liczba jest brana dosłownie.
+              Puste pole = ilość wyjściowa przemnożona przez porcje. Wpisana liczba jest brana dosłownie.
             </p>
             <ul className="space-y-2">
-              {recipe.recipeIngredients.map((ingredient) => {
+              {ingredients.map((ingredient) => {
                 const override = overrides.get(ingredient.ingredientId);
                 return (
                   <li key={ingredient.ingredientId} className="flex items-center gap-3">

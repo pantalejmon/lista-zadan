@@ -22,9 +22,12 @@ niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby ni
 ## Pojęcia
 
 - **Produkt** (`Product`) — pozycja słownika: nazwa, jednostka bazowa (`g`/`ml`/`szt`),
-  `packageSize` (rozmiar standardowego opakowania) i `trackInPantry`. Produkty
-  z `trackInPantry = false` to składniki „do smaku" (sól, pieprz) — **pomijane**
-  w spiżarni i zakupach. Opcjonalnie niesie też **wartości odżywcze** (`nutrition`):
+  `packageSize` (rozmiar standardowego opakowania) i `trackInPantry`. Produkt zakładany
+  „w locie" z autouzupełniania (`IngredientAutocomplete`) **pyta o jednostkę i opakowanie**
+  — wcześniej dostawał na sztywno `szt`, przez co przepis w gramach się z nim nie schodził,
+  a zaokrąglanie do opakowań nie miało z czego liczyć (#106). Kategorię i makro uzupełnia się
+  w zakładce Produkty. Produkty z `trackInPantry = false` to składniki „do smaku"
+  (sól, pieprz) — **pomijane** w spiżarni i zakupach. Opcjonalnie niesie też **wartości odżywcze** (`nutrition`):
   na 100 g / 100 ml, a dla `baseUnit = szt` na 1 sztukę. Zapisywane są kompletem
   (kcal + białko + tłuszcz + węglowodany; błonnik i sól opcjonalnie) — z połowy
   etykiety wychodziłoby cicho zaniżone makro przepisu. Szczegóły: `docs/nutrition.md`.
@@ -64,13 +67,34 @@ Wejście: tydzień (`weekStart`) oraz opcjonalnie `days` — lista dni tygodnia
      a gdy brak dopasowania = `name:<nazwa>`).
 4. Dla każdej zagregowanej pozycji:
    - `inStock` = stan ze spiżarni (0 gdy brak),
-   - `shortfall = max(0, required - inStock)` — niedobór,
-   - **zaokrąglenie do opakowań**: jeśli `packageSize > 0` i jest niedobór,
-     `packages = ceil(shortfall / packageSize)`, a `toBuy = packages * packageSize`.
-     Bez `packageSize` kupujemy dokładnie `shortfall`.
+   - `shortfall = max(0, required - inStock)` — niedobór wobec **samej spiżarni**,
+   - `onList` = ile tej pozycji leży już (niekupione) na liście zakupów — patrz niżej,
+   - `remaining = max(0, shortfall - onList)` — ile naprawdę trzeba dokupić,
+   - **zaokrąglenie do opakowań**: jeśli `packageSize > 0` i `remaining > 0`,
+     `packages = ceil(remaining / packageSize)`, a `toBuy = packages * packageSize`.
+     Bez `packageSize` kupujemy dokładnie `remaining`.
 
    > Przykład: brakuje 120 g ryżu, opakowanie 1000 g → `toBuy = 1000` (1 opak.).
    > Nie da się kupić 120 g, więc kupujemy całe opakowanie.
+
+### Odjęcie listy zakupów (`ListedQuantities`)
+
+Potrzeba, którą user zdążył już dopisać na listę, przestaje być potrzebą. Bez tego
+sekcja „Czego brakuje" pokazywała pozycje sprzed minuty, a każde kolejne „Generuj
+z planu" dokładało **drugi komplet** tych samych zakupów (#108, #109).
+
+`shoppingListCoverage` buduje mapę `nazwa → ListedQuantities` z **niekupionych** pozycji
+listy (kupione wpadły już do spiżarni i liczą się jako `inStock`). Reguły dopasowania:
+
+- ilość odejmuje się, gdy jednostka pozycji zgadza się z jednostką potrzeby **albo**
+  pozycja jednostki nie podaje,
+- pozycja **bez ilości** („mleko", dopisane ręcznie) albo w **innej jednostce**
+  („2 opak." wobec potrzeby w gramach) jest nieprzeliczalna → uznajemy potrzebę za
+  załatwioną (`onListUnknownQty`), zamiast dokładać to samo drugi raz.
+
+Dzięki temu `generateFromPlan` jest **powtarzalne**: drugie kliknięcie nie tworzy
+duplikatów. Listy **nie czyścimy** przed generowaniem — skasowałoby to ręczne dopiski,
+których planer nie zna.
 
 `generateFromPlan` używa tego samego wyniku (z tym samym filtrem `days`) i tworzy pozycje
 zakupowe tylko dla `toBuy > 0`. UI zakupów pozwala wybrać tydzień (strzałki) i konkretne dni,
@@ -98,6 +122,9 @@ który zostaje wzorcem. Wpis planera niesie:
 
 Nadpisanie **wygrywa ze skalowaniem**: skoro user wpisał „4 jajka", to znaczy 4 jajka,
 a nie 4 × mnożnik. Nadpisanie na `0` zeruje składnik (a nie przywraca przepisu).
+
+Korekty działają tak samo dla **posiłku doraźnego** — składniki bierze się wtedy z `custom`,
+więc „Dopasuj porcje" jest dostępne wszędzie tam, gdzie wpis ma jakiekolwiek składniki (#113).
 
 `effectiveIngredients(ingredients, portionScale, overrides)` w
 `server/src/meal/domain/effective-ingredients.ts` to **jedyne miejsce**, w którym
@@ -154,6 +181,13 @@ W `toggleShoppingItem(id, isChecked)`:
 
 Pozycje bez ilości albo bez dopasowanego produktu nie ruszają spiżarni (są
 neutralne — np. ręcznie dopisane „coś tam").
+
+**Pętla musi być widoczna** (#110). Odpowiedź niesie `pantry` (`PantryEffectResponse`
+albo `null`), a UI zamienia to na jedno zdanie: „Jajko: +2 szt w spiżarni". Gdy pozycja
+jest neutralna, mówi wprost dlaczego („bez ilości — spiżarnia bez zmian") — inaczej
+pętla, która **działa**, wygląda na niedziałającą. Dlatego też ręczne dopisywanie pozwala
+od razu podać ilość i jednostkę (`POST /meals/shopping` i MCP `add_shopping_item` przyjmują
+`quantity` + `unit`): pozycja dopisana z ilością zachowuje się dokładnie jak wygenerowana.
 
 ## Eksport zakupów do listy zadań (#23)
 

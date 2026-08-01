@@ -15,6 +15,7 @@ import { computeRecipeNutrition, scaleNutrition, type Nutrition, type RecipeNutr
 import { NutritionGoal, type NutritionGoalResponse } from './nutrition-goal.model';
 import { NutritionGoalRepositoryPort } from './nutrition-goal.repository.port';
 import { effectiveIngredients } from './effective-ingredients';
+import { ListedQuantities } from './listed-quantities';
 import type { MealType, RecipeIngredient } from './recipe-ingredient';
 import { MealParticipant } from './meal-participant';
 import { MealGateway } from '../web/meal.gateway';
@@ -63,10 +64,35 @@ export interface MemberBalanceResponse {
   weekTotal: Nutrition;
 }
 
+// Czego bilans nie policzył i dlaczego. Bez tego pusty ekran mówi tylko „brak danych",
+// a user nie ma jak zgadnąć, że winne są nieprzypisane posiłki albo produkty bez makro (#111).
+export interface BalanceSkippedResponse {
+  noParticipants: number;
+  noNutrition: number;
+  // Produkty, którym brakuje wartości odżywczych — nazwy do pokazania wprost.
+  missingProducts: string[];
+}
+
 export interface NutritionBalanceResponse {
   weekStart: string;
   onlyCooked: boolean;
   members: MemberBalanceResponse[];
+  skipped: BalanceSkippedResponse;
+}
+
+// Co odhaczenie pozycji zrobiło ze spiżarnią. `null` w odpowiedzi znaczy „nic" —
+// pozycja bez ilości albo bez dopasowanego produktu jest neutralna, ale user nie ma
+// jak tego zobaczyć, jeśli mu tego nie powiemy (#110).
+export interface PantryEffectResponse {
+  productId: string;
+  name: string;
+  // Dodatnia = tyle wpadło do spiżarni, ujemna = tyle z niej zeszło (cofnięcie zakupu).
+  delta: number;
+  unit: string;
+}
+
+export interface ShoppingToggleResponse extends MealShoppingItemResponse {
+  pantry: PantryEffectResponse | null;
 }
 
 export interface NeedResponse {
@@ -76,6 +102,11 @@ export interface NeedResponse {
   required: number;
   inStock: number;
   shortfall: number;
+  // Ile tej pozycji leży już (niekupione) na liście zakupów. `onListUnknownQty`
+  // znaczy „jest na liście, ale bez ilości" — wtedy uznajemy pozycję za załatwioną,
+  // bo user sam ją tam dopisał.
+  onList: number;
+  onListUnknownQty: boolean;
   packageSize?: number;
   toBuy: number;
   packages?: number;
@@ -243,6 +274,11 @@ export class MealService {
       this.gateway.notifyChanged(householdId);
       return updated.toResponse();
     }
+    // Nowy posiłek trafia domyślnie do bilansu **wszystkich** domowników po jednej
+    // porcji. Wcześniej startował bez uczestników, więc bilans z definicji nie liczył
+    // nic, dopóki user nie wszedł w każdy kafel z osobna (#111). Kto nie je — tego się
+    // odklikuje w „Kto je ten posiłek?"; jawnie przesłana pusta lista zostaje pusta.
+    const assigned = participants ?? (await this.allMembersAsParticipants(householdId, userId));
     const entry = custom
       ? MealEntry.createCustom(
         householdId,
@@ -250,7 +286,7 @@ export class MealService {
         dto.dayOfWeek,
         dto.mealType,
         custom,
-        participants ?? [],
+        assigned,
       )
       : MealEntry.createFromRecipe(
         householdId,
@@ -258,7 +294,7 @@ export class MealService {
         dto.dayOfWeek,
         dto.mealType,
         dto.recipeId as string,
-        participants ?? [],
+        assigned,
       );
     await this.entryRepo.save(entry);
     this.gateway.notifyChanged(householdId);
@@ -283,6 +319,11 @@ export class MealService {
     await this.entryRepo.update(updated);
     this.gateway.notifyChanged(entry.householdId);
     return updated.toResponse();
+  }
+
+  private async allMembersAsParticipants(householdId: string, userId: string): Promise<MealParticipant[]> {
+    const members = await this.sharingService.getHouseholdMembers(householdId, userId);
+    return members.map((m) => ({ userId: m.userId, portions: 1 }));
   }
 
   // Do bilansu może wejść tylko domownik z tego gospodarstwa — inaczej przez API
@@ -420,17 +461,30 @@ export class MealService {
     ]);
     const goalByUser = new Map(goals.map((g) => [g.userId, g]));
     const shares = new Map<string, Map<number, MealShareResponse[]>>();
+    // Liczone tylko wśród posiłków, które w ogóle wchodzą w zakres — posiłek pominięty
+    // przez filtr „tylko ugotowane" nie jest problemem do zgłoszenia.
+    const skipped: BalanceSkippedResponse = { noParticipants: 0, noNutrition: 0, missingProducts: [] };
+    const missingProducts = new Set<string>();
 
     for (const entry of entries) {
-      if (entry.participants.length === 0 || (onlyCooked && !entry.cooked)) {
+      if (onlyCooked && !entry.cooked) {
+        continue;
+      }
+      if (entry.participants.length === 0) {
+        skipped.noParticipants += 1;
         continue;
       }
       const { recipe, ingredients, servings } = await this.resolveEntry(entry);
       if (ingredients.length === 0) {
+        skipped.noNutrition += 1;
         continue;
       }
       const nutrition = computeRecipeNutrition(ingredients, products, servings);
+      for (const name of nutrition.missing) {
+        missingProducts.add(name);
+      }
       if (nutrition.coverage === 0) {
+        skipped.noNutrition += 1;
         continue;
       }
       const title = recipe?.title ?? entry.custom?.title ?? 'Posiłek';
@@ -450,9 +504,12 @@ export class MealService {
       }
     }
 
+    skipped.missingProducts = [...missingProducts].sort((a, b) => a.localeCompare(b, 'pl'));
+
     return {
       weekStart,
       onlyCooked,
+      skipped,
       members: members.map((member) => {
         const byDay = shares.get(member.userId) ?? new Map<number, MealShareResponse[]>();
         const days: DayBalanceResponse[] = [];
@@ -485,30 +542,41 @@ export class MealService {
     return items.sort((a, b) => a.createdAt - b.createdAt).map((i) => i.toResponse());
   }
 
-  async addShoppingItem(householdId: string, userId: string, name: string): Promise<MealShoppingItemResponse> {
+  // Ilość i jednostka są opcjonalne, ale pozycja bez ilości nie rusza spiżarni przy
+  // odhaczeniu — dlatego UI o nie pyta przy dopisywaniu (#110).
+  async addShoppingItem(
+    householdId: string,
+    userId: string,
+    name: string,
+    quantity?: number,
+    unit?: string,
+  ): Promise<MealShoppingItemResponse> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
-    const item = MealShoppingItem.create(householdId, name);
+    const item = MealShoppingItem.create(householdId, name, quantity, unit);
     await this.shoppingRepo.save(item);
     this.gateway.notifyChanged(householdId);
     return item.toResponse();
   }
 
-  async toggleShoppingItem(id: string, userId: string, isChecked: boolean): Promise<MealShoppingItemResponse> {
+  async toggleShoppingItem(id: string, userId: string, isChecked: boolean): Promise<ShoppingToggleResponse> {
     const item = await this.findShoppingItemOrThrow(id);
     await this.sharingService.assertHouseholdPermission(item.householdId, userId, WRITE_ROLES);
     // Loop closer: checking off a purchase adds it to the pantry; un-checking
     // reverses that. Only items with a known quantity and a name-matched,
     // pantry-tracked product move stock.
+    let pantry: PantryEffectResponse | null = null;
     if (item.isChecked !== isChecked && item.quantity && item.quantity > 0) {
       const product = await this.findTrackedProductByName(item.householdId, item.name);
       if (product) {
-        await this.adjustPantryInternal(item.householdId, product.id, isChecked ? item.quantity : -item.quantity);
+        const delta = isChecked ? item.quantity : -item.quantity;
+        await this.adjustPantryInternal(item.householdId, product.id, delta);
+        pantry = { productId: product.id, name: product.name, delta, unit: product.baseUnit };
       }
     }
     const updated = item.withChecked(isChecked);
     await this.shoppingRepo.update(updated);
     this.gateway.notifyChanged(item.householdId);
-    return updated.toResponse();
+    return { ...updated.toResponse(), pantry };
   }
 
   async removeShoppingItem(id: string, userId: string): Promise<void> {
@@ -519,6 +587,10 @@ export class MealService {
   }
 
   // Pantry-aware: buys only what's missing, rounded up to whole packages.
+  //
+  // Powtarzalne bez skutków ubocznych: `computeNeedsInternal` odejmuje to, co już
+  // leży na liście, więc drugie kliknięcie „Generuj" nie dokłada drugiego kompletu
+  // (#108). Czyszczenia listy tu nie ma i być nie powinno — skasowałoby ręczne dopiski.
   async generateFromPlan(householdId: string, userId: string, weekStart: string, days?: number[]): Promise<number> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
     const needs = await this.computeNeedsInternal(householdId, weekStart, days);
@@ -593,6 +665,7 @@ export class MealService {
     const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]));
     const pantry = await this.pantryRepo.findByHousehold(householdId);
     const stockByProduct = new Map(pantry.map((x) => [x.productId, x.quantity]));
+    const onList = await this.shoppingListCoverage(householdId);
 
     const agg = new Map<
       string,
@@ -628,14 +701,20 @@ export class MealService {
     for (const a of agg.values()) {
       const inStock = a.productId ? (stockByProduct.get(a.productId) ?? 0) : 0;
       const shortfall = Math.max(0, a.required - inStock);
+      // Niedobór minus to, co już czeka na liście zakupów. Pozycja dopisana ręcznie,
+      // bez ilości, zamyka temat w całości — user wie, co kupuje, my nie zgadujemy.
+      const listed = onList.get(a.name.toLowerCase());
+      const listedQty = listed?.quantityIn(a.unit) ?? 0;
+      const uncountable = listed?.hasUncountable(a.unit) ?? false;
+      const remaining = uncountable ? 0 : Math.max(0, shortfall - listedQty);
       let toBuy = 0;
       let packages: number | undefined;
-      if (shortfall > 0) {
+      if (remaining > 0) {
         if (a.packageSize && a.packageSize > 0) {
-          packages = Math.ceil(shortfall / a.packageSize);
+          packages = Math.ceil(remaining / a.packageSize);
           toBuy = packages * a.packageSize;
         } else {
-          toBuy = shortfall;
+          toBuy = remaining;
         }
       }
       needs.push({
@@ -645,12 +724,32 @@ export class MealService {
         required: a.required,
         inStock,
         shortfall,
+        onList: listedQty,
+        onListUnknownQty: uncountable,
         packageSize: a.packageSize ?? undefined,
         toBuy,
         packages,
       });
     }
     return needs.sort((x, y) => x.name.localeCompare(y.name, 'pl'));
+  }
+
+  // Co z niekupionych pozycji listy zakupów pokrywa braki, po nazwie produktu.
+  // Bez tego „czego brakuje" pokazuje pozycje dopisane minutę wcześniej, a każde
+  // kolejne „Generuj z planu" dokłada drugi komplet tych samych zakupów (#108, #109).
+  private async shoppingListCoverage(householdId: string): Promise<Map<string, ListedQuantities>> {
+    const items = await this.shoppingRepo.findByHousehold(householdId);
+    const coverage = new Map<string, ListedQuantities>();
+    for (const item of items) {
+      if (item.isChecked) {
+        continue; // kupione → wpadło już do spiżarni i liczy się jako `inStock`
+      }
+      const key = item.name.trim().toLowerCase();
+      const listed = coverage.get(key) ?? new ListedQuantities();
+      listed.add(item.quantity, item.unit);
+      coverage.set(key, listed);
+    }
+    return coverage;
   }
 
   // Applies ingredients to the pantry with the given sign (-1 consumes,

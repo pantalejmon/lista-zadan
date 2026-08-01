@@ -3,6 +3,7 @@ import {
   getMonday,
   shiftWeek,
   weekLabel,
+  isCurrentWeek,
   WEEK_DAYS,
   MEAL_TYPES,
   type BalanceSkipped,
@@ -24,6 +25,12 @@ function formatGrams(value: number): string {
   return value.toString().replace('.', ',');
 }
 
+// Dzisiaj jako indeks dnia tygodnia (0 = poniedziałek), bo `getDay()` liczy od niedzieli.
+function todayIndex(): number {
+  const day = new Date().getDay();
+  return day === 0 ? 6 : day - 1;
+}
+
 export function BalanceView({
   storage,
   liveKey = 0,
@@ -32,10 +39,7 @@ export function BalanceView({
   liveKey?: number;
 }) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
-  const [day, setDay] = useState(() => {
-    const today = new Date().getDay();
-    return today === 0 ? 6 : today - 1;
-  });
+  const [day, setDay] = useState(todayIndex);
   const [onlyCooked, setOnlyCooked] = useState(false);
   const [balance, setBalance] = useState<NutritionBalance | null>(null);
   const [editingGoal, setEditingGoal] = useState<MemberBalance | null>(null);
@@ -47,6 +51,15 @@ export function BalanceView({
   useEffect(() => { load(); }, [load, liveKey]);
 
   const anyData = balance?.members.some((m) => m.days.some((d) => d.meals.length > 0)) ?? false;
+  const today = todayIndex();
+  const currentWeek = isCurrentWeek(weekStart);
+
+  // Jeden ruch wraca i do tygodnia, i do dnia — po tygodniu wstecz „dzisiaj" bez
+  // zmiany dnia pokazywałoby sobotę sprzed tygodnia.
+  const goToToday = () => {
+    setWeekStart(getMonday(new Date()));
+    setDay(todayIndex());
+  };
 
   return (
     <div className="max-w-2xl mx-auto w-full px-4 py-6">
@@ -58,13 +71,14 @@ export function BalanceView({
         >
           <IconChevronLeft className="w-5 h-5" />
         </button>
-        <div className="text-center">
+        <div className="text-center min-w-0">
           <h1 className="text-lg font-bold">Bilans</h1>
           <button
-            onClick={() => setWeekStart(getMonday(new Date()))}
+            onClick={goToToday}
+            title="Wróć do bieżącego tygodnia"
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
           >
-            {weekLabel(weekStart)}
+            {weekLabel(weekStart)}{currentWeek ? ' · ten tydzień' : ''}
           </button>
         </div>
         <button
@@ -76,22 +90,50 @@ export function BalanceView({
         </button>
       </div>
 
-      {/* Dzień tygodnia */}
+      {/* Dzień tygodnia. Dzisiejszy dzień ma kropkę — w bieżącym tygodniu bez niej
+          nie widać, gdzie się jest, gdy user kliknie inny dzień (#112). */}
       <div className="flex gap-1 mb-3">
-        {WEEK_DAYS.map((label, index) => (
-          <button
-            key={label}
-            onClick={() => setDay(index)}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-              day === index
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+        {WEEK_DAYS.map((label, index) => {
+          const isToday = currentWeek && index === today;
+          const isSelected = day === index;
+          return (
+            <button
+              key={label}
+              onClick={() => setDay(index)}
+              aria-label={isToday ? `${label} — dzisiaj` : label}
+              aria-pressed={isSelected}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                isSelected
+                  ? 'bg-primary-500 text-white'
+                  : `bg-gray-100 dark:bg-gray-800 hover:text-gray-800 dark:hover:text-gray-200 ${
+                    isToday
+                      ? 'text-primary-700 dark:text-primary-300 font-semibold'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`
+              }`}
+            >
+              {label}
+              <span
+                aria-hidden
+                className={`block mx-auto mt-0.5 w-1 h-1 rounded-full ${
+                  isToday ? (isSelected ? 'bg-white' : 'bg-primary-500') : 'bg-transparent'
+                }`}
+              />
+            </button>
+          );
+        })}
       </div>
+
+      {/* Poza bieżącym tygodniem droga powrotna musi być widoczna, a nie schowana
+          pod kliknięciem etykiety. */}
+      {!currentWeek && (
+        <button
+          onClick={goToToday}
+          className="w-full mb-3 py-2 rounded-xl border border-primary-500 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 active:scale-95 transition-all"
+        >
+          Wróć do dzisiaj
+        </button>
+      )}
 
       <label className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-5 cursor-pointer">
         <input

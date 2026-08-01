@@ -26,9 +26,8 @@ niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby ni
   „w locie" z autouzupełniania (`IngredientAutocomplete`) **pyta o jednostkę i opakowanie**
   — wcześniej dostawał na sztywno `szt`, przez co przepis w gramach się z nim nie schodził,
   a zaokrąglanie do opakowań nie miało z czego liczyć (#106). Kategorię i makro uzupełnia się
-  w zakładce Produkty. Produkty
-  z `trackInPantry = false` to składniki „do smaku" (sól, pieprz) — **pomijane**
-  w spiżarni i zakupach. Opcjonalnie niesie też **wartości odżywcze** (`nutrition`):
+  w zakładce Produkty. Produkty z `trackInPantry = false` to składniki „do smaku"
+  (sól, pieprz) — **pomijane** w spiżarni i zakupach. Opcjonalnie niesie też **wartości odżywcze** (`nutrition`):
   na 100 g / 100 ml, a dla `baseUnit = szt` na 1 sztukę. Zapisywane są kompletem
   (kcal + białko + tłuszcz + węglowodany; błonnik i sól opcjonalnie) — z połowy
   etykiety wychodziłoby cicho zaniżone makro przepisu. Szczegóły: `docs/nutrition.md`.

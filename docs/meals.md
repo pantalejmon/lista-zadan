@@ -22,7 +22,11 @@ niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby ni
 ## Pojęcia
 
 - **Produkt** (`Product`) — pozycja słownika: nazwa, jednostka bazowa (`g`/`ml`/`szt`),
-  `packageSize` (rozmiar standardowego opakowania) i `trackInPantry`. Produkty
+  `packageSize` (rozmiar standardowego opakowania) i `trackInPantry`. Produkt zakładany
+  „w locie" z autouzupełniania (`IngredientAutocomplete`) **pyta o jednostkę i opakowanie**
+  — wcześniej dostawał na sztywno `szt`, przez co przepis w gramach się z nim nie schodził,
+  a zaokrąglanie do opakowań nie miało z czego liczyć (#106). Kategorię i makro uzupełnia się
+  w zakładce Produkty. Produkty
   z `trackInPantry = false` to składniki „do smaku" (sól, pieprz) — **pomijane**
   w spiżarni i zakupach. Opcjonalnie niesie też **wartości odżywcze** (`nutrition`):
   na 100 g / 100 ml, a dla `baseUnit = szt` na 1 sztukę. Zapisywane są kompletem

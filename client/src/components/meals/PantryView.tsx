@@ -22,8 +22,9 @@ export function PantryView({ storage, liveKey = 0 }: { storage: MealStorage; liv
     load();
   };
 
-  const handleAddPackage = async (productId: string, packageSize: number) => {
-    await storage.adjustPantryStock(productId, packageSize);
+  // Dodatnia delta dokłada opakowanie, ujemna je zdejmuje — serwer podłogowuje do zera.
+  const handleAdjustPackage = async (productId: string, delta: number) => {
+    await storage.adjustPantryStock(productId, delta);
     load();
   };
 
@@ -108,7 +109,8 @@ export function PantryView({ storage, liveKey = 0 }: { storage: MealStorage; liv
               key={it.id}
               item={it}
               onSet={(q) => handleSetStock(it.productId, q)}
-              onAddPackage={() => it.packageSize && handleAddPackage(it.productId, it.packageSize)}
+              onAddPackage={() => it.packageSize && handleAdjustPackage(it.productId, it.packageSize)}
+              onRemovePackage={() => it.packageSize && handleAdjustPackage(it.productId, -it.packageSize)}
               onRemove={() => handleRemove(it.id)}
             />
           ))}
@@ -122,11 +124,13 @@ function PantryRow({
   item,
   onSet,
   onAddPackage,
+  onRemovePackage,
   onRemove,
 }: {
   item: PantryItem;
   onSet: (quantity: number) => void;
   onAddPackage: () => void;
+  onRemovePackage: () => void;
   onRemove: () => void;
 }) {
   const [qty, setQty] = useState(String(item.quantity));
@@ -165,14 +169,29 @@ function PantryRow({
           className="w-24 sm:w-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-2 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
         <span className="text-sm text-gray-400 shrink-0">{item.baseUnit}</span>
+        {/* Opakowanie chodzi w obie strony: jedno się zepsuło albo zużyło poza
+            posiłkiem, więc musi dać się je zdjąć tak samo łatwo, jak dołożyć (#107). */}
         {item.packageSize ? (
-          <button
-            onClick={onAddPackage}
-            className="text-xs font-medium px-2.5 py-2 rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-500/20 transition-colors shrink-0"
-            title={`Dodaj jedno opakowanie (${item.packageSize} ${item.baseUnit})`}
-          >
-            +opak.
-          </button>
+          <span className="flex items-center rounded-lg bg-primary-50 dark:bg-primary-500/10 shrink-0">
+            <button
+              onClick={onRemovePackage}
+              disabled={item.quantity <= 0}
+              className="min-w-10 min-h-10 flex items-center justify-center rounded-l-lg text-primary-600 dark:text-primary-400 text-base font-semibold hover:bg-primary-100 dark:hover:bg-primary-500/20 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+              title={`Zdejmij jedno opakowanie (${item.packageSize} ${item.baseUnit})`}
+              aria-label={`Zdejmij opakowanie: ${item.name}`}
+            >
+              −
+            </button>
+            <span className="text-[10px] text-primary-600/70 dark:text-primary-400/70 px-0.5 select-none">opak.</span>
+            <button
+              onClick={onAddPackage}
+              className="min-w-10 min-h-10 flex items-center justify-center rounded-r-lg text-primary-600 dark:text-primary-400 text-base font-semibold hover:bg-primary-100 dark:hover:bg-primary-500/20 transition-colors"
+              title={`Dodaj jedno opakowanie (${item.packageSize} ${item.baseUnit})`}
+              aria-label={`Dodaj opakowanie: ${item.name}`}
+            >
+              +
+            </button>
+          </span>
         ) : null}
         {/* Kosz na koniec rzędu — na telefonie odsunięty na prawą krawędź,
             żeby nie sąsiadował z „+opak." i nie łapało się go przez pomyłkę. */}

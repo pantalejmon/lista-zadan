@@ -51,7 +51,7 @@ function DayButton({
       onClick={() => onSelectDate(day)}
       className={`
         relative flex flex-col items-center justify-center
-        py-2 rounded-xl transition-all duration-150
+        py-1.5 rounded-xl transition-all duration-150
         ${!inMonth ? 'opacity-30' : ''}
         ${selected
           ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/25'
@@ -63,11 +63,15 @@ function DayButton({
       `}
     >
       <span className="text-sm leading-none">{format(day, 'd')}</span>
-      {dayCount && (
-        <div className="flex gap-0.5 mt-1">
-          {dayCount.total <= 3 ? (
+      {/* Wiersz znaczników jest **zawsze** w drzewie i ma stałą wysokość. Renderowany
+          warunkowo dokładał się do kolumny wyśrodkowanej w pionie, więc numer dnia
+          z zadaniami siedział wyżej niż numer dnia bez — a wariant „0/5" (wyższy od
+          kropek) podnosił go jeszcze bardziej. Numery muszą stać w jednej linii. */}
+      <div className="h-2.5 flex items-center justify-center gap-0.5">
+        {dayCount && (
+          dayCount.total <= 3 ? (
             Array.from({ length: dayCount.total }).map((_, i) => (
-              <div
+              <span
                 key={i}
                 className={`w-1 h-1 rounded-full ${
                   selected
@@ -81,7 +85,7 @@ function DayButton({
               />
             ))
           ) : (
-            <div
+            <span
               className={`text-[9px] leading-none font-medium ${
                 selected
                   ? 'text-white/70'
@@ -91,10 +95,10 @@ function DayButton({
               }`}
             >
               {dayCount.completed}/{dayCount.total}
-            </div>
-          )}
-        </div>
-      )}
+            </span>
+          )
+        )}
+      </div>
     </button>
   );
 }

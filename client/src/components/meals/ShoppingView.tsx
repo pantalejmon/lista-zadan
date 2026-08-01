@@ -43,7 +43,15 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
 
   useEffect(() => { load(); }, [load, liveKey]);
 
+  // Komunikat po generowaniu opisuje **jedno** kliknięcie i przestaje być prawdziwy,
+  // gdy user ruszy cokolwiek innego — więc każda inna akcja go kasuje (#108).
+  const changeWeek = (next: string) => {
+    setGenMessage(null);
+    setWeekStart(next);
+  };
+
   const toggleDay = (day: number) => {
+    setGenMessage(null);
     setDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b)));
   };
 
@@ -53,17 +61,20 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
     if (!name) {
       return;
     }
+    setGenMessage(null);
     await storage.addShoppingItem(name);
     setNewItem('');
     load();
   };
 
   const handleToggle = async (id: string, isChecked: boolean) => {
+    setGenMessage(null);
     await storage.toggleShoppingItem(id, isChecked);
     load();
   };
 
   const handleRemove = async (id: string) => {
+    setGenMessage(null);
     await storage.removeShoppingItem(id);
     load();
   };
@@ -76,16 +87,23 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
     setGenMessage(null);
     const count = await storage.generateShoppingFromPlan(weekStart, daysArg);
     setGenerating(false);
+    // Zero pozycji ma dwa różne powody i user musi wiedzieć, na który trafił.
     setGenMessage(
-      count === 0
-        ? 'Brak przepisów w wybranym zakresie. Zaplanuj posiłki w Planerze.'
-        : `Dodano ${count} ${count === 1 ? 'pozycję' : 'pozycji'} do listy.`,
+      count > 0
+        ? `Dodano ${count} ${count === 1 ? 'pozycję' : 'pozycji'} do listy.`
+        : needs.length === 0
+          ? 'Brak przepisów w wybranym zakresie. Zaplanuj posiłki w Planerze.'
+          : 'Nic nie dodano — wszystko masz w spiżarni albo już na liście.',
     );
     load();
   };
 
   const unchecked = items.filter((i) => !i.isChecked);
   const checked = items.filter((i) => i.isChecked);
+  // Brakuje = brakuje **po odjęciu listy**. Pozycje, które user zdążył dopisać,
+  // znikają z sekcji, ale mówimy ile ich było — inaczej wygląda to na zgubienie (#109).
+  const missing = needs.filter((n) => n.toBuy > 0);
+  const coveredByList = needs.filter((n) => n.shortfall > 0 && n.toBuy === 0).length;
   const current = isCurrentWeek(weekStart);
   const rangeLabel = daysArg
     ? `wybrane dni (${days.length})`
@@ -116,21 +134,21 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
       <div className="mb-5 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
         <div className="flex items-center justify-between mb-3">
           <button
-            onClick={() => setWeekStart(shiftWeek(weekStart, -1))}
+            onClick={() => changeWeek(shiftWeek(weekStart, -1))}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 active:scale-95 transition-all"
             aria-label="Poprzedni tydzień"
           >
             <IconChevronLeft className="w-5 h-5" />
           </button>
           <button
-            onClick={() => setWeekStart(getMonday(new Date()))}
+            onClick={() => changeWeek(getMonday(new Date()))}
             className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400"
             title="Wróć do bieżącego tygodnia"
           >
             {weekLabel(weekStart)}{current ? ' · ten tydzień' : ''}
           </button>
           <button
-            onClick={() => setWeekStart(shiftWeek(weekStart, 1))}
+            onClick={() => changeWeek(shiftWeek(weekStart, 1))}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 active:scale-95 transition-all"
             aria-label="Następny tydzień"
           >
@@ -172,14 +190,20 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
         )}
       </div>
 
-      {/* Czego brakuje — planer minus spiżarnia, zaokrąglone do opakowań */}
-      {needs.some((n) => n.shortfall > 0) && (
+      {coveredByList > 0 && (
+        <p className="-mt-3 mb-4 text-xs text-center text-gray-400 dark:text-gray-500">
+          Na liście masz już {coveredByList} z potrzebnych pozycji.
+        </p>
+      )}
+
+      {/* Czego brakuje — planer minus spiżarnia minus lista, zaokrąglone do opakowań */}
+      {missing.length > 0 && (
         <div className="mb-5 rounded-2xl border border-primary-100 dark:border-primary-500/20 bg-primary-50/50 dark:bg-primary-500/5 overflow-hidden">
           <button
             onClick={() => setShowNeeds((s) => !s)}
             className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary-700 dark:text-primary-300"
           >
-            <span>Czego brakuje ({rangeLabel}) — {needs.filter((n) => n.shortfall > 0).length}</span>
+            <span>Czego brakuje ({rangeLabel}) — {missing.length}</span>
             <svg className={`w-4 h-4 ml-auto transition-transform ${showNeeds ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
@@ -189,11 +213,12 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
               nazwa zostawała z kilkoma pikselami i łamała się po literze. */}
           {showNeeds && (
             <ul className="px-4 pb-3 divide-y divide-primary-100/70 dark:divide-primary-500/10">
-              {needs.filter((n) => n.shortfall > 0).map((n, i) => (
+              {missing.map((n, i) => (
                 <li key={i} className="py-1.5 text-xs text-gray-600 dark:text-gray-300">
                   <p className="font-medium text-sm text-gray-800 dark:text-gray-100 break-words">{n.name}</p>
                   <p className="text-gray-500 dark:text-gray-400 tabular-nums mt-0.5">
-                    potrzeba {n.required} {n.unit} · masz {n.inStock} →{' '}
+                    potrzeba {n.required} {n.unit} · masz {n.inStock}
+                    {n.onList > 0 ? ` · na liście ${n.onList}` : ''} →{' '}
                     <span className="text-primary-600 dark:text-primary-400 font-medium">
                       kup {n.toBuy} {n.unit}
                     </span>

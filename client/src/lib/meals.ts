@@ -80,7 +80,12 @@ export interface NeedItem {
   unit: string;
   required: number;
   inStock: number;
+  // Niedobór wobec samej spiżarni (`required - inStock`), jeszcze bez listy zakupów.
   shortfall: number;
+  // Ile tej pozycji leży już na liście zakupów; `onListUnknownQty` = jest na liście,
+  // ale bez policzalnej ilości (dopisana ręcznie). W obu wypadkach `toBuy` maleje.
+  onList: number;
+  onListUnknownQty: boolean;
   packageSize?: number;
   toBuy: number;
   packages?: number;

@@ -65,8 +65,9 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     {
       name: 'what_is_missing',
       description:
-        'Zwraca czego brakuje (plan minus spiżarnia, zaokrąglone do opakowań). Opcjonalnie week oraz days ' +
-        '(lista dni tygodnia 0=pon…6=niedz, aby liczyć tylko wybrane dni).',
+        'Zwraca czego brakuje (plan minus spiżarnia minus to, co już leży na liście zakupów, zaokrąglone ' +
+        'do opakowań). Opcjonalnie week oraz days (lista dni tygodnia 0=pon…6=niedz, aby liczyć tylko ' +
+        'wybrane dni).',
       requiredScopes: ['meals:read'],
       inputSchema: {
         type: 'object',
@@ -167,8 +168,9 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     {
       name: 'generate_shopping_from_plan',
       description:
-        'Generuje listę zakupów z planu, kupując tylko braki zaokrąglone do opakowań. Opcjonalnie week oraz days ' +
-        '(lista dni 0=pon…6=niedz, aby kupić tylko na wybrane dni).',
+        'Generuje listę zakupów z planu, kupując tylko braki zaokrąglone do opakowań. Powtarzalne — pozycje ' +
+        'już obecne na liście nie są dodawane drugi raz, a ręczne dopiski zostają nietknięte. Opcjonalnie ' +
+        'week oraz days (lista dni 0=pon…6=niedz, aby kupić tylko na wybrane dni).',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',

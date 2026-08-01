@@ -31,6 +31,7 @@ import { PantryItemResponse } from '../domain/pantry-item.model';
 import { NeedResponse } from '../domain/meal.service';
 import { MealEntryResponse } from '../domain/meal-entry.model';
 import { MealShoppingItemResponse } from '../domain/meal-shopping-item.model';
+import { ShoppingToggleResponse } from '../domain/meal.service';
 import { JwtAuthGuard } from '../../auth/web/jwt-auth.guard';
 import { User } from '../../auth/domain/user.model';
 
@@ -220,7 +221,13 @@ export class MealController {
     @Body() dto: CreateShoppingItemDto,
     @Query('householdId') householdId?: string,
   ): Promise<MealShoppingItemResponse> {
-    return this.mealService.addShoppingItem(this.requireHousehold(householdId), this.userId(req), dto.name);
+    return this.mealService.addShoppingItem(
+      this.requireHousehold(householdId),
+      this.userId(req),
+      dto.name,
+      dto.quantity,
+      dto.unit,
+    );
   }
 
   @Patch('shopping/:id')
@@ -228,7 +235,7 @@ export class MealController {
     @Req() req: Request,
     @Param('id') id: string,
     @Body() dto: UpdateShoppingItemDto,
-  ): Promise<MealShoppingItemResponse> {
+  ): Promise<ShoppingToggleResponse> {
     return this.mealService.toggleShoppingItem(id, this.userId(req), dto.isChecked);
   }
 

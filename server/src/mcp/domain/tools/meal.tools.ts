@@ -148,11 +148,18 @@ export function buildMealTools(mealService: MealService): McpTool[] {
     },
     {
       name: 'add_shopping_item',
-      description: 'Dodaje pozycję do listy zakupów posiłków. Wymaga name.',
+      description:
+        'Dodaje pozycję do listy zakupów posiłków. Wymaga name; opcjonalnie quantity i unit — bez ilości ' +
+        'odhaczenie pozycji nie zaktualizuje spiżarni.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
-        properties: { ...householdProp, name: { type: 'string', description: 'Nazwa produktu' } },
+        properties: {
+          ...householdProp,
+          name: { type: 'string', description: 'Nazwa produktu' },
+          quantity: { type: 'number', description: 'Ilość (opcjonalnie)' },
+          unit: { type: 'string', description: 'Jednostka, np. g/ml/szt (opcjonalnie)' },
+        },
         required: ['name'],
         additionalProperties: false,
       },
@@ -162,7 +169,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         if (!name) {
           throw new Error('Missing required argument: name');
         }
-        return mealService.addShoppingItem(householdId, ctx.userId, name);
+        return mealService.addShoppingItem(householdId, ctx.userId, name, numberArg(args, 'quantity'), stringArg(args, 'unit'));
       },
     },
     {
@@ -586,7 +593,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
       name: 'check_shopping_item',
       description:
         'Zaznacza/odznacza pozycję na liście zakupów posiłków. Zaznaczenie pozycji o znanej ilości (produkt śledzony) ' +
-        'dodaje ją do spiżarni („kupione"), odznaczenie cofa. Wymaga itemId; isChecked domyślnie true.',
+        'dodaje ją do spiżarni („kupione"), odznaczenie cofa — pole `pantry` w odpowiedzi mówi, co się zmieniło ' +
+        '(`null` = spiżarnia bez zmian). Wymaga itemId; isChecked domyślnie true.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',

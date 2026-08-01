@@ -182,6 +182,13 @@ W `toggleShoppingItem(id, isChecked)`:
 Pozycje bez ilości albo bez dopasowanego produktu nie ruszają spiżarni (są
 neutralne — np. ręcznie dopisane „coś tam").
 
+**Pętla musi być widoczna** (#110). Odpowiedź niesie `pantry` (`PantryEffectResponse`
+albo `null`), a UI zamienia to na jedno zdanie: „Jajko: +2 szt w spiżarni". Gdy pozycja
+jest neutralna, mówi wprost dlaczego („bez ilości — spiżarnia bez zmian") — inaczej
+pętla, która **działa**, wygląda na niedziałającą. Dlatego też ręczne dopisywanie pozwala
+od razu podać ilość i jednostkę (`POST /meals/shopping` i MCP `add_shopping_item` przyjmują
+`quantity` + `unit`): pozycja dopisana z ilością zachowuje się dokładnie jak wygenerowana.
+
 ## Eksport zakupów do listy zadań (#23)
 
 Realizowany **wyłącznie na froncie** (`ShoppingView` → `ExportModal`), przez istniejące

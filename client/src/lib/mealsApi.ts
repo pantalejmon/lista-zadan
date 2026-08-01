@@ -14,6 +14,7 @@ import type {
   CustomMeal,
   NutritionBalance,
   NutritionGoal,
+  PantryEffect,
 } from './meals';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
@@ -118,18 +119,19 @@ export function createCloudMealStorage(householdId: string): MealStorage {
 
     getShopping: () => request<ShoppingItem[]>(`/meals/shopping?householdId=${hh}`),
 
-    addShoppingItem: async (name) => {
+    addShoppingItem: async (name, quantity, unit) => {
       await request<unknown>(`/meals/shopping?householdId=${hh}`, {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, quantity, unit }),
       });
     },
 
     toggleShoppingItem: async (id, isChecked) => {
-      await request<unknown>(`/meals/shopping/${id}`, {
+      const res = await request<{ pantry: PantryEffect | null }>(`/meals/shopping/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ isChecked }),
       });
+      return res.pantry;
     },
 
     removeShoppingItem: (id) => request<void>(`/meals/shopping/${id}`, { method: 'DELETE' }),

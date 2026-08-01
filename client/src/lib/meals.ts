@@ -190,6 +190,15 @@ export interface ShoppingItem {
   createdAt: number;
 }
 
+// Skutek odhaczenia pozycji zakupowej dla spiżarni. `delta` dodatnia = tyle przybyło,
+// ujemna = tyle zeszło (cofnięcie zakupu).
+export interface PantryEffect {
+  productId: string;
+  name: string;
+  delta: number;
+  unit: string;
+}
+
 export interface RecipeInput {
   title: string;
   category?: string;
@@ -348,8 +357,10 @@ export interface MealStorage {
   setParticipants(id: string, participants: MealParticipant[]): Promise<void>;
   adjustEntry(id: string, portionScale: number, overrides: IngredientOverride[]): Promise<void>;
   getShopping(): Promise<ShoppingItem[]>;
-  addShoppingItem(name: string): Promise<void>;
-  toggleShoppingItem(id: string, isChecked: boolean): Promise<void>;
+  addShoppingItem(name: string, quantity?: number, unit?: string): Promise<void>;
+  // Zwraca to, co odhaczenie zrobiło ze spiżarnią (albo `null`, gdy nic) — UI musi
+  // móc to pokazać, inaczej pętla „kupione → spiżarnia" jest niewidoczna.
+  toggleShoppingItem(id: string, isChecked: boolean): Promise<PantryEffect | null>;
   removeShoppingItem(id: string): Promise<void>;
   generateShoppingFromPlan(weekStart: string, days?: number[]): Promise<number>;
   getPantry(): Promise<PantryItem[]>;

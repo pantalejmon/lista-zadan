@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
+  BASE_UNITS,
   getMonday,
   shiftWeek,
   weekLabel,
   isCurrentWeek,
   WEEK_DAYS,
+  type BaseUnit,
   type MealStorage,
   type ShoppingItem,
   type NeedItem,
@@ -20,6 +22,9 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
   const [needs, setNeeds] = useState<NeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState('');
+  const [newQty, setNewQty] = useState('');
+  const [newUnit, setNewUnit] = useState<BaseUnit>('szt');
+  const [pantryNote, setPantryNote] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [showNeeds, setShowNeeds] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -62,14 +67,31 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
       return;
     }
     setGenMessage(null);
-    await storage.addShoppingItem(name);
+    setPantryNote(null);
+    const quantity = parseFloat(newQty.replace(',', '.'));
+    await storage.addShoppingItem(name, Number.isFinite(quantity) && quantity > 0 ? quantity : undefined, newUnit);
     setNewItem('');
+    setNewQty('');
     load();
   };
 
-  const handleToggle = async (id: string, isChecked: boolean) => {
+  // „Kupione" dokłada pozycję do spiżarni — ale tylko z ilością i dopasowanym
+  // produktem. Bez potwierdzenia cała pętla jest niewidoczna i wygląda, jakby nie
+  // działała; bez wyjaśnienia przy pozycji bez ilości wygląda tak samo (#110).
+  const handleToggle = async (item: ShoppingItem, isChecked: boolean) => {
     setGenMessage(null);
-    await storage.toggleShoppingItem(id, isChecked);
+    const effect = await storage.toggleShoppingItem(item.id, isChecked);
+    if (effect) {
+      setPantryNote(
+        effect.delta > 0
+          ? `${effect.name}: +${effect.delta} ${effect.unit} w spiżarni.`
+          : `${effect.name}: −${Math.abs(effect.delta)} ${effect.unit} ze spiżarni.`,
+      );
+    } else if (isChecked && !item.quantity) {
+      setPantryNote(`„${item.name}" bez ilości — spiżarnia bez zmian. Podaj ilość, żeby stan liczył się sam.`);
+    } else {
+      setPantryNote(null);
+    }
     load();
   };
 
@@ -231,21 +253,53 @@ export function ShoppingView({ storage, liveKey = 0 }: { storage: MealStorage; l
         </div>
       )}
 
-      <form onSubmit={handleAdd} className="flex gap-2 mb-6">
-        <input
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          placeholder="Dodaj produkt..."
-          className="flex-1 min-w-0 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-        <button
-          type="submit"
-          disabled={!newItem.trim()}
-          className="bg-primary-500 text-white px-4 py-2 rounded-xl text-sm hover:bg-primary-600 disabled:opacity-50 shrink-0"
-        >
-          Dodaj
-        </button>
+      {/* Ilość jest opcjonalna, ale to ona sprawia, że odhaczenie zasila spiżarnię —
+          dlatego stoi obok nazwy, a nie w osobnym kroku. */}
+      <form onSubmit={handleAdd} className="mb-6 space-y-2">
+        <div className="flex gap-2">
+          <input
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            placeholder="Dodaj produkt..."
+            className="flex-1 min-w-0 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <button
+            type="submit"
+            disabled={!newItem.trim()}
+            className="bg-primary-500 text-white px-4 py-2 rounded-xl text-sm hover:bg-primary-600 disabled:opacity-50 shrink-0"
+          >
+            Dodaj
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="any"
+            value={newQty}
+            onChange={(e) => setNewQty(e.target.value)}
+            placeholder="ile"
+            aria-label="Ilość (opcjonalnie)"
+            className="w-20 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-2 py-1.5 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <select
+            value={newUnit}
+            onChange={(e) => setNewUnit(e.target.value as BaseUnit)}
+            aria-label="Jednostka"
+            className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            {BASE_UNITS.map((u) => <option key={u.value} value={u.value}>{u.value}</option>)}
+          </select>
+          <span className="text-xs text-gray-400 dark:text-gray-500 min-w-0">
+            Z ilością pozycja wpadnie po zakupie do spiżarni.
+          </span>
+        </div>
       </form>
+
+      {pantryNote && (
+        <p className="-mt-4 mb-5 text-xs text-center text-gray-500 dark:text-gray-400">{pantryNote}</p>
+      )}
 
       {loading ? (
         <div className="space-y-2">
@@ -289,7 +343,7 @@ function ShoppingRow({
   onRemove,
 }: {
   item: ShoppingItem;
-  onToggle: (id: string, isChecked: boolean) => void;
+  onToggle: (item: ShoppingItem, isChecked: boolean) => void;
   onRemove: (id: string) => void;
 }) {
   return (
@@ -302,7 +356,7 @@ function ShoppingRow({
     >
       <button
         type="button"
-        onClick={() => onToggle(item.id, !item.isChecked)}
+        onClick={() => onToggle(item, !item.isChecked)}
         className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
           item.isChecked
             ? 'bg-emerald-500 border-emerald-500 text-white'

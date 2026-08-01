@@ -109,7 +109,8 @@ odczytu wymagają scope `:read`, zapisu/edycji/usuwania — `:write` (który imp
   `plan_custom_meal` (posiłek bez przepisu, np. „jogurt i banan"),
   `set_meal_participants` (kto je i w ilu porcjach), `adjust_meal_entry` (mnożnik porcji / ilości
   składników w tym jednym posiłku), `mark_meal_cooked` (odejmij ze spiżarni), `remove_meal_entry`,
-- zakupy: `add_shopping_item`, `check_shopping_item` („kupione" → do spiżarni), `delete_shopping_item`,
+- zakupy: `add_shopping_item` (opcjonalne `quantity` + `unit` — bez nich odhaczenie nie ruszy spiżarni),
+  `check_shopping_item` („kupione" → do spiżarni; pole `pantry` w odpowiedzi mówi, co się zmieniło), `delete_shopping_item`,
   `generate_shopping_from_plan` (powtarzalne — nie dubluje pozycji już obecnych na liście),
 - produkty/spiżarnia: `create_product`, `update_product` (oba przyjmują `nutrition` — wartości odżywcze
   na 100 g/ml, a dla `baseUnit = szt` na 1 sztukę — oraz `origin`: `plant`/`animal`, z którego bierze się

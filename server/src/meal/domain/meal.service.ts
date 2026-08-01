@@ -80,6 +80,21 @@ export interface NutritionBalanceResponse {
   skipped: BalanceSkippedResponse;
 }
 
+// Co odhaczenie pozycji zrobiło ze spiżarnią. `null` w odpowiedzi znaczy „nic" —
+// pozycja bez ilości albo bez dopasowanego produktu jest neutralna, ale user nie ma
+// jak tego zobaczyć, jeśli mu tego nie powiemy (#110).
+export interface PantryEffectResponse {
+  productId: string;
+  name: string;
+  // Dodatnia = tyle wpadło do spiżarni, ujemna = tyle z niej zeszło (cofnięcie zakupu).
+  delta: number;
+  unit: string;
+}
+
+export interface ShoppingToggleResponse extends MealShoppingItemResponse {
+  pantry: PantryEffectResponse | null;
+}
+
 export interface NeedResponse {
   productId: string | null;
   name: string;
@@ -527,30 +542,41 @@ export class MealService {
     return items.sort((a, b) => a.createdAt - b.createdAt).map((i) => i.toResponse());
   }
 
-  async addShoppingItem(householdId: string, userId: string, name: string): Promise<MealShoppingItemResponse> {
+  // Ilość i jednostka są opcjonalne, ale pozycja bez ilości nie rusza spiżarni przy
+  // odhaczeniu — dlatego UI o nie pyta przy dopisywaniu (#110).
+  async addShoppingItem(
+    householdId: string,
+    userId: string,
+    name: string,
+    quantity?: number,
+    unit?: string,
+  ): Promise<MealShoppingItemResponse> {
     await this.sharingService.assertHouseholdPermission(householdId, userId, WRITE_ROLES);
-    const item = MealShoppingItem.create(householdId, name);
+    const item = MealShoppingItem.create(householdId, name, quantity, unit);
     await this.shoppingRepo.save(item);
     this.gateway.notifyChanged(householdId);
     return item.toResponse();
   }
 
-  async toggleShoppingItem(id: string, userId: string, isChecked: boolean): Promise<MealShoppingItemResponse> {
+  async toggleShoppingItem(id: string, userId: string, isChecked: boolean): Promise<ShoppingToggleResponse> {
     const item = await this.findShoppingItemOrThrow(id);
     await this.sharingService.assertHouseholdPermission(item.householdId, userId, WRITE_ROLES);
     // Loop closer: checking off a purchase adds it to the pantry; un-checking
     // reverses that. Only items with a known quantity and a name-matched,
     // pantry-tracked product move stock.
+    let pantry: PantryEffectResponse | null = null;
     if (item.isChecked !== isChecked && item.quantity && item.quantity > 0) {
       const product = await this.findTrackedProductByName(item.householdId, item.name);
       if (product) {
-        await this.adjustPantryInternal(item.householdId, product.id, isChecked ? item.quantity : -item.quantity);
+        const delta = isChecked ? item.quantity : -item.quantity;
+        await this.adjustPantryInternal(item.householdId, product.id, delta);
+        pantry = { productId: product.id, name: product.name, delta, unit: product.baseUnit };
       }
     }
     const updated = item.withChecked(isChecked);
     await this.shoppingRepo.update(updated);
     this.gateway.notifyChanged(item.householdId);
-    return updated.toResponse();
+    return { ...updated.toResponse(), pantry };
   }
 
   async removeShoppingItem(id: string, userId: string): Promise<void> {

@@ -404,7 +404,8 @@ export function buildMealTools(mealService: MealService): McpTool[] {
       description:
         'Przypisuje przepis do dnia i pory w planie tygodnia (nadpisuje slot). Wymaga recipeId, weekStart (poniedziałek YYYY-MM-DD), ' +
         'dayOfWeek (0=poniedziałek … 6=niedziela) i mealType (BREAKFAST/LUNCH/DINNER/SNACK). ' +
-        'Opcjonalnie participants — kto je i w ilu porcjach.',
+        'Opcjonalnie participants — kto je i w ilu porcjach; pominięte = wszyscy domownicy po jednej ' +
+        'porcji, a jawnie przesłana pusta lista zostawia posiłek poza bilansem.',
       requiredScopes: ['meals:write'],
       inputSchema: {
         type: 'object',
@@ -439,6 +440,7 @@ export function buildMealTools(mealService: MealService): McpTool[] {
         'Wpisuje do planera posiłek **bez przepisu** („jogurt i banan"). Wymaga title, weekStart ' +
         '(poniedziałek YYYY-MM-DD), dayOfWeek (0=pon…6=niedz) i mealType. Opcjonalnie ingredients — ' +
         'ze składnikami posiłek liczy się do zakupów, spiżarni i bilansu tak samo jak przepis. ' +
+        'Bez podanych participants posiłek dostaje wszystkich domowników po jednej porcji. ' +
         'Nadpisuje zajęty slot.',
       requiredScopes: ['meals:write'],
       inputSchema: {

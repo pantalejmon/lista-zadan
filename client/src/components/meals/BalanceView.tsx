@@ -5,6 +5,7 @@ import {
   weekLabel,
   WEEK_DAYS,
   MEAL_TYPES,
+  type BalanceSkipped,
   type MealStorage,
   type MemberBalance,
   type NutritionBalance,
@@ -107,12 +108,7 @@ export function BalanceView({
           {[1, 2].map((i) => <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />)}
         </div>
       ) : !anyData ? (
-        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <p>Brak danych na ten tydzień.</p>
-          <p className="text-sm mt-1">
-            Bilans liczy tylko posiłki z przypisanymi domownikami — przypisz ich w planerze.
-          </p>
-        </div>
+        <EmptyBalance skipped={balance.skipped} onlyCooked={onlyCooked} />
       ) : (
         <div className="space-y-4">
           {balance.members.map((member) => (
@@ -126,6 +122,10 @@ export function BalanceView({
         </div>
       )}
 
+      {balance && anyData && balance.skipped.noParticipants + balance.skipped.noNutrition > 0 && (
+        <SkippedNote skipped={balance.skipped} />
+      )}
+
       {editingGoal && (
         <GoalModal
           member={editingGoal}
@@ -137,6 +137,83 @@ export function BalanceView({
           onClose={() => setEditingGoal(null)}
         />
       )}
+    </div>
+  );
+}
+
+// „posiłek / posiłki / posiłków" — pusty ekran ma brzmieć jak zdanie, nie jak log.
+function mealsWord(count: number): string {
+  if (count === 1) {
+    return 'posiłek';
+  }
+  const tens = count % 100;
+  const ones = count % 10;
+  if (ones >= 2 && ones <= 4 && (tens < 12 || tens > 14)) {
+    return 'posiłki';
+  }
+  return 'posiłków';
+}
+
+// Powody, dla których posiłek nie wszedł do bilansu — konkretnie i z instrukcją,
+// co kliknąć. Bilans, który milczy, wygląda jak zepsuty (#111).
+function SkippedReasons({ skipped }: { skipped: BalanceSkipped }) {
+  return (
+    <ul className="text-sm text-left inline-block space-y-1.5">
+      {skipped.noParticipants > 0 && (
+        <li>
+          <span className="font-medium">{skipped.noParticipants} {mealsWord(skipped.noParticipants)}</span>{' '}
+          bez przypisanych domowników — otwórz „kto je?" na kaflu w Planerze.
+        </li>
+      )}
+      {skipped.noNutrition > 0 && (
+        <li>
+          <span className="font-medium">{skipped.noNutrition} {mealsWord(skipped.noNutrition)}</span>{' '}
+          bez wartości odżywczych składników.
+        </li>
+      )}
+      {skipped.missingProducts.length > 0 && (
+        <li className="text-gray-400 dark:text-gray-500">
+          Brakuje makro dla: {skipped.missingProducts.slice(0, 5).join(', ')}
+          {skipped.missingProducts.length > 5 ? ` i ${skipped.missingProducts.length - 5} innych` : ''} —
+          uzupełnij w zakładce Produkty.
+        </li>
+      )}
+    </ul>
+  );
+}
+
+function EmptyBalance({ skipped, onlyCooked }: { skipped: BalanceSkipped; onlyCooked: boolean }) {
+  const hasReasons = skipped.noParticipants + skipped.noNutrition > 0;
+
+  return (
+    <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+      <p className="text-gray-400 dark:text-gray-500">
+        {hasReasons ? 'Bilans nie ma czego policzyć.' : 'Brak danych na ten tydzień.'}
+      </p>
+      <div className="mt-3">
+        {hasReasons ? (
+          <SkippedReasons skipped={skipped} />
+        ) : (
+          <p className="text-sm text-gray-400 dark:text-gray-500">
+            {onlyCooked
+              ? 'Żaden posiłek z tego tygodnia nie jest odhaczony jako ugotowany.'
+              : 'Zaplanuj posiłki w Planerze — bilans policzy się sam.'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Ten sam rachunek, gdy bilans **coś** policzył: suma jest niepełna i user musi
+// o tym wiedzieć, zanim porówna ją z celem.
+function SkippedNote({ skipped }: { skipped: BalanceSkipped }) {
+  return (
+    <div className="mt-4 rounded-2xl border border-amber-200/70 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/5 px-4 py-3 text-gray-600 dark:text-gray-300">
+      <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-500 mb-1.5">
+        Poza bilansem
+      </p>
+      <SkippedReasons skipped={skipped} />
     </div>
   );
 }

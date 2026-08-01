@@ -234,10 +234,18 @@ export interface MemberBalance {
   weekTotal: Nutrition;
 }
 
+// Czego bilans nie policzył i dlaczego — żeby pusty ekran mówił, co naprawić.
+export interface BalanceSkipped {
+  noParticipants: number;
+  noNutrition: number;
+  missingProducts: string[];
+}
+
 export interface NutritionBalance {
   weekStart: string;
   onlyCooked: boolean;
   members: MemberBalance[];
+  skipped: BalanceSkipped;
 }
 
 // --- Week helpers ---

@@ -151,6 +151,18 @@ Do bilansu **nie wchodzą**:
 - posiłki bez przypisanych domowników (nie wiadomo, komu je policzyć),
 - posiłki, których nie dało się policzyć w ogóle (`coverage = 0`).
 
+**Domyślni uczestnicy.** Nowy wpis planera (`addEntry`, więc i `plan_meal` / `plan_custom_meal`
+w MCP) dostaje **wszystkich domowników po jednej porcji**. Wcześniej startował z pustą listą,
+więc bilans z definicji nie liczył nic, dopóki user nie wszedł w każdy kafel osobno — wyglądało
+to na zepsutą funkcję (#111). Kto nie je, tego się odklikuje w „Kto je ten posiłek?"; jawnie
+przesłana pusta lista (`participants: []`) zostaje pusta.
+
+**Dlaczego nie policzył.** `NutritionBalanceResponse.skipped` niesie rachunek pominiętych:
+`noParticipants`, `noNutrition` i `missingProducts` (nazwy produktów bez makro). Bilans, który
+milczy, wygląda jak zepsuty — więc pusty ekran mówi wprost, ile posiłków wypadło i dlaczego,
+a niepełny bilans dokleja tę samą notkę pod kartami („Poza bilansem"). Posiłki odfiltrowane
+przez `onlyCooked` **nie** są liczone jako problem.
+
 **Zaplanowane czy zjedzone?** Domyślnie liczymy **zaplanowane** — planer jest planem, więc
 bilans na przyszły tydzień pokazywałby same zera. Przełącznik `onlyCooked` zawęża do
 posiłków odhaczonych jako ugotowane.

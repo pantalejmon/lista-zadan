@@ -64,10 +64,20 @@ export interface MemberBalanceResponse {
   weekTotal: Nutrition;
 }
 
+// Czego bilans nie policzył i dlaczego. Bez tego pusty ekran mówi tylko „brak danych",
+// a user nie ma jak zgadnąć, że winne są nieprzypisane posiłki albo produkty bez makro (#111).
+export interface BalanceSkippedResponse {
+  noParticipants: number;
+  noNutrition: number;
+  // Produkty, którym brakuje wartości odżywczych — nazwy do pokazania wprost.
+  missingProducts: string[];
+}
+
 export interface NutritionBalanceResponse {
   weekStart: string;
   onlyCooked: boolean;
   members: MemberBalanceResponse[];
+  skipped: BalanceSkippedResponse;
 }
 
 export interface NeedResponse {
@@ -249,6 +259,11 @@ export class MealService {
       this.gateway.notifyChanged(householdId);
       return updated.toResponse();
     }
+    // Nowy posiłek trafia domyślnie do bilansu **wszystkich** domowników po jednej
+    // porcji. Wcześniej startował bez uczestników, więc bilans z definicji nie liczył
+    // nic, dopóki user nie wszedł w każdy kafel z osobna (#111). Kto nie je — tego się
+    // odklikuje w „Kto je ten posiłek?"; jawnie przesłana pusta lista zostaje pusta.
+    const assigned = participants ?? (await this.allMembersAsParticipants(householdId, userId));
     const entry = custom
       ? MealEntry.createCustom(
         householdId,
@@ -256,7 +271,7 @@ export class MealService {
         dto.dayOfWeek,
         dto.mealType,
         custom,
-        participants ?? [],
+        assigned,
       )
       : MealEntry.createFromRecipe(
         householdId,
@@ -264,7 +279,7 @@ export class MealService {
         dto.dayOfWeek,
         dto.mealType,
         dto.recipeId as string,
-        participants ?? [],
+        assigned,
       );
     await this.entryRepo.save(entry);
     this.gateway.notifyChanged(householdId);
@@ -289,6 +304,11 @@ export class MealService {
     await this.entryRepo.update(updated);
     this.gateway.notifyChanged(entry.householdId);
     return updated.toResponse();
+  }
+
+  private async allMembersAsParticipants(householdId: string, userId: string): Promise<MealParticipant[]> {
+    const members = await this.sharingService.getHouseholdMembers(householdId, userId);
+    return members.map((m) => ({ userId: m.userId, portions: 1 }));
   }
 
   // Do bilansu może wejść tylko domownik z tego gospodarstwa — inaczej przez API
@@ -426,17 +446,30 @@ export class MealService {
     ]);
     const goalByUser = new Map(goals.map((g) => [g.userId, g]));
     const shares = new Map<string, Map<number, MealShareResponse[]>>();
+    // Liczone tylko wśród posiłków, które w ogóle wchodzą w zakres — posiłek pominięty
+    // przez filtr „tylko ugotowane" nie jest problemem do zgłoszenia.
+    const skipped: BalanceSkippedResponse = { noParticipants: 0, noNutrition: 0, missingProducts: [] };
+    const missingProducts = new Set<string>();
 
     for (const entry of entries) {
-      if (entry.participants.length === 0 || (onlyCooked && !entry.cooked)) {
+      if (onlyCooked && !entry.cooked) {
+        continue;
+      }
+      if (entry.participants.length === 0) {
+        skipped.noParticipants += 1;
         continue;
       }
       const { recipe, ingredients, servings } = await this.resolveEntry(entry);
       if (ingredients.length === 0) {
+        skipped.noNutrition += 1;
         continue;
       }
       const nutrition = computeRecipeNutrition(ingredients, products, servings);
+      for (const name of nutrition.missing) {
+        missingProducts.add(name);
+      }
       if (nutrition.coverage === 0) {
+        skipped.noNutrition += 1;
         continue;
       }
       const title = recipe?.title ?? entry.custom?.title ?? 'Posiłek';
@@ -456,9 +489,12 @@ export class MealService {
       }
     }
 
+    skipped.missingProducts = [...missingProducts].sort((a, b) => a.localeCompare(b, 'pl'));
+
     return {
       weekStart,
       onlyCooked,
+      skipped,
       members: members.map((member) => {
         const byDay = shares.get(member.userId) ?? new Map<number, MealShareResponse[]>();
         const days: DayBalanceResponse[] = [];

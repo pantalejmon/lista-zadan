@@ -146,6 +146,14 @@ gdzie `perServing` uwzględnia korekty ze slotu (`docs/meals.md` → „Korekty 
 a `porcje` pochodzą z `MealEntry.participants`. Posiłek doraźny liczy się tak samo, przy
 `servings = 1`.
 
+**Co znaczy „1×".** Porcja domownika to mnożnik **jednej porcji dania**, nie procent przepisu —
+danie na 4 osoby robi się czterema uczestnikami po `1`, a nie jednym z `4`. Gotowanie na zapas
+(więcej, niż dom zje) to osobna rzecz: `portionScale` w „Dopasuj porcje". UI mówi to wprost
+w nagłówku „Kto je ten posiłek?" („1× = jedna z N porcji dania, ≈ X kcal"), bo sama pigułka
+„1×" była czytana jako „100% przepisu" (#113). Gotowe kroki to `0,5 / 1 / 1,5 / 2`, ale pole
+„inna" przyjmuje dowolną wartość z zakresu **0,25–10** — tego samego, który waliduje
+`MealParticipantDto`.
+
 Do bilansu **nie wchodzą**:
 
 - posiłki bez przypisanych domowników (nie wiadomo, komu je policzyć),

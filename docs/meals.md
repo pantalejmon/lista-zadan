@@ -124,6 +124,9 @@ który zostaje wzorcem. Wpis planera niesie:
 Nadpisanie **wygrywa ze skalowaniem**: skoro user wpisał „4 jajka", to znaczy 4 jajka,
 a nie 4 × mnożnik. Nadpisanie na `0` zeruje składnik (a nie przywraca przepisu).
 
+Korekty działają tak samo dla **posiłku doraźnego** — składniki bierze się wtedy z `custom`,
+więc „Dopasuj porcje" jest dostępne wszędzie tam, gdzie wpis ma jakiekolwiek składniki (#113).
+
 `effectiveIngredients(ingredients, portionScale, overrides)` w
 `server/src/meal/domain/effective-ingredients.ts` to **jedyne miejsce**, w którym
 powstaje efektywna lista. Korzystają z niej **wszystkie trzy** ścieżki:

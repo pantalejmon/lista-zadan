@@ -62,11 +62,16 @@ export function ParticipantsBadges({
 export function ParticipantsPicker({
   members,
   initial,
+  servings,
+  perServingKcal,
   onSave,
   onClose,
 }: {
   members: HouseholdMember[];
   initial: MealParticipant[];
+  // Ile porcji daje danie i ile kcal ma jedna — bez tego „1×" to liczba bez jednostki.
+  servings: number;
+  perServingKcal: number | null;
   onSave: (participants: MealParticipant[]) => void;
   onClose: () => void;
 }) {
@@ -104,9 +109,14 @@ export function ParticipantsPicker({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-          <div>
+          <div className="min-w-0">
             <h2 className="font-semibold">Kto je ten posiłek?</h2>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Porcje wchodzą do bilansu domownika.</p>
+            {/* Bez tego zdania „1×" nic nie znaczy: tester czytał je jako „100% przepisu",
+                a to mnożnik **jednej porcji** przypadającej na domownika (#113). */}
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              1× = {servings > 1 ? `jedna z ${servings} porcji dania` : 'całe danie'}
+              {perServingKcal !== null ? ` (≈ ${perServingKcal} kcal)` : ''}. Liczy się do bilansu domownika.
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -157,29 +167,24 @@ export function ParticipantsPicker({
                 </button>
 
                 {active && (
-                  <div className="flex gap-1.5 px-3 pb-2.5">
-                    {PORTION_OPTIONS.map((portions) => (
-                      <button
-                        key={portions}
-                        type="button"
-                        onClick={() => setPortions(member.userId, portions)}
-                        className={`flex-1 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          selected.get(member.userId) === portions
-                            ? 'bg-primary-500 text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
-                        }`}
-                      >
-                        {formatPortions(portions)}
-                      </button>
-                    ))}
-                  </div>
+                  <PortionPicker
+                    value={selected.get(member.userId) ?? 1}
+                    onChange={(portions) => setPortions(member.userId, portions)}
+                  />
                 )}
               </div>
             );
           })}
         </div>
 
-        <div className="flex gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800">
+        {/* Najczęstsze nieporozumienie: „a jak gotuję na 4 osoby?". Odpowiedź są dwie
+            i obie warto powiedzieć wprost. */}
+        <p className="px-4 pt-3 text-xs text-gray-400 dark:text-gray-500">
+          Gotujesz dla większej liczby osób? Dopisz ich tutaj. Gotujesz więcej, niż dom zje
+          (zapas, goście spoza domu)? Podnieś mnożnik w „Dopasuj porcje”.
+        </p>
+
+        <div className="flex gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800 mt-3">
           <button
             type="button"
             onClick={selectAll}
@@ -196,6 +201,55 @@ export function ParticipantsPicker({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Gotowe kroki załatwiają większość przypadków, ale nie wszystkie — „3×" albo „0,75×"
+// musi dać się wpisać, zamiast zaokrąglać domownika do najbliższej pigułki (#113).
+// Zakres 0,25–10 to ten sam, który waliduje serwer.
+function PortionPicker({ value, onChange }: { value: number; onChange: (portions: number) => void }) {
+  const isStep = PORTION_OPTIONS.includes(value);
+  const [custom, setCustom] = useState(isStep ? '' : formatPortions(value).replace('×', ''));
+
+  const commitCustom = (raw: string) => {
+    setCustom(raw);
+    const parsed = parseFloat(raw.replace(',', '.'));
+    if (Number.isFinite(parsed) && parsed >= 0.25 && parsed <= 10) {
+      onChange(parsed);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 px-3 pb-2.5">
+      {PORTION_OPTIONS.map((portions) => (
+        <button
+          key={portions}
+          type="button"
+          onClick={() => { setCustom(''); onChange(portions); }}
+          className={`flex-1 min-h-9 rounded-lg text-xs font-medium transition-colors ${
+            value === portions
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+          }`}
+        >
+          {formatPortions(portions)}
+        </button>
+      ))}
+      <input
+        type="number"
+        inputMode="decimal"
+        min="0.25"
+        max="10"
+        step="0.25"
+        value={custom}
+        onChange={(e) => commitCustom(e.target.value)}
+        placeholder="inna"
+        aria-label="Inna liczba porcji"
+        className={`w-16 min-h-9 rounded-lg px-2 text-xs text-right tabular-nums bg-white dark:bg-gray-900 border focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+          !isStep ? 'border-primary-400 dark:border-primary-500' : 'border-gray-200 dark:border-gray-700'
+        }`}
+      />
     </div>
   );
 }

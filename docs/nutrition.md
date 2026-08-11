@@ -3,7 +3,7 @@
 Moduł Posiłki liczy makro od dołu: **produkt** niesie wartości z etykiety, **przepis**
 sumuje je po składnikach, **planer** rozdziela na domowników. Ten dokument opisuje
 konwencje i algorytmy tego łańcucha. Wszystko żyje po stronie serwera
-(`server/src/meal/`) — moduł jest cloud-only, patrz `docs/meals.md`.
+(`server/src/modules/meal/`) — moduł jest cloud-only, patrz `docs/meals.md`.
 
 ## Jednostka odniesienia
 
@@ -20,7 +20,7 @@ pola jednostką (`nutritionBasisLabel`), a nie zostawia ich gołych.
 
 ## Komplet albo nic
 
-`Nutrition` (`server/src/meal/domain/nutrition.ts`) wymaga **kcal + białka + tłuszczu
+`Nutrition` (`server/src/modules/meal/domain/nutrition.ts`) wymaga **kcal + białka + tłuszczu
 + węglowodanów**; błonnik i sól są opcjonalne. Etykieta na opakowaniu zawsze ma tę
 czwórkę, a policzenie przepisu z połowy danych dawałoby wynik zaniżony **po cichu** —
 gorzej niż brak wyniku. Dlatego:

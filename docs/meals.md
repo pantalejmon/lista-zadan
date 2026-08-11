@@ -9,12 +9,12 @@ rzeczywistym (WebSocket namespace `meal`, pokój `household:<id>`, event `meal:c
 Tryb lokalny (bez konta) ogranicza się do modułu **Zadania** — nawigacja nie pokazuje
 Posiłków, a sekcja jest wymuszana na `tasks`. Posiłki wymagają gospodarstwa, więc
 istnieje **jedna** implementacja storage’u: `createCloudMealStorage(householdId)`
-(`client/src/lib/mealsApi.ts`), REST do backendu. Interfejs `MealStorage`
-(`client/src/lib/meals.ts`) opisuje jej kontrakt; sam plik trzyma już tylko typy,
+(`client/src/modules/meals/mealsApi.ts`), REST do backendu. Interfejs `MealStorage`
+(`client/src/modules/meals/meals.ts`) opisuje jej kontrakt; sam plik trzyma już tylko typy,
 stałe i helpery prezentacyjne.
 
 **Algorytmy opisane niżej mają jedno miejsce prawdy:
-`server/src/meal/domain/meal.service.ts`.** (Do wersji sprzed tego uporządkowania front
+`server/src/modules/meal/domain/meal.service.ts`.** (Do wersji sprzed tego uporządkowania front
 zawierał bliźniaczą implementację na IndexedDB — została usunięta jako nieosiągalna
 z UI. Osierocona baza `lista-zadan-meals` w przeglądarkach nie jest kasowana: mogą w
 niej siedzieć dane sprzed ograniczenia trybu lokalnego, a usunięcie byłoby nieodwracalne.)
@@ -106,7 +106,7 @@ jest przekazywany end-to-end: `GET /meals/needs` i `POST /meals/shopping/generat
 
 Zarówno **produkty** (`Product.category`), jak i **przepisy** (`Recipe.category`, dodane migracją
 `AddRecipeCategory`) mają dowolne, tekstowe kategorie (podpowiedzi: `PRODUCT_CATEGORIES` /
-`RECIPE_CATEGORIES` w `client/src/lib/meals.ts`). W UI listy Produktów i Przepisów są
+`RECIPE_CATEGORIES` w `client/src/modules/meals/meals.ts`). W UI listy Produktów i Przepisów są
 **pogrupowane po kategoriach** (helpery `groupByCategory` / `presentCategories`), z wyszukiwarką
 i przewijalnymi chipami kategorii (`CategoryFilter`) — ergonomicznie na telefonie. Kategoria
 przepisu jest częścią modelu i przechodzi przez REST oraz narzędzia MCP `create_recipe` /
@@ -127,7 +127,7 @@ Korekty działają tak samo dla **posiłku doraźnego** — składniki bierze si
 więc „Dopasuj porcje" jest dostępne wszędzie tam, gdzie wpis ma jakiekolwiek składniki (#113).
 
 `effectiveIngredients(ingredients, portionScale, overrides)` w
-`server/src/meal/domain/effective-ingredients.ts` to **jedyne miejsce**, w którym
+`server/src/modules/meal/domain/effective-ingredients.ts` to **jedyne miejsce**, w którym
 powstaje efektywna lista. Korzystają z niej **wszystkie trzy** ścieżki:
 
 Skąd biorą się składniki wpisu (przepis czy `custom`) rozstrzyga **wyłącznie**

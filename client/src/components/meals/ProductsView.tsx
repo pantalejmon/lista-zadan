@@ -137,14 +137,14 @@ export function ProductsView({ storage, liveKey = 0 }: { storage: MealStorage; l
                       </div>
                       <button
                         onClick={() => setEditing(p)}
-                        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
+                        className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
                         aria-label="Edytuj"
                       >
                         <IconPencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(p.id)}
-                        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+                        className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
                         aria-label="Usuń"
                       >
                         <IconTrash className="w-4 h-4" />
@@ -276,9 +276,10 @@ function ProductForm({ product, onSave, onCancel }: { product?: Product; onSave:
           value={packageSize}
           onChange={(e) => setPackageSize(e.target.value)}
           placeholder="Rozmiar opakowania"
-          className="w-40 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="flex-1 min-w-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
-        <span className="text-sm text-gray-400">{baseUnit} / opak.</span>
+        {/* Stałe `w-40` ucinało własny placeholder do „Rozmiar opakowani" przy 360 px. */}
+        <span className="text-sm text-gray-400 shrink-0">{baseUnit} / opak.</span>
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
         <input

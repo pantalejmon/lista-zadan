@@ -108,7 +108,7 @@ export function RecurringView({ householdId, wallet, liveKey, onChanged }: Recur
               </span>
               <button
                 onClick={() => handleDelete(rule)}
-                className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 shrink-0"
+                className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 shrink-0"
                 aria-label="Usuń regułę"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

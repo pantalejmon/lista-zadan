@@ -379,7 +379,7 @@ function ShoppingRow({
 
       <button
         onClick={() => onRemove(item.id)}
-        className="shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-md text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+        className="shrink-0 p-2 min-w-10 min-h-10 flex items-center justify-center rounded-md text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
         aria-label="Usuń produkt"
       >
         <IconClose className="w-3.5 h-3.5" />

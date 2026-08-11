@@ -154,14 +154,14 @@ function RecipeList({ storage, liveKey, onOpen, onNew }: { storage: MealStorage;
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => onOpen(recipe.id)}
-                        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
+                        className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
                         aria-label="Edytuj"
                       >
                         <IconPencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(recipe.id)}
-                        className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+                        className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
                         aria-label="Usuń"
                       >
                         <IconTrash className="w-4 h-4" />
@@ -419,7 +419,7 @@ function RecipeForm({ storage, id, onDone, onCancel }: { storage: MealStorage; i
                 {rows.length > 1 && (
                   <button
                     onClick={() => removeRow(i)}
-                    className="p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+                    className="p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
                     aria-label="Usuń wiersz"
                   >
                     <IconClose className="w-4 h-4" />

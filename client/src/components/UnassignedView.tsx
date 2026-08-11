@@ -205,7 +205,7 @@ export function UnassignedView({ storage, listId, refreshKey, onRefresh }: Unass
                           setAssigningId(assigningId === todo.id ? null : todo.id);
                           setAssignDate('');
                         }}
-                        className="shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-500 transition-all"
+                        className="shrink-0 p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-500 transition-all"
                         title="Przypisz datę"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

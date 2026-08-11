@@ -141,8 +141,14 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
         ${fullyComplete ? 'opacity-60' : ''}
       `}
     >
-      {/* Header row */}
-      <div className="flex items-center gap-3 p-3">
+      {/* Nagłówek karty. Na telefonie dwupoziomowy: nazwa listy dostaje własny
+          wiersz (obok czterech kontrolek i plakietki terminu zostawało z niej
+          „Zakupy na we…"), a postęp, termin i akcje schodzą pod spód. Od `sm`
+          wzwyż wraca jeden rząd. */}
+      <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3">
+        {/* Wiersz nazwy. `sm:contents` rozpuszcza opakowanie na szerokim ekranie,
+            więc koszyk i nazwa wracają na swoje miejsce w jednym rzędzie. */}
+        <div className="flex items-center gap-3 min-w-0 sm:contents">
         {/* Progress donut + cart */}
         <button
           type="button"
@@ -199,7 +205,7 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
               placeholder="Nazwa listy zakupów"
             />
           ) : (
-            <p className={`text-sm font-medium leading-snug truncate ${fullyComplete ? 'line-through text-gray-400 dark:text-gray-500' : ''}`}>
+            <p className={`text-sm font-medium leading-snug break-words sm:truncate ${fullyComplete ? 'line-through text-gray-400 dark:text-gray-500' : ''}`}>
               {todo.text}
             </p>
           )}
@@ -258,11 +264,15 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
             </div>
           </div>
         </div>
+        </div>
 
+        {/* Wiersz akcji — na telefonie własny, dosunięty do prawej krawędzi;
+            od `sm` rozpuszczony z powrotem do wspólnego rzędu. */}
+        <div className="flex items-center justify-end gap-1 sm:contents">
         {/* Edit title */}
         <button
           onClick={(e) => { e.stopPropagation(); setTitleText(todo.text); setEditingTitle(true); setExpanded(true); }}
-          className="flex-shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
+          className="flex-shrink-0 p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 transition-all"
           aria-label="Zmień nazwę"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -273,7 +283,7 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
         {/* Delete entire list */}
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(todo.id); }}
-          className="flex-shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+          className="flex-shrink-0 p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
           aria-label="Usuń listę"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -284,7 +294,7 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
         {/* Expand chevron */}
         <button
           onClick={(e) => { e.stopPropagation(); setExpanded((s) => !s); }}
-          className="flex-shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+          className="flex-shrink-0 p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
           aria-label={expanded ? 'Zwiń' : 'Rozwiń'}
         >
           <svg
@@ -294,6 +304,7 @@ export function ShoppingListItem({ todo, onUpdate, onDelete }: ShoppingListItemP
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
+        </div>
       </div>
 
       {/* Items panel */}

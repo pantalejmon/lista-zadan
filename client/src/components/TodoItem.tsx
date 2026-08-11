@@ -169,7 +169,7 @@ export function TodoItem({ todo, onToggle, onUpdate, onDelete, onDeleteGroup, on
       {/* Edit button */}
       <button
         onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-        className="flex-shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 active:text-gray-600 transition-all"
+        className="flex-shrink-0 p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-300 active:text-gray-600 transition-all"
         aria-label="Edytuj"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -181,7 +181,7 @@ export function TodoItem({ todo, onToggle, onUpdate, onDelete, onDeleteGroup, on
       {/* Delete button */}
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(todo.id); }}
-        className="flex-shrink-0 p-2 min-w-9 min-h-9 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 active:text-red-500 transition-all"
+        className="flex-shrink-0 p-2 min-w-10 min-h-10 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 active:text-red-500 transition-all"
         aria-label="Usuń"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

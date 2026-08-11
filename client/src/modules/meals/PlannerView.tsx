@@ -16,8 +16,8 @@ import { RecipePreviewModal } from './RecipePreviewModal';
 import { ParticipantsBadges, ParticipantsPicker } from './ParticipantsPicker';
 import { AdjustEntryModal } from './AdjustEntryModal';
 import { QuickMealForm } from './QuickMealForm';
-import { getHouseholdMembers } from '@platform/api/api';
-import type { HouseholdMember } from '@platform/api/types';
+import { getHouseholdMembers } from '@platform/households/householdsApi';
+import type { HouseholdMember } from '@platform/households/household.types';
 
 function entryTitle(entry: PlannerEntry): string {
   return entry.recipe?.title ?? entry.custom?.title ?? 'Posiłek';

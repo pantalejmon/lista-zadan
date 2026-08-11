@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { TodoList } from '@platform/api/types';
-import * as api from '@platform/api/api';
+import type { TodoList } from '@platform/households/household.types';
+import * as api from '@platform/households/householdsApi';
 
 const STORAGE_KEY = 'lista-zadan:activeListId';
 

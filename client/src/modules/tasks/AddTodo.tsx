@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { format, addMonths } from 'date-fns';
-import type { RecurrenceType, RecurrenceConfig, TodoKind } from '@platform/api/types';
+import type { RecurrenceType, RecurrenceConfig, TodoKind } from '@modules/tasks/todo.types';
 
 interface AddTodoProps {
   selectedDate: string; // YYYY-MM-DD

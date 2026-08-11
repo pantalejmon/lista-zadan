@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Household } from '@platform/api/types';
+import type { Household } from './household.types';
 
 interface HouseholdSwitcherProps {
   households: Household[];

@@ -1,5 +1,5 @@
 import type { WsStatus } from '@platform/realtime/useWebSocket';
-import type { SyncStatus } from '@platform/storage/offlineQueue';
+import type { SyncStatus } from '@platform/connection';
 
 interface ConnectionIndicatorProps {
   wsStatus: WsStatus;

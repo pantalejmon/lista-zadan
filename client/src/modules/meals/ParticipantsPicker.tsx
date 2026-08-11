@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PORTION_OPTIONS, type MealParticipant } from './meals';
-import type { HouseholdMember } from '@platform/api/types';
+import type { HouseholdMember } from '@platform/households/household.types';
 import { IconClose } from './icons';
 
 // Inicjały domownika — na kaflu planera nie ma miejsca na pełne imiona.

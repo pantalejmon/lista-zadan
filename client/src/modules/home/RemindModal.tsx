@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getLists, addTodo } from '@platform/api/api';
-import type { TodoList } from '@platform/api/types';
+import { getLists } from '@platform/households/householdsApi';
+import { addTodo } from '@modules/tasks/tasksApi';
+import type { TodoList } from '@platform/households/household.types';
 import type { Maintenance } from './homeApi';
 
 interface RemindModalProps {

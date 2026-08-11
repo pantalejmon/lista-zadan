@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import type { TodoStorage } from '@platform/storage/storage';
+import type { TodoStorage } from '@modules/tasks/storage';
 
 export interface DayCounts {
   [date: string]: { total: number; completed: number };

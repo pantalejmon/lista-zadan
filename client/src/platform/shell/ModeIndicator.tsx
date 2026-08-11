@@ -1,4 +1,4 @@
-import type { StorageMode } from '@platform/storage/storage';
+import type { StorageMode } from '@platform/connection';
 
 interface ModeIndicatorProps {
   mode: StorageMode;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Household } from './types';
+import type { Household } from '@platform/households/household.types';
 import {
   getTokens,
   getScopes,

@@ -11,8 +11,10 @@ import {
   type ShoppingItem,
   type NeedItem,
 } from './meals';
-import { getLists, addTodo, updateTodo } from '@platform/api/api';
-import type { TodoList, ShoppingItem as TodoShoppingItem } from '@platform/api/types';
+import { getLists } from '@platform/households/householdsApi';
+import { addTodo, updateTodo } from '@modules/tasks/tasksApi';
+import type { TodoList } from '@platform/households/household.types';
+import type { ShoppingItem as TodoShoppingItem } from '@modules/tasks/todo.types';
 import { IconCalendar, IconCart, IconClose, IconCheck, IconChevronLeft, IconChevronRight } from './icons';
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { HouseholdInvitation } from '@platform/api/types';
+import type { HouseholdInvitation } from '@platform/households/household.types';
 import type { AuthUser } from '@platform/auth/useAuth';
 
 interface OnboardingProps {

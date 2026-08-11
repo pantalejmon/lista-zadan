@@ -1,9 +1,6 @@
-import { syncTodos, type SyncOperation } from '@platform/api/api';
-import {
-  getAllPendingOps,
-  clearPendingOps,
-  type SyncStatus,
-} from './offlineQueue';
+import { syncTodos, type SyncOperation } from './tasksApi';
+import { getAllPendingOps, clearPendingOps } from './offlineQueue';
+import type { SyncStatus } from '@platform/connection';
 
 type StatusCallback = (status: SyncStatus) => void;
 

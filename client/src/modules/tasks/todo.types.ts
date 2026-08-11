@@ -1,3 +1,6 @@
+// Typy Zadań: sam todo, pozycje listy zakupów i konfiguracja cykliczności.
+// Listy i gospodarstwa są osobną domeną — patrz `@platform/households/household.types`.
+
 export type RecurrenceType = 'daily' | 'weekly' | 'monthly';
 
 export type TodoKind = 'task' | 'shopping';
@@ -28,53 +31,6 @@ export interface RecurrenceConfig {
   type: RecurrenceType;
   dateFrom: string; // YYYY-MM-DD
   dateTo: string;   // YYYY-MM-DD
-}
-
-export type ListRole = 'owner' | 'editor' | 'viewer';
-
-export interface TodoList {
-  id: string;
-  name: string;
-  ownerId: string;
-  householdId: string;
-  householdName: string;
-  isDefault: boolean;
-  role: ListRole;
-  createdAt: number;
-}
-
-export interface Household {
-  id: string;
-  name: string;
-  role: ListRole;
-  createdAt: number;
-}
-
-export interface HouseholdMember {
-  id: string;
-  householdId: string;
-  userId: string;
-  email: string;
-  displayName: string;
-  role: ListRole;
-  joinedAt: number;
-}
-
-export interface ContactSuggestion {
-  userId: string;
-  email: string;
-  displayName: string;
-}
-
-export interface HouseholdInvitation {
-  id: string;
-  householdId: string;
-  householdName: string;
-  invitedByName: string;
-  invitedEmail: string;
-  role: ListRole;
-  status: 'pending' | 'accepted' | 'declined';
-  createdAt: number;
 }
 
 export function isShoppingComplete(items: ShoppingItem[] | null | undefined): boolean {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { HouseholdInvitation } from '@platform/api/types';
-import * as api from '@platform/api/api';
+import type { HouseholdInvitation } from './household.types';
+import * as api from './householdsApi';
 
 export function useInvitations(isCloud: boolean) {
   const [invitations, setInvitations] = useState<HouseholdInvitation[]>([]);

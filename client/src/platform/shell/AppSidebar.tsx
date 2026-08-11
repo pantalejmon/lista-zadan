@@ -4,9 +4,9 @@ import { HouseholdSwitcher } from '@platform/households/HouseholdSwitcher';
 import { IconBrandHome } from './AppIcons';
 import { type NavItem, type AppSection } from './navigation';
 import type { AuthUser } from '@platform/auth/useAuth';
-import type { Household } from '@platform/api/types';
+import type { Household } from '@platform/households/household.types';
 import type { WsStatus } from '@platform/realtime/useWebSocket';
-import type { SyncStatus } from '@platform/storage/offlineQueue';
+import type { SyncStatus } from '@platform/connection';
 
 export type { AppSection };
 

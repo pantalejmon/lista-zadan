@@ -23,8 +23,8 @@ doc in the same commit** — the docs are the source of truth for the intent beh
 
 - `docs/meals.md` — Posiłki module: pantry-aware shopping (`computeNeeds` + package rounding), loop closers
   (cooked → subtract from pantry, bought → add to pantry), and shopping-list export to a todo list. Cloud-only,
-  per household: the algorithms live **only** in `server/src/meal/domain/meal.service.ts`, and
-  `client/src/lib/meals.ts` holds just types, constants and presentation helpers.
+  per household: the algorithms live **only** in `server/src/modules/meal/domain/meal.service.ts`, and
+  `client/src/modules/meals/meals.ts` holds just types, constants and presentation helpers.
 - `docs/nutrition.md` — wartości odżywcze: jednostka odniesienia (100 g/ml vs 1 szt), zasada „komplet albo nic"
   dla kcal + makroskładników, i (docelowo) liczenie makro przepisu oraz bilansu domowników.
 - `docs/home-service.md` — Serwis domu module: home assets + cyclic maintenance, `nextDueAt` derivation
@@ -38,9 +38,9 @@ doc in the same commit** — the docs are the source of truth for the intent beh
   scopes, household binding, expiry), the `<module>:<read|write>` scope grammar with `write⇒read`, and the
   `MachineOrJwtAuthGuard` that accepts a session cookie OR a `Bearer lz_…` token and enforces `@RequireScopes`.
 - `docs/mcp-setup.md` — MCP server: JSON-RPC over Streamable HTTP at `POST /api/mcp`, OAuth **or**
-  bearer-token auth, the tool registry (`server/src/mcp/domain/tools/`), per-tool scope gating, and how
+  bearer-token auth, per-module tool files (`<module>/mcp/*.tools.ts`), per-tool scope gating, and how
   to connect an agent (Cowork). Tools reuse the domain services, so UI permissions apply unchanged.
-- `docs/mcp-oauth.md` — MCP OAuth 2.1 authorization server (`server/src/oauth/`): the app is both
+- `docs/mcp-oauth.md` — MCP OAuth 2.1 authorization server (`server/src/platform/oauth/`): the app is both
   Resource Server (`/api/mcp`) and Authorization Server. Dynamic client registration (RFC 7591), PKCE
   `S256` authorize/consent (reusing Google login), and a token endpoint that mints an ordinary `lz_…`
   machine token — so the MCP guard and scope gating are unchanged. Discovery docs live at
@@ -80,6 +80,41 @@ npm run preview -w client      # Preview production build
 - **Auth:** Passport.js with Google OAuth 2.0, JWT sessions
 - **Real-time:** Socket.io via `@nestjs/websockets`
 
+## Source Tree Layout
+
+Opening `server/src` or `client/src` must answer one question first: **what is this app about?** So the top
+level splits into exactly two things — the app's modules, and the infrastructure that serves them. Modules
+mirror the menu (`client/src/platform/shell/navigation.ts`): **Zadania, Posiłki, Serwis domu, Finanse, Czat**.
+
+```
+server/src/                           client/src/
+├── main.ts, app.module.ts            ├── App.tsx, main.tsx
+├── modules/                          ├── modules/     — components + hooks + api together, per module
+│   todo/ meal/ home/                 │   tasks/ meals/ home/ finance/ chat/
+│   finance/ chat/                    └── platform/
+└── platform/                             shell/ households/ api/
+    auth/ sharing/ api-token/              storage/ auth/ push/ realtime/
+    oauth/ mcp/ push/
+    config/ migration/ common/
+```
+
+- **Group by module, not by file kind.** A change to Posiłki belongs in one directory. Splitting a feature
+  across `components/`, `hooks/` and `lib/` means three directories per change and buries the domain.
+- **`platform/` is what every module uses** and what has no place in the menu: auth, households (`sharing`),
+  machine tokens, OAuth, the MCP protocol, push, storage/offline, config, migrations, shared helpers.
+- **Import across a module boundary via aliases** (`@modules/*`, `@platform/*`); imports **inside** a module
+  stay relative — `./todo.model` is clearer than a full alias when you are already in that directory, and such
+  paths survive the module being moved.
+
+**Enforced by ESLint, not by memory.** `@typescript-eslint/no-restricted-imports` fails the build when
+`platform/**` imports `@modules/*`, and when anything reaches another module's `infrastructure/` through an
+alias. Intra-module imports stay relative (`./infrastructure/…`), so the alias ban targets exactly the
+cross-module case. Try it: adding `import … from '@modules/finance/domain/finance.service'` to any file under
+`platform/` is a lint error.
+
+**Why `modules/`, not `domain/`:** server modules already have an inner `domain/` layer, so the path would
+read `domain/meal/domain/meal.service.ts` — the same word meaning two different things in one path.
+
 ## Architecture (Backend)
 
 The backend uses ports & adapters pattern **within NestJS modules**. Unlike Java where hexagonal layers live
@@ -91,7 +126,7 @@ dependency rule and code review, not from the build system.
 ### Layer structure per module
 
 ```
-src/
+src/modules/
 ├── todo/
 │   ├── domain/
 │   │   ├── todo.model.ts                 — domain model (plain class, no decorators)
@@ -174,6 +209,14 @@ Web depends on domain. The module file wires it all together via NestJS DI (`pro
 - **Repositories never leak outside their module**: if another module needs data, it imports the module and
   injects the public service, not the repository. Services that are used cross-module are exported from the
   module.
+- **A module owns every way into its domain**: REST controller, WebSocket gateway and **MCP tools** are all
+  entry points to the same logic, so they live in the module that owns that logic — `<module>/mcp/<module>.tools.ts`,
+  next to the service they wrap. Shared infrastructure (`mcp/`) keeps only the protocol: the `McpTool` contract,
+  JSON-RPC handling, scope gating and the registry that collects contributions. Nothing under `mcp/` may import
+  `todo/`, `meal/`, `home/`, `finance/` or `sharing/`; a new module with tools must not require touching `mcp/`.
+  Modules contribute their tools to `McpToolRegistry` from `onModuleInit`, so the dependency points from the
+  domain to the protocol and never back. NestJS has no `multi` providers (that is an Angular pattern), which
+  is why registration is a call rather than an injected array.
 - **No unnecessary abstractions**: don't create helpers, utilities, or abstractions for one-time operations.
   Three similar lines of code is better than a premature abstraction.
 - **Immutable where possible**: prefer `readonly` fields. Mutation happens through explicit methods, not
@@ -217,7 +260,7 @@ Web depends on domain. The module file wires it all together via NestJS DI (`pro
 
 ## Database Schema
 
-Schema is managed by **TypeORM migrations** (`server/src/migrations/`). TypeORM `synchronize` is **off** in
+Schema is managed by **TypeORM migrations** (`server/src/platform/migration/`). TypeORM `synchronize` is **off** in
 production — it does NOT generate DDL. When adding, removing, or altering entities or fields, you MUST create
 a new migration (`npm run migration:generate -- -n DescriptiveName`) with the corresponding schema changes.
 Without a migration, the app will fail on startup with a schema mismatch.
@@ -239,18 +282,18 @@ Without a migration, the app will fail on startup with a schema mismatch.
 
 ## MCP Tool Parity
 
-The app is fully controllable by agents through the MCP server (`server/src/mcp/`), and it must **stay** that
+The app is fully controllable by agents through the MCP server (`server/src/platform/mcp/`), and it must **stay** that
 way. The rule: **every user-facing capability has an equivalent MCP tool.** When you touch the API surface,
 update MCP in the *same commit*.
 
-- **New domain-service method / REST endpoint that exposes a capability** → add a matching tool in the right
-  `server/src/mcp/domain/tools/<module>.tools.ts` (todo, meal, home, household, finance). Read-only capability →
-  a `:read`-scoped tool; mutation → a `:write`-scoped tool. Reuse the domain service (never re-implement logic in
-  the tool) so permissions and validation apply unchanged.
-- **New module** → add a new `<module>.tools.ts`, a `finance`-style scope module in
-  `server/src/api-token/domain/api-scope.ts` (`SCOPE_MODULES` + the regex), a consent label in
-  `OAuthController`'s `SCOPE_LABELS` (the `Record<ApiScope, string>` type enforces this), and wire the builder into
-  `McpModule`.
+- **New domain-service method / REST endpoint that exposes a capability** → add a matching tool in that module's
+  own tool file (`<module>/mcp/<module>.tools.ts`). Read-only capability → a `:read`-scoped tool; mutation →
+  a `:write`-scoped tool. Reuse the domain service (never re-implement logic in the tool) so permissions and
+  validation apply unchanged.
+- **New module** → add the module's own tool file, import `McpRegistryModule` and register the tools from
+  `onModuleInit`, add a `finance`-style scope module in `server/src/platform/api-token/domain/api-scope.ts`
+  (`SCOPE_MODULES` + the regex), and a consent label in `OAuthController`'s `SCOPE_LABELS` (the
+  `Record<ApiScope, string>` type enforces this). **`McpModule` is not touched.**
 - **Changed method signature / DTO field** → update the tool's `inputSchema` and handler to match.
 - **Removed capability** → remove the corresponding tool.
 - Always update `docs/mcp-setup.md` (tool catalogue) and, for scope changes, `docs/api-tokens.md`.

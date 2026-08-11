@@ -20,7 +20,9 @@ export default defineConfig({
       // ma jedno źródło — waliduje go serwer, a UI renderuje dokładnie to, co
       // serwer przyjmie. To zwykłe stałe bez zależności; bundler je wkleja,
       // więc klient nie zyskuje żadnej zależności runtime od serwera.
-      '@shared': fileURLToPath(new URL('../server/src/common', import.meta.url)),
+      '@shared': fileURLToPath(new URL('../server/src/platform/common', import.meta.url)),
+      '@modules': fileURLToPath(new URL('./src/modules', import.meta.url)),
+      '@platform': fileURLToPath(new URL('./src/platform', import.meta.url)),
     },
   },
   server: {

@@ -1,10 +1,10 @@
-import { FinanceService } from '@modules/finance/domain/finance.service';
-import { CreateWalletDto } from '@modules/finance/web/dto/create-wallet.dto';
-import { CreateTransactionDto } from '@modules/finance/web/dto/create-transaction.dto';
-import { UpdateTransactionDto } from '@modules/finance/web/dto/update-transaction.dto';
-import { CreateRecurringDto } from '@modules/finance/web/dto/create-recurring.dto';
-import { FINANCE_CATEGORIES, RECURRENCE_FREQUENCIES, type RecurrenceFrequency } from '@modules/finance/domain/finance-category';
-import { McpTool, stringArg, requireStringArg, numberArg, requireNumberArg } from '../mcp-tool';
+import { FinanceService } from '../domain/finance.service';
+import { CreateWalletDto } from '../web/dto/create-wallet.dto';
+import { CreateTransactionDto } from '../web/dto/create-transaction.dto';
+import { UpdateTransactionDto } from '../web/dto/update-transaction.dto';
+import { CreateRecurringDto } from '../web/dto/create-recurring.dto';
+import { FINANCE_CATEGORIES, RECURRENCE_FREQUENCIES, type RecurrenceFrequency } from '../domain/finance-category';
+import { McpTool, stringArg, requireStringArg, numberArg, requireNumberArg } from '@platform/mcp/domain/mcp-tool';
 
 // Agent tools for the finance module (Finanse): wallets, transactions, recurring
 // rules and stats. Household-scoped like meals/home. Sign convention: dodatnia

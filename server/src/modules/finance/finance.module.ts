@@ -1,8 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '@platform/auth/auth.module';
 import { SharingModule } from '@platform/sharing/sharing.module';
 import { SharingService } from '@platform/sharing/domain/sharing.service';
+import { McpRegistryModule } from '@platform/mcp/mcp-registry.module';
+import { McpToolRegistry } from '@platform/mcp/domain/mcp-tool.registry';
+import { buildFinanceTools } from './mcp/finance.tools';
 import { WalletEntity } from './infrastructure/wallet.entity';
 import { TransactionEntity } from './infrastructure/transaction.entity';
 import { RecurringTransactionEntity } from './infrastructure/recurring-transaction.entity';
@@ -21,6 +24,7 @@ import { FinanceGateway } from './web/finance.gateway';
     TypeOrmModule.forFeature([WalletEntity, TransactionEntity, RecurringTransactionEntity]),
     AuthModule,
     SharingModule,
+    McpRegistryModule,
   ],
   controllers: [FinanceController],
   providers: [
@@ -48,4 +52,15 @@ import { FinanceGateway } from './web/finance.gateway';
   ],
   exports: [FinanceService],
 })
-export class FinanceModule {}
+export class FinanceModule implements OnModuleInit {
+  constructor(
+    private readonly registry: McpToolRegistry,
+    private readonly financeService: FinanceService,
+  ) {}
+
+  // Moduł sam wnosi swoje narzędzia MCP — sterowanie agentem to kolejne wejście
+  // do tej samej logiki, obok kontrolera REST i gatewaya, więc mieszka tutaj.
+  onModuleInit(): void {
+    this.registry.register(buildFinanceTools(this.financeService));
+  }
+}

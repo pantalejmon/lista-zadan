@@ -1,10 +1,10 @@
-import { HomeService } from '@modules/home/domain/home.service';
-import { CreateAssetDto } from '@modules/home/web/dto/create-asset.dto';
-import { CreateMaintenanceDto } from '@modules/home/web/dto/create-maintenance.dto';
-import { CompleteMaintenanceDto } from '@modules/home/web/dto/complete-maintenance.dto';
-import { CreateProviderDto } from '@modules/home/web/dto/create-provider.dto';
-import { CreateRenovationDto, ChecklistItemDto } from '@modules/home/web/dto/create-renovation.dto';
-import { McpTool, stringArg, requireStringArg, numberArg, boolArg } from '../mcp-tool';
+import { HomeService } from '../domain/home.service';
+import { CreateAssetDto } from '../web/dto/create-asset.dto';
+import { CreateMaintenanceDto } from '../web/dto/create-maintenance.dto';
+import { CompleteMaintenanceDto } from '../web/dto/complete-maintenance.dto';
+import { CreateProviderDto } from '../web/dto/create-provider.dto';
+import { CreateRenovationDto, ChecklistItemDto } from '../web/dto/create-renovation.dto';
+import { McpTool, stringArg, requireStringArg, numberArg, boolArg } from '@platform/mcp/domain/mcp-tool';
 
 // Agent tools for the home-service module (#46): assets and cyclic maintenance.
 export function buildHomeTools(homeService: HomeService): McpTool[] {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AuthModule } from '@platform/auth/auth.module';
@@ -13,8 +13,12 @@ import { SharingService } from '@platform/sharing/domain/sharing.service';
 import { UserRepositoryPort } from '@platform/auth/domain/user.repository.port';
 import { RateLimiterGuard } from './web/rate-limiter.guard';
 
+import { McpRegistryModule } from '@platform/mcp/mcp-registry.module';
+import { McpToolRegistry } from '@platform/mcp/domain/mcp-tool.registry';
+import { buildTodoTools } from './mcp/todo.tools';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([TodoEntity]), AuthModule, SharingModule],
+  imports: [TypeOrmModule.forFeature([TodoEntity]), AuthModule, SharingModule, McpRegistryModule],
   controllers: [TodoController],
   providers: [
     {
@@ -37,4 +41,16 @@ import { RateLimiterGuard } from './web/rate-limiter.guard';
   ],
   exports: [TodoService],
 })
-export class TodoModule {}
+export class TodoModule implements OnModuleInit {
+  constructor(
+    private readonly registry: McpToolRegistry,
+    private readonly todoService: TodoService,
+    private readonly sharingService: SharingService,
+  ) {}
+
+  // Moduł sam wnosi swoje narzędzia MCP — sterowanie agentem to kolejne
+  // wejście do tej samej logiki, obok kontrolera REST i gatewaya.
+  onModuleInit(): void {
+    this.registry.register(buildTodoTools(this.todoService, this.sharingService));
+  }
+}

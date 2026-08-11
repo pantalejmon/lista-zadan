@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '@platform/auth/auth.module';
 import { TodoListEntity } from './infrastructure/todo-list.entity';
@@ -18,6 +18,10 @@ import { SharingController, InvitationController } from './web/sharing.controlle
 import { HouseholdController, ContactsController } from './web/household.controller';
 import { AuthService } from '@platform/auth/domain/auth.service';
 
+import { McpRegistryModule } from '@platform/mcp/mcp-registry.module';
+import { McpToolRegistry } from '@platform/mcp/domain/mcp-tool.registry';
+import { buildHouseholdTools } from './mcp/household.tools';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -27,6 +31,7 @@ import { AuthService } from '@platform/auth/domain/auth.service';
       HouseholdInvitationEntity,
     ]),
     AuthModule,
+    McpRegistryModule,
   ],
   controllers: [SharingController, InvitationController, HouseholdController, ContactsController],
   providers: [
@@ -54,4 +59,15 @@ import { AuthService } from '@platform/auth/domain/auth.service';
   ],
   exports: [SharingService],
 })
-export class SharingModule {}
+export class SharingModule implements OnModuleInit {
+  constructor(
+    private readonly registry: McpToolRegistry,
+    private readonly sharingService: SharingService,
+  ) {}
+
+  // Moduł sam wnosi swoje narzędzia MCP — sterowanie agentem to kolejne
+  // wejście do tej samej logiki, obok kontrolera REST i gatewaya.
+  onModuleInit(): void {
+    this.registry.register(buildHouseholdTools(this.sharingService));
+  }
+}

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '@platform/auth/auth.module';
 import { SharingModule } from '@platform/sharing/sharing.module';
@@ -25,6 +25,13 @@ import { MealService } from './domain/meal.service';
 import { MealController } from './web/meal.controller';
 import { MealGateway } from './web/meal.gateway';
 
+import { TodoModule } from '@modules/todo/todo.module';
+import { TodoService } from '@modules/todo/domain/todo.service';
+import { McpRegistryModule } from '@platform/mcp/mcp-registry.module';
+import { McpToolRegistry } from '@platform/mcp/domain/mcp-tool.registry';
+import { buildMealTools } from './mcp/meal.tools';
+import { buildShoppingExportTools } from './mcp/shopping-export.tools';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -37,6 +44,8 @@ import { MealGateway } from './web/meal.gateway';
     ]),
     AuthModule,
     SharingModule,
+    McpRegistryModule,
+    TodoModule,
   ],
   controllers: [MealController],
   providers: [
@@ -83,4 +92,19 @@ import { MealGateway } from './web/meal.gateway';
   ],
   exports: [MealService],
 })
-export class MealModule {}
+export class MealModule implements OnModuleInit {
+  constructor(
+    private readonly registry: McpToolRegistry,
+    private readonly mealService: MealService,
+    private readonly todoService: TodoService,
+  ) {}
+
+  // Moduł sam wnosi swoje narzędzia MCP — sterowanie agentem to kolejne
+  // wejście do tej samej logiki, obok kontrolera REST i gatewaya.
+  onModuleInit(): void {
+    this.registry.register(buildMealTools(this.mealService));
+    // Eksport zakupów do listy zadań — Posiłki czytają swoje, a Zadania
+    // dostają gotowy wpis przez swój publiczny serwis.
+    this.registry.register(buildShoppingExportTools(this.mealService, this.todoService));
+  }
+}

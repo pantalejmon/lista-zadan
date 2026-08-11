@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '@platform/auth/auth.module';
 import { SharingModule } from '@platform/sharing/sharing.module';
@@ -19,11 +19,16 @@ import { HomeService } from './domain/home.service';
 import { HomeController } from './web/home.controller';
 import { HomeGateway } from './web/home.gateway';
 
+import { McpRegistryModule } from '@platform/mcp/mcp-registry.module';
+import { McpToolRegistry } from '@platform/mcp/domain/mcp-tool.registry';
+import { buildHomeTools } from './mcp/home.tools';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([HomeAssetEntity, MaintenanceEntity, ProviderEntity, RenovationEntity]),
     AuthModule,
     SharingModule,
+    McpRegistryModule,
   ],
   controllers: [HomeController],
   providers: [
@@ -54,4 +59,15 @@ import { HomeGateway } from './web/home.gateway';
   ],
   exports: [HomeService],
 })
-export class HomeModule {}
+export class HomeModule implements OnModuleInit {
+  constructor(
+    private readonly registry: McpToolRegistry,
+    private readonly homeService: HomeService,
+  ) {}
+
+  // Moduł sam wnosi swoje narzędzia MCP — sterowanie agentem to kolejne
+  // wejście do tej samej logiki, obok kontrolera REST i gatewaya.
+  onModuleInit(): void {
+    this.registry.register(buildHomeTools(this.homeService));
+  }
+}

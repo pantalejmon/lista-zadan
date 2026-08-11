@@ -1,6 +1,6 @@
-import { AuthService } from '@platform/auth/domain/auth.service';
-import { UpdateSettingsDto } from '@platform/auth/web/dto/update-settings.dto';
-import { McpTool, requireStringArg } from '../mcp-tool';
+import { AuthService } from '../domain/auth.service';
+import { UpdateSettingsDto } from '../web/dto/update-settings.dto';
+import { McpTool, requireStringArg } from '@platform/mcp/domain/mcp-tool';
 import { ACCENTS, FONT_SIZES, HIDEABLE_MODULES, THEMES } from '@platform/common/appearance';
 
 

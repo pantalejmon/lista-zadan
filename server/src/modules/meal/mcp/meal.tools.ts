@@ -1,17 +1,17 @@
-import { MealService } from '@modules/meal/domain/meal.service';
-import { CreateProductDto } from '@modules/meal/web/dto/create-product.dto';
-import { NutritionDto } from '@modules/meal/web/dto/nutrition.dto';
-import { MealParticipantDto } from '@modules/meal/web/dto/meal-participant.dto';
-import { AdjustEntryDto } from '@modules/meal/web/dto/adjust-entry.dto';
-import { IngredientOverrideDto } from '@modules/meal/web/dto/ingredient-override.dto';
-import { CustomMealDto } from '@modules/meal/web/dto/custom-meal.dto';
-import { SetNutritionGoalDto } from '@modules/meal/web/dto/set-nutrition-goal.dto';
-import { CreateRecipeDto } from '@modules/meal/web/dto/create-recipe.dto';
-import { RecipeIngredientDto } from '@modules/meal/web/dto/recipe-ingredient.dto';
-import { CreateEntryDto } from '@modules/meal/web/dto/create-entry.dto';
-import type { BaseUnit } from '@modules/meal/domain/product.model';
-import type { MealType } from '@modules/meal/domain/recipe-ingredient';
-import { McpTool, stringArg, requireStringArg, numberArg, requireNumberArg, boolArg } from '../mcp-tool';
+import { MealService } from '../domain/meal.service';
+import { CreateProductDto } from '../web/dto/create-product.dto';
+import { NutritionDto } from '../web/dto/nutrition.dto';
+import { MealParticipantDto } from '../web/dto/meal-participant.dto';
+import { AdjustEntryDto } from '../web/dto/adjust-entry.dto';
+import { IngredientOverrideDto } from '../web/dto/ingredient-override.dto';
+import { CustomMealDto } from '../web/dto/custom-meal.dto';
+import { SetNutritionGoalDto } from '../web/dto/set-nutrition-goal.dto';
+import { CreateRecipeDto } from '../web/dto/create-recipe.dto';
+import { RecipeIngredientDto } from '../web/dto/recipe-ingredient.dto';
+import { CreateEntryDto } from '../web/dto/create-entry.dto';
+import type { BaseUnit } from '../domain/product.model';
+import type { MealType } from '../domain/recipe-ingredient';
+import { McpTool, stringArg, requireStringArg, numberArg, requireNumberArg, boolArg } from '@platform/mcp/domain/mcp-tool';
 
 function currentMonday(): string {
   const d = new Date();

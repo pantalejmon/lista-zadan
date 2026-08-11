@@ -1,6 +1,7 @@
 import { ApiToken } from '@platform/api-token/domain/api-token.model';
 import { scopeSatisfied } from '@platform/api-token/domain/api-scope';
 import { McpTool, ToolContext } from './mcp-tool';
+import { McpToolRegistry } from './mcp-tool.registry';
 
 const PROTOCOL_VERSION = '2024-11-05';
 const SERVER_INFO = { name: 'lista-zadan', version: '1.0.0' };
@@ -30,7 +31,7 @@ export interface McpCaller {
 // Handles initialize / tools/list / tools/call / ping. Tools are gated by the
 // caller's token scopes; interactive (cookie) callers see every tool.
 export class McpService {
-  constructor(private readonly tools: McpTool[]) {}
+  constructor(private readonly registry: McpToolRegistry) {}
 
   // Returns the JSON-RPC response, or null for notifications (no id).
   async handle(request: JsonRpcRequest, caller: McpCaller): Promise<JsonRpcResponse | null> {
@@ -70,7 +71,7 @@ export class McpService {
     caller: McpCaller,
   ): Promise<JsonRpcResponse> {
     const name = typeof params.name === 'string' ? params.name : '';
-    const tool = this.tools.find((t) => t.name === name);
+    const tool = this.registry.all().find((t) => t.name === name);
     if (!tool) {
       return this.err(id, -32602, `Unknown tool: ${name}`);
     }
@@ -116,7 +117,7 @@ export class McpService {
   }
 
   private visibleTools(caller: McpCaller): McpTool[] {
-    return this.tools.filter((t) => this.missingScopes(caller, t).length === 0);
+    return this.registry.all().filter((t) => this.missingScopes(caller, t).length === 0);
   }
 
   // Scopes the tool requires that the caller's token does not satisfy. Empty for

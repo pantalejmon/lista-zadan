@@ -1,11 +1,11 @@
 import { randomUUID } from 'crypto';
-import { TodoService } from '@modules/todo/domain/todo.service';
+import { TodoService } from '../domain/todo.service';
 import { SharingService } from '@platform/sharing/domain/sharing.service';
-import { CreateTodoDto } from '@modules/todo/web/dto/create-todo.dto';
-import { UpdateTodoDto } from '@modules/todo/web/dto/update-todo.dto';
-import { CreateRecurringTodosDto } from '@modules/todo/web/dto/create-recurring-todos.dto';
-import { ShoppingItemDto } from '@modules/todo/web/dto/shopping-item.dto';
-import { McpTool, requireStringArg, stringArg, boolArg } from '../mcp-tool';
+import { CreateTodoDto } from '../web/dto/create-todo.dto';
+import { UpdateTodoDto } from '../web/dto/update-todo.dto';
+import { CreateRecurringTodosDto } from '../web/dto/create-recurring-todos.dto';
+import { ShoppingItemDto } from '../web/dto/shopping-item.dto';
+import { McpTool, requireStringArg, stringArg, boolArg } from '@platform/mcp/domain/mcp-tool';
 
 // Pozycje listy zakupów agent podaje jako zwykłe napisy — id i kolejność to
 // szczegół modelu, którym nie ma po co go obarczać.

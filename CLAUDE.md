@@ -80,6 +80,36 @@ npm run preview -w client      # Preview production build
 - **Auth:** Passport.js with Google OAuth 2.0, JWT sessions
 - **Real-time:** Socket.io via `@nestjs/websockets`
 
+## Source Tree Layout
+
+Opening `server/src` or `client/src` must answer one question first: **what is this app about?** So the top
+level splits into exactly two things — the app's domains, and the infrastructure that serves them. Domains
+mirror the menu (`client/src/lib/navigation.ts`): **Zadania, Posiłki, Serwis domu, Finanse, Czat**.
+
+```
+server/src/                          client/src/
+├── main.ts, app.module.ts           ├── App.tsx, main.tsx
+├── domain/                          ├── domain/          — components + hooks + api together, per domain
+│   todo/ meal/ home/                │   tasks/ meals/ home/ finance/ chat/
+│   finance/ chat/                   └── platform/
+└── platform/                            shell/ storage/ auth/ push/ settings/ realtime/
+    auth/ sharing/ api-token/
+    oauth/ mcp/ push/
+    config/ migration/ common/
+```
+
+- **Group by domain, not by file kind.** A change to Posiłki belongs in one directory. Splitting a feature
+  across `components/`, `hooks/` and `lib/` means three directories per change and buries the domain.
+- **`platform/` is what every domain uses** and what has no place in the menu: auth, households (`sharing`),
+  machine tokens, OAuth, the MCP protocol, push, config, migrations, shared helpers.
+- **Import via path aliases** (`@domain/*`, `@platform/*`), not `../../../`.
+
+⚠️ **Not true yet.** Today both trees are flat and alphabetical — `meal/` sits next to `mcp/` and
+`migration/`; 24 loose components in `client/src/components` mix Zadania and Czat with the app shell. The
+reorganisation is tracked in [#115](https://github.com/pantalejmon/lista-zadan/issues/115). Until it lands,
+put new code where the rule says **if that directory already exists**, and otherwise follow the local
+convention rather than creating a half-migrated third layout.
+
 ## Architecture (Backend)
 
 The backend uses ports & adapters pattern **within NestJS modules**. Unlike Java where hexagonal layers live
@@ -179,9 +209,9 @@ Web depends on domain. The module file wires it all together via NestJS DI (`pro
   next to the service they wrap. Shared infrastructure (`mcp/`) keeps only the protocol: the `McpTool` contract,
   JSON-RPC handling, scope gating and the registry that collects contributions. Nothing under `mcp/` may import
   `todo/`, `meal/`, `home/`, `finance/` or `sharing/`; a new module with tools must not require touching `mcp/`.
-  ⚠️ **Not true yet** — tools currently sit in `server/src/mcp/domain/tools/`; the move is tracked in
-  [#115](https://github.com/pantalejmon/lista-zadan/issues/115). Write new tools where the rule says, or extend
-  the existing file if the move hasn't happened yet — but don't deepen the coupling.
+  ⚠️ **Not true yet** — tools currently sit in `server/src/mcp/domain/tools/`; the move is part of the tree
+  reorganisation in [#115](https://github.com/pantalejmon/lista-zadan/issues/115). Write new tools where the
+  rule says, or extend the existing file if the move hasn't happened yet — but don't deepen the coupling.
 - **No unnecessary abstractions**: don't create helpers, utilities, or abstractions for one-time operations.
   Three similar lines of code is better than a premature abstraction.
 - **Immutable where possible**: prefer `readonly` fields. Mutation happens through explicit methods, not

@@ -12,7 +12,9 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../server/src/common/*"]
+      "@shared/*": ["../server/src/platform/common/*"],
+      "@modules/*": ["src/modules/*"],
+      "@platform/*": ["src/platform/*"]
     },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,

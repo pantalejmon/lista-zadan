@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import * as db from '@platform/storage/db';
-import type { TodoStorage } from '@platform/storage/storage';
+import * as db from '@modules/tasks/db';
+import type { TodoStorage } from '@modules/tasks/storage';
 
 const MIGRATED_KEY = 'todos-migrated-to-cloud';
 

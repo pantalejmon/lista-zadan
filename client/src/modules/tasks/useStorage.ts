@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { getStorage, type TodoStorage, type StorageMode } from './storage';
+import { getStorage, type TodoStorage } from './storage';
+import type { StorageMode } from '@platform/connection';
 import type { AuthUser } from '@platform/auth/useAuth';
 
 const MODE_KEY = 'storage-mode';

@@ -1,4 +1,4 @@
-import type { HouseholdInvitation } from '@platform/api/types';
+import type { HouseholdInvitation } from './household.types';
 
 interface InvitationBannerProps {
   invitations: HouseholdInvitation[];

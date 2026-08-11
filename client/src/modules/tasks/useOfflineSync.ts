@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getPendingCount, type SyncStatus } from './offlineQueue';
+import { getPendingCount } from './offlineQueue';
+import type { SyncStatus } from '@platform/connection';
 import { syncPendingOps } from './syncService';
 
 interface UseOfflineSyncOptions {

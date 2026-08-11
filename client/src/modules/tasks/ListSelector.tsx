@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { TodoList } from '@platform/api/types';
+import type { TodoList } from '@platform/households/household.types';
 
 interface ListSelectorProps {
   // Lists of the active household only — household is switched globally in the sidebar.

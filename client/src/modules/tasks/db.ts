@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb';
-import type { Todo, RecurrenceConfig } from '@platform/api/types';
+import type { Todo, RecurrenceConfig } from './todo.types';
 import {
   eachDayOfInterval,
   eachWeekOfInterval,

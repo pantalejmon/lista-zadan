@@ -1,7 +1,8 @@
-import type { Todo, RecurrenceConfig } from '@platform/api/types';
+import type { Todo, RecurrenceConfig } from '@modules/tasks/todo.types';
 import * as db from './db';
-import * as api from '@platform/api/api';
-import { enqueueOperation, isOnline } from './offlineQueue';
+import * as api from './tasksApi';
+import { enqueueOperation } from './offlineQueue';
+import { isOnline, type StorageMode } from '@platform/connection';
 
 export interface TodoStorage {
   getTodosByDate(date: string, listId?: string): Promise<Todo[]>;
@@ -14,8 +15,6 @@ export interface TodoStorage {
   addRecurringTodos(text: string, time: string | undefined, config: RecurrenceConfig, listId?: string): Promise<void>;
   getDatesWithTodos(listId?: string): Promise<Set<string>>;
 }
-
-export type StorageMode = 'local' | 'cloud';
 
 const localStorage: TodoStorage = {
   getTodosByDate: db.getTodosByDate,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Todo, RecurrenceConfig } from '@platform/api/types';
-import type { TodoStorage } from '@platform/storage/storage';
+import type { Todo, RecurrenceConfig } from '@modules/tasks/todo.types';
+import type { TodoStorage } from '@modules/tasks/storage';
 
 function generateId(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;

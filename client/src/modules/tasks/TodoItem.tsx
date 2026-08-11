@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Todo } from '@platform/api/types';
+import type { Todo } from './todo.types';
 
 interface TodoItemProps {
   todo: Todo;

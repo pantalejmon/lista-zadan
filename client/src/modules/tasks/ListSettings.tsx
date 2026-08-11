@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { TodoList, Household } from '@platform/api/types';
+import type { TodoList, Household } from '@platform/households/household.types';
 
 interface ListSettingsProps {
   list: TodoList;

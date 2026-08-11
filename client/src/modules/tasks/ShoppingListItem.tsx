@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Todo, ShoppingItem } from '@platform/api/types';
-import { isShoppingComplete, shoppingProgress } from '@platform/api/types';
+import type { Todo, ShoppingItem } from './todo.types';
+import { isShoppingComplete, shoppingProgress } from './todo.types';
 
 interface ShoppingListItemProps {
   todo: Todo;

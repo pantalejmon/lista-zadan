@@ -7,7 +7,7 @@ import { TodoItem } from '@modules/tasks/TodoItem';
 import { ShoppingListItem } from '@modules/tasks/ShoppingListItem';
 import { AddTodo } from '@modules/tasks/AddTodo';
 import { AllTodosView } from '@modules/tasks/AllTodosView';
-import { MigrationBanner } from '@platform/shell/MigrationBanner';
+import { MigrationBanner } from '@modules/tasks/MigrationBanner';
 import { ListSelector } from '@modules/tasks/ListSelector';
 import { ListSettings } from '@modules/tasks/ListSettings';
 import { HouseholdSettings } from '@platform/households/HouseholdSettings';
@@ -19,7 +19,8 @@ import { AppSidebar } from '@platform/shell/AppSidebar';
 import { NAV_ITEMS, visibleNavItems, type AppSection } from '@platform/shell/navigation';
 import { SectionTabs, type SectionTab } from '@platform/shell/SectionTabs';
 import { Onboarding } from '@platform/shell/Onboarding';
-import { setupHousehold, updateUserSettings } from '@platform/api/api';
+import { setupHousehold } from '@platform/households/householdsApi';
+import { updateUserSettings } from '@platform/auth/userApi';
 import { MealsSection } from '@modules/meals/MealsSection';
 import { HomeSection } from '@modules/home/HomeSection';
 import { FinanceSection } from '@modules/finance/FinanceSection';
@@ -28,13 +29,13 @@ import { useTodos } from '@modules/tasks/useTodos';
 import { useSettings } from '@platform/shell/useSettings';
 import { useTodoCounts } from '@modules/tasks/useTodoCounts';
 import { useAuth } from '@platform/auth/useAuth';
-import { useStorage } from '@platform/storage/useStorage';
+import { useStorage } from '@modules/tasks/useStorage';
 import { useLists } from '@modules/tasks/useLists';
 import { useHouseholds } from '@platform/households/useHouseholds';
 import { useInvitations } from '@platform/households/useInvitations';
 import { useWebSocket } from '@platform/realtime/useWebSocket';
 import { useChatNotifications } from '@modules/chat/useChatNotifications';
-import { useOfflineSync } from '@platform/storage/useOfflineSync';
+import { useOfflineSync } from '@modules/tasks/useOfflineSync';
 import { useMealStorage } from '@modules/meals/useMealStorage';
 import { useMealHousehold } from '@modules/meals/useMealHousehold';
 
@@ -328,7 +329,7 @@ export default function App() {
     triggerRefresh();
   };
 
-  const handleUpdateFull = async (updated: import('@platform/api/types').Todo) => {
+  const handleUpdateFull = async (updated: import('@modules/tasks/todo.types').Todo) => {
     await updateFull(updated);
     triggerRefresh();
   };

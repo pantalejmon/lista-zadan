@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Household } from '@platform/api/types';
+import type { Household } from '@platform/households/household.types';
 
 const STORAGE_KEY = 'lista-zadan:mealHouseholdId';
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Household, HouseholdMember, ContactSuggestion, ListRole } from '@platform/api/types';
-import * as api from '@platform/api/api';
+import type { Household, HouseholdMember, ContactSuggestion, ListRole } from './household.types';
+import * as api from './householdsApi';
 
 interface HouseholdSettingsProps {
   household: Household;

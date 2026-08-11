@@ -1,7 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb';
-import type { Todo } from '@platform/api/types';
-
-export type SyncStatus = 'idle' | 'syncing' | 'error';
+import type { Todo } from '@modules/tasks/todo.types';
 
 export type OfflineOperation =
   | { type: 'create'; todo: Todo; listId: string; timestamp: number }
@@ -50,6 +48,3 @@ export async function getPendingCount(): Promise<number> {
   return db.count(STORE);
 }
 
-export function isOnline(): boolean {
-  return navigator.onLine;
-}

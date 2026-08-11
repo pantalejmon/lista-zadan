@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, addMonths } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import type { Todo } from '@platform/api/types';
-import type { TodoStorage } from '@platform/storage/storage';
+import type { Todo } from './todo.types';
+import type { TodoStorage } from '@modules/tasks/storage';
 import { TodoItem } from './TodoItem';
 import { ShoppingListItem } from './ShoppingListItem';
 

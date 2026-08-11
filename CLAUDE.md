@@ -174,6 +174,14 @@ Web depends on domain. The module file wires it all together via NestJS DI (`pro
 - **Repositories never leak outside their module**: if another module needs data, it imports the module and
   injects the public service, not the repository. Services that are used cross-module are exported from the
   module.
+- **A module owns every way into its domain**: REST controller, WebSocket gateway and **MCP tools** are all
+  entry points to the same logic, so they live in the module that owns that logic — `<module>/mcp/<module>.tools.ts`,
+  next to the service they wrap. Shared infrastructure (`mcp/`) keeps only the protocol: the `McpTool` contract,
+  JSON-RPC handling, scope gating and the registry that collects contributions. Nothing under `mcp/` may import
+  `todo/`, `meal/`, `home/`, `finance/` or `sharing/`; a new module with tools must not require touching `mcp/`.
+  ⚠️ **Not true yet** — tools currently sit in `server/src/mcp/domain/tools/`; the move is tracked in
+  [#115](https://github.com/pantalejmon/lista-zadan/issues/115). Write new tools where the rule says, or extend
+  the existing file if the move hasn't happened yet — but don't deepen the coupling.
 - **No unnecessary abstractions**: don't create helpers, utilities, or abstractions for one-time operations.
   Three similar lines of code is better than a premature abstraction.
 - **Immutable where possible**: prefer `readonly` fields. Mutation happens through explicit methods, not
@@ -243,14 +251,15 @@ The app is fully controllable by agents through the MCP server (`server/src/mcp/
 way. The rule: **every user-facing capability has an equivalent MCP tool.** When you touch the API surface,
 update MCP in the *same commit*.
 
-- **New domain-service method / REST endpoint that exposes a capability** → add a matching tool in the right
-  `server/src/mcp/domain/tools/<module>.tools.ts` (todo, meal, home, household, finance). Read-only capability →
-  a `:read`-scoped tool; mutation → a `:write`-scoped tool. Reuse the domain service (never re-implement logic in
-  the tool) so permissions and validation apply unchanged.
-- **New module** → add a new `<module>.tools.ts`, a `finance`-style scope module in
-  `server/src/api-token/domain/api-scope.ts` (`SCOPE_MODULES` + the regex), a consent label in
-  `OAuthController`'s `SCOPE_LABELS` (the `Record<ApiScope, string>` type enforces this), and wire the builder into
-  `McpModule`.
+- **New domain-service method / REST endpoint that exposes a capability** → add a matching tool in that module's
+  own tool file (`<module>/mcp/<module>.tools.ts` — see the ownership rule above; until #115 lands, the existing
+  `server/src/mcp/domain/tools/<module>.tools.ts`). Read-only capability → a `:read`-scoped tool; mutation →
+  a `:write`-scoped tool. Reuse the domain service (never re-implement logic in the tool) so permissions and
+  validation apply unchanged.
+- **New module** → add the module's own tool file, a `finance`-style scope module in
+  `server/src/api-token/domain/api-scope.ts` (`SCOPE_MODULES` + the regex), and a consent label in
+  `OAuthController`'s `SCOPE_LABELS` (the `Record<ApiScope, string>` type enforces this). The module registers its
+  own tools; only until #115 lands does this also mean wiring the builder into `McpModule`.
 - **Changed method signature / DTO field** → update the tool's `inputSchema` and handler to match.
 - **Removed capability** → remove the corresponding tool.
 - Always update `docs/mcp-setup.md` (tool catalogue) and, for scope changes, `docs/api-tokens.md`.

@@ -17,6 +17,7 @@ import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
 import { CreateRecurringTodosDto } from './dto/create-recurring-todos.dto';
 import { SyncTodosDto } from './dto/sync-todos.dto';
+import { SyncOperationResultResponse } from './dto/sync-result.response';
 import { TodoResponse } from './dto/todo.response';
 import { JwtAuthGuard } from '@platform/auth/web/jwt-auth.guard';
 import { User } from '@platform/auth/domain/user.model';
@@ -86,7 +87,7 @@ export class TodoController {
   }
 
   @Post('sync')
-  async sync(@Req() req: Request, @Body() dto: SyncTodosDto): Promise<TodoResponse[]> {
+  async sync(@Req() req: Request, @Body() dto: SyncTodosDto): Promise<SyncOperationResultResponse[]> {
     const userId = (req.user as User).id;
     return this.todoService.syncOperations(dto.operations, userId);
   }

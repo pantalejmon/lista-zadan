@@ -90,8 +90,16 @@ export interface SyncOperation {
   timestamp: number;
 }
 
-export async function syncTodos(operations: SyncOperation[]): Promise<Todo[]> {
-  return request<Todo[]>('/todos/sync', {
+// Wynik **per operacja**, w kolejności wysłania. Batch nie jest transakcją:
+// serwer nie przewraca całej paczki przez jedną zepsutą zmianę (#119).
+export interface SyncOperationResult {
+  status: 'applied' | 'rejected' | 'failed';
+  todo?: Todo;
+  reason?: string;
+}
+
+export async function syncTodos(operations: SyncOperation[]): Promise<SyncOperationResult[]> {
+  return request<SyncOperationResult[]>('/todos/sync', {
     method: 'POST',
     body: JSON.stringify({ operations }),
   });

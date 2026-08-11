@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   eachDayOfInterval,
@@ -15,6 +15,7 @@ import { CreateTodoDto } from '../web/dto/create-todo.dto';
 import { UpdateTodoDto } from '../web/dto/update-todo.dto';
 import { CreateRecurringTodosDto } from '../web/dto/create-recurring-todos.dto';
 import { SyncOperationDto } from '../web/dto/sync-todos.dto';
+import { SyncOperationResultResponse } from '../web/dto/sync-result.response';
 import { TodoResponse } from '../web/dto/todo.response';
 import { SharingService } from '@platform/sharing/domain/sharing.service';
 import { UserRepositoryPort } from '@platform/auth/domain/user.repository.port';
@@ -25,6 +26,21 @@ function todoStorageBytes(todo: Todo): number {
     ? todo.items.reduce((sum, i) => sum + Buffer.byteLength(i.text, 'utf8') + 80, 0)
     : 0;
   return Buffer.byteLength(todo.text, 'utf8') + 200 + itemsBytes;
+}
+
+// Powód odrzucenia trafia wprost do UI, więc jest po polsku i mówi o tym, co
+// użytkownik może z tym zrobić, a nie o kodzie HTTP.
+function rejectionReason(status: number): string {
+  if (status === 403) {
+    return 'Brak dostępu do listy — mogła zostać usunięta albo straciłeś do niej uprawnienia.';
+  }
+  if (status === 404) {
+    return 'Lista już nie istnieje.';
+  }
+  if (status === 413) {
+    return 'Przekroczony limit miejsca.';
+  }
+  return 'Zmiany nie da się zapisać.';
 }
 
 // Powiadomienia WebSocket wychodzą **z serwisu**, nie z kontrolera: każda ścieżka
@@ -151,13 +167,52 @@ export class TodoService {
     }
   }
 
-  async syncOperations(operations: SyncOperationDto[], userId: string): Promise<TodoResponse[]> {
-    const results: TodoResponse[] = [];
+  // Batch **nie jest transakcją**: każda operacja dostaje własny wynik, a błąd
+  // jednej nie przewraca pozostałych. Wcześniej pierwszy wyjątek wywalał całe
+  // żądanie, a klient — który czyści kolejkę dopiero po pełnym sukcesie —
+  // wysyłał tę samą, na zawsze niesynchronizowalną paczkę co 2 sekundy.
+  async syncOperations(
+    operations: SyncOperationDto[],
+    userId: string,
+  ): Promise<SyncOperationResultResponse[]> {
+    const results: SyncOperationResultResponse[] = [];
 
     for (const op of operations) {
-      const listId = op.todo.listId;
-      await this.sharingService.assertPermission(listId, userId, ['owner', 'editor']);
+      try {
+        const todo = await this.applyOperation(op, userId);
+        results.push(todo ? { status: 'applied', todo } : { status: 'applied' });
+      } catch (error) {
+        results.push(this.classifyFailure(error));
+      }
+    }
 
+    return results;
+  }
+
+  // Odrzucenie trwałe (4xx — nie ma listy, brak uprawnień, limit) vs przejściowe
+  // (reszta — baza, sieć). Klient usuwa z kolejki tylko to pierwsze; drugie
+  // ponawia, więc awaria bazy nie kasuje niczyich zmian.
+  private classifyFailure(error: unknown): SyncOperationResultResponse {
+    if (error instanceof HttpException) {
+      const status = error.getStatus();
+      if (status >= 400 && status < 500) {
+        return { status: 'rejected', reason: rejectionReason(status) };
+      }
+    }
+    return { status: 'failed', reason: 'Błąd serwera — spróbujemy ponownie.' };
+  }
+
+  private async applyOperation(op: SyncOperationDto, userId: string): Promise<TodoResponse | undefined> {
+    const listId = op.todo.listId;
+    // Walidacja `listId` musi być **per operacja**, nie na całym żądaniu:
+    // pusty identyfikator to jedna zepsuta zmiana, a nie powód, żeby odrzucić
+    // paczkę wszystkich pozostałych.
+    if (!listId) {
+      throw new BadRequestException('Operacja bez listy');
+    }
+    await this.sharingService.assertPermission(listId, userId, ['owner', 'editor']);
+
+    {
       switch (op.type) {
         case 'create': {
           const existing = await this.repository.findById(op.todo.id);
@@ -181,9 +236,9 @@ export class TodoService {
             await this.assertQuota(userId, bytes);
             await this.repository.save(todo);
             await this.userRepository.addStorageUsed(userId, bytes);
-            results.push(todo.toResponse());
+            return todo.toResponse();
           } else {
-            results.push(existing.toResponse());
+            return existing.toResponse();
           }
           break;
         }
@@ -217,10 +272,10 @@ export class TodoService {
               if (delta !== 0) {
                 await this.userRepository.addStorageUsed(userId, delta);
               }
-              results.push(updated.toResponse());
+              return updated.toResponse();
             } else {
               // Server version is newer — return server state
-              results.push(existing.toResponse());
+              return existing.toResponse();
             }
           }
           break;
@@ -237,7 +292,7 @@ export class TodoService {
       }
     }
 
-    return results;
+    return undefined;
   }
 
   async getUnassigned(listId: string, userId: string): Promise<TodoResponse[]> {

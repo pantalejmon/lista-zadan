@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getPendingCount } from './offlineQueue';
-import type { SyncStatus } from '@platform/connection';
+import { getPendingCount, clearPendingOps } from './offlineQueue';
+import type { SyncStatus, RejectedChange } from '@platform/connection';
 import { syncPendingOps } from './syncService';
 
 interface UseOfflineSyncOptions {
@@ -8,11 +8,19 @@ interface UseOfflineSyncOptions {
   onSynced: () => void;
 }
 
+// Odstęp między próbami rośnie po każdej nieudanej: 2 s, 4 s, 8 s… do minuty.
+// Stałe 2 s oznaczało żądanie co dwie sekundy w nieskończoność, gdy kolejka była
+// zablokowana — na baterii telefonu i na serwerze (#119).
+const FIRST_RETRY_MS = 2000;
+const MAX_RETRY_MS = 60000;
+
 export function useOfflineSync({ enabled, onSynced }: UseOfflineSyncOptions) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [pendingCount, setPendingCount] = useState(0);
+  const [rejected, setRejected] = useState<RejectedChange[]>([]);
   const [online, setOnline] = useState(navigator.onLine);
   const onSyncedRef = useRef(onSynced);
+  const delayRef = useRef(FIRST_RETRY_MS);
   useEffect(() => {
     onSyncedRef.current = onSynced;
   }, [onSynced]);
@@ -34,65 +42,71 @@ export function useOfflineSync({ enabled, onSynced }: UseOfflineSyncOptions) {
     };
   }, [enabled]);
 
-  const refreshPendingCount = useCallback(async () => {
-    if (!enabled) {
-      return;
-    }
+  // Ostatnia deska ratunku: wyrzuć kolejkę i przestań próbować. Bez tego jedynym
+  // wyjściem z zablokowanej synchronizacji było ręczne czyszczenie danych
+  // witryny — IndexedDB przeżywa nawet przeinstalowanie PWA, więc użytkownik
+  // nie miał żadnego sposobu, żeby sobie pomóc.
+  const discardPending = useCallback(async () => {
+    await clearPendingOps();
+    setPendingCount(0);
+    setRejected([]);
+    setSyncStatus('idle');
+    delayRef.current = FIRST_RETRY_MS;
+  }, []);
+
+  const dismissRejected = useCallback(() => {
+    setRejected([]);
+    setSyncStatus('idle');
+  }, []);
+
+  // Jedna próba synchronizacji: aktualizuje licznik, status i listę odrzuconych.
+  const attempt = useCallback(async () => {
     const count = await getPendingCount();
     setPendingCount(count);
-    // Nothing left to sync → a lingering 'error' is stale (the ops already
-    // reached the server). Clear it so the UI stops showing "Błąd synchronizacji"
-    // forever after the queue has actually drained.
     if (count === 0) {
+      // Kolejka pusta → ewentualny stary błąd jest nieaktualny.
       setSyncStatus((prev) => (prev === 'error' ? 'idle' : prev));
+      delayRef.current = FIRST_RETRY_MS;
+      return;
     }
-  }, [enabled]);
-
-  // Sync when coming back online
-  useEffect(() => {
-    if (!enabled || !online) {
+    if (!navigator.onLine) {
       return;
     }
 
-    const doSync = async () => {
-      const count = await getPendingCount();
-      if (count === 0) {
-        setSyncStatus((prev) => (prev === 'error' ? 'idle' : prev));
-        return;
-      }
-      await syncPendingOps(setSyncStatus);
-      await refreshPendingCount();
-      onSyncedRef.current();
-    };
+    const justRejected = await syncPendingOps(setSyncStatus);
+    if (justRejected.length > 0) {
+      setRejected((prev) => [...prev, ...justRejected]);
+    }
 
-    doSync();
-  }, [enabled, online, refreshPendingCount]);
+    const left = await getPendingCount();
+    setPendingCount(left);
+    // Kolejka drgnęła → problem był przejściowy, wracamy do krótkiego odstępu.
+    delayRef.current = left < count ? FIRST_RETRY_MS : Math.min(delayRef.current * 2, MAX_RETRY_MS);
+    onSyncedRef.current();
+  }, []);
 
-  // Steady-state loop: refresh the pending count and retry queued ops every few
-  // seconds. Retrying here means a transient failure self-heals instead of
-  // freezing the status on 'error' until a reload — the queue drains, the count
-  // hits zero, and refreshPendingCount clears the stale error.
   useEffect(() => {
     if (!enabled) {
       return;
     }
-    const tick = async () => {
-      const count = await getPendingCount();
-      setPendingCount(count);
-      if (count === 0) {
-        setSyncStatus((prev) => (prev === 'error' ? 'idle' : prev));
-        return;
-      }
-      if (navigator.onLine) {
-        await syncPendingOps(setSyncStatus);
-        await refreshPendingCount();
-        onSyncedRef.current();
+    let timer: ReturnType<typeof setTimeout>;
+    let stopped = false;
+
+    const loop = async () => {
+      await attempt();
+      if (!stopped) {
+        timer = setTimeout(loop, delayRef.current);
       }
     };
-    tick();
-    const interval = setInterval(tick, 2000);
-    return () => clearInterval(interval);
-  }, [enabled, refreshPendingCount]);
+    loop();
 
-  return { syncStatus, pendingCount, online };
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+    // `online` w zależnościach: powrót sieci ma od razu wywołać próbę,
+    // zamiast czekać na wygaśnięcie odstępu.
+  }, [enabled, online, attempt]);
+
+  return { syncStatus, pendingCount, rejected, online, discardPending, dismissRejected };
 }

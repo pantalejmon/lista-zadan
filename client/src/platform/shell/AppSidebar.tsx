@@ -6,7 +6,7 @@ import { type NavItem, type AppSection } from './navigation';
 import type { AuthUser } from '@platform/auth/useAuth';
 import type { Household } from '@platform/households/household.types';
 import type { WsStatus } from '@platform/realtime/useWebSocket';
-import type { SyncStatus } from '@platform/connection';
+import type { SyncStatus, RejectedChange } from '@platform/connection';
 
 export type { AppSection };
 
@@ -32,6 +32,9 @@ interface AppSidebarProps {
   wsStatus: WsStatus;
   syncStatus: SyncStatus;
   pendingCount: number;
+  rejectedChanges: RejectedChange[];
+  onDiscardPending: () => void;
+  onDismissRejected: () => void;
   isCloud: boolean;
   // Sekcje po filtrach (tryb lokalny + moduły ukryte w ustawieniach).
   navItems: NavItem[];
@@ -86,6 +89,9 @@ function SidebarContent({
   wsStatus,
   syncStatus,
   pendingCount,
+  rejectedChanges,
+  onDiscardPending,
+  onDismissRejected,
   isCloud,
   navItems,
   onOpenTokens,
@@ -199,6 +205,45 @@ function SidebarContent({
             <span className={`w-2 h-2 rounded-full ${status.color.replace('text-', 'bg-')} ${status.pulse ? 'animate-pulse' : ''}`} />
             <span className={`text-xs font-medium ${status.color}`}>{status.text}</span>
           </div>
+
+          {/* Zmiany, których serwer nie przyjmie. Użytkownik zrobił je offline
+              i uznał za zapisane, więc musi się dowiedzieć, co przepadło —
+              samo „Błąd synchronizacji" nic mu nie mówi. */}
+          {rejectedChanges.length > 0 && (
+            <div className="mt-2 rounded-xl bg-red-50 dark:bg-red-900/20 px-3 py-2">
+              <p className="text-[11px] font-medium text-red-600 dark:text-red-400">
+                Nie udało się zapisać {rejectedChanges.length === 1 ? 'zmiany' : `${rejectedChanges.length} zmian`}:
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {rejectedChanges.slice(0, 3).map((change, index) => (
+                  <li key={index} className="text-[11px] text-red-500/90 dark:text-red-400/80 break-words">
+                    „{change.description}" — {change.reason}
+                  </li>
+                ))}
+              </ul>
+              {rejectedChanges.length > 3 && (
+                <p className="text-[11px] text-red-500/70">…i {rejectedChanges.length - 3} więcej</p>
+              )}
+              <button
+                onClick={onDismissRejected}
+                className="mt-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 underline underline-offset-2"
+              >
+                Rozumiem
+              </button>
+            </div>
+          )}
+
+          {/* Wyjście awaryjne. Bez tego jedynym sposobem na odblokowanie
+              synchronizacji było wyczyszczenie danych witryny w ustawieniach
+              przeglądarki — IndexedDB przeżywa przeinstalowanie PWA (#119). */}
+          {syncStatus === 'error' && pendingCount > 0 && (
+            <button
+              onClick={onDiscardPending}
+              className="mt-2 w-full text-[11px] font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              Odrzuć {pendingCount} zablokowanych {pendingCount === 1 ? 'zmianę' : 'zmian'}
+            </button>
+          )}
         </div>
       )}
 

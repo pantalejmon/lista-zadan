@@ -41,8 +41,9 @@ class SyncTodoData {
   @Matches(/^\d{4}-\d{2}$/)
   month?: string | null;
 
+  // Bez `@IsNotEmpty()`: pusty `listId` to jedna zepsuta operacja, a nie powód,
+  // żeby odrzucić całą paczkę. Odrzuca ją serwis, per operacja.
   @IsString()
-  @IsNotEmpty()
   listId!: string;
 
   @IsOptional()

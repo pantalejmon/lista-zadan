@@ -286,7 +286,7 @@ export default function App() {
     onTodoChange: handleRemoteTodoChange,
   });
 
-  const { syncStatus, pendingCount } = useOfflineSync({
+  const { syncStatus, pendingCount, rejected, discardPending, dismissRejected } = useOfflineSync({
     enabled: isCloud,
     onSynced: handleWsTodoChange,
   });
@@ -440,6 +440,9 @@ export default function App() {
         wsStatus={wsStatus}
         syncStatus={syncStatus}
         pendingCount={pendingCount}
+        rejectedChanges={rejected}
+        onDiscardPending={() => { void discardPending(); }}
+        onDismissRejected={dismissRejected}
         isCloud={isCloud}
         navItems={navItems}
         onOpenTokens={() => setTokensOpen(true)}
